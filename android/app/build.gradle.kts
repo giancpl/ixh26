@@ -14,9 +14,23 @@ android {
         versionName = "0.1"
     }
     buildFeatures { compose = true }
+    buildFeatures { buildConfig = true }
+    buildTypes {
+        debug {
+            buildConfigField("String", "API_URL", "\"http://127.0.0.1:8080\"")
+            buildConfigField("String", "RELAY_URL", "\"ws://127.0.0.1:7777\"")
+        }
+        release {
+            // No public services or cleartext endpoints are configured for release.
+            buildConfigField("String", "API_URL", "\"\"")
+            buildConfigField("String", "RELAY_URL", "\"\"")
+        }
+    }
+    sourceSets["test"].resources.srcDir("../../contracts/fixtures")
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }
+dependencyLocking { lockAllConfigurations() }
 dependencies {
     implementation("org.nostrdevkit:nostr-sdk:0.45.1")
     // The official binding exposes JNA types in its public interface.
@@ -27,6 +41,10 @@ dependencies {
     // checks in JVM tests; Android builds continue to package only the Android AAR.
     testRuntimeOnly("org.nostrdevkit:nostr-sdk-jvm:0.45.1") { isTransitive = false }
     testRuntimeOnly("net.java.dev.jna:jna:5.17.0@jar")
+    testImplementation("org.json:json:20240303")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     constraints {
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0") {
             version { strictly("1.9.0") }
