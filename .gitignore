@@ -11,6 +11,7 @@ dist/
 proofs/
 regtest-artifacts/
 data/
+.photoanchor/
 *.db
 *.db-shm
 *.db-wal

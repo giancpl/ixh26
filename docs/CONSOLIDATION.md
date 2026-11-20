@@ -14,7 +14,7 @@ publication and timestamp contracts in the same product.
 | Stage | Scope | Status |
 |---|---|---|
 | 1 | Shared contracts, genuine signed fixtures, protocol validation, bundle CLI, optional packaging and offline gate | Integrated; validation recorded below |
-| 2 | Select and migrate the application backend to `/v1`; durable independent relay and OTS jobs | Pending |
+| 2 | Add the target `/v1` application backend; durable independent relay and OTS jobs | Integrated; legacy `/api` consumers remain separate |
 | 3 | Move photo consumers to kind 20 and the signed-event OTS payload | Pending |
 | 4 | Consolidate Docker services; explicit mining by default, optional automated demo mode | Pending |
 | 5 | Reconcile Android with the native Compose client; selectively preserve mobile UI improvements | Pending |
@@ -42,6 +42,7 @@ byte sequences and need an explicit format boundary in consumers.
 | `feat/social-infra` | `68ff268` | Same integrated tip; not an infrastructure-only delivery |
 | `validation/nostr-photo-mvp` | `68ff268` | Local alias of the integrated tip |
 | `feature/bitcoin-settlement-regtest` | `1052ed6` | Historical local branch, already contained in main |
+| `leomain` | `eb6c293` | Newly discovered: independent `fingerprinto` crypto/capture module and tests; review separately |
 
 All worktrees were clean during the audit. Contract, backend and Android source
 directories in their specialist branches match the earlier integrated MVP.
@@ -115,3 +116,45 @@ Prior MVP reports on other branches are historical evidence, not validation
 of this new branch. Physical two-phone acceptance remains deferred at the
 user's request. No new Docker lifecycle or Android build was needed for this
 protocol-only stage, whose application source diff is empty.
+
+## Stage 2: target application backend
+
+Stage 1 was merged through PR [#2](https://github.com/giancpl/ixh26/pull/2),
+after both Python versions passed the hosted CI checks. Subsequent integration
+branches start from the resulting remote main, without changing local worktrees
+owned by other tasks.
+
+The `social/` backend and its 22 tests come from source commits `0deb864` and
+`aa90d5b`. It serves the frozen `/v1` contract, persists original JPEG bytes,
+signed events and two independent jobs per post in SQLite. The worker uses the
+official SDK to publish the existing signature, and the unchanged settlement
+service to stamp, upgrade and freshly verify its opaque event payload.
+Lease ownership, heartbeat and per-event locks protect retries and restarts.
+Calendar failure does not stop relay publication; no user key enters the API.
+
+```sh
+python -m pip install -c requirements-social.lock '.[social,test]'
+export PHOTOANCHOR_DATA_DIR=/path/to/persistent/social-data
+export PHOTOANCHOR_PUBLIC_URL=http://127.0.0.1:8080
+export PHOTOANCHOR_RELAY_URL=ws://127.0.0.1:7777
+# Explicit regtest settings; start the real node/calendar separately:
+export PHOTOANCHOR_NETWORK=regtest
+export PHOTOANCHOR_CALENDARS=http://calendar:14788
+export PHOTOANCHOR_BITCOIN_CONF=/path/to/bitcoin.conf
+python -m uvicorn social.api:app --host 127.0.0.1 --port 8080
+# In a second shell with the same environment:
+python -m social.worker
+```
+
+No relay or calendar is contacted while accepting a post. A separate worker
+must be running for publication and OTS progress. Mainnet remains the default;
+the application has no implicit calendar submission destination. The optional
+`social` extra and fully pinned constraints keep these dependencies outside
+the standalone settlement installation. Automatic regtest mining is not part
+of this worker.
+
+The existing `server/` and web UI retain their historical `/api` behavior until
+their consumers are migrated. They do not share a database or proof directory
+with `social/`. Deploy the target backend for the native MVP, and do not present
+legacy image-only timestamps as signed-event timestamps. Docker orchestration,
+Android reconciliation and legacy UI migration have separate integration gates.
