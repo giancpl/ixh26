@@ -8,3 +8,7 @@ proofs
 regtest-artifacts
 build
 dist
+.worktrees
+.local
+android
+social-artifacts

@@ -1,0 +1,16 @@
+FROM eclipse-temurin:17-jdk-jammy
+ARG SDK_TOOLS=15859902
+ARG SDK_SHA256=4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583
+ENV ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk
+ENV PATH="${PATH}:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools"
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip git && rm -rf /var/lib/apt/lists/*
+RUN curl -4 -fL --retry 3 --connect-timeout 20 --max-time 600 "https://dl.google.com/android/repository/commandlinetools-linux-${SDK_TOOLS}_latest.zip" -o /tmp/tools.zip \
+    && echo "${SDK_SHA256}  /tmp/tools.zip" | sha256sum -c - \
+    && mkdir -p /opt/android-sdk/cmdline-tools \
+    && unzip -q /tmp/tools.zip -d /opt/android-sdk/cmdline-tools \
+    && mv /opt/android-sdk/cmdline-tools/cmdline-tools /opt/android-sdk/cmdline-tools/latest \
+    && rm /tmp/tools.zip \
+    && yes | sdkmanager --licenses >/dev/null \
+    && sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
+WORKDIR /workspace/android
+CMD ["./gradlew", "--no-daemon", "assembleDebug", "testDebugUnitTest", "lintDebug"]
