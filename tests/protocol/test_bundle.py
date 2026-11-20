@@ -2,6 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import struct
 import sys
 import zipfile
 
@@ -16,7 +17,7 @@ from upp_protocol.verify_bundle import verify_bundle
 FIXTURES = Path(__file__).parents[2] / "contracts" / "fixtures"
 
 
-def make_bundle(tmp_path, changes=None, *, bitcoin=False):
+def make_bundle(tmp_path, changes=None, *, bitcoin=False, compression=zipfile.ZIP_STORED):
     members = {name: (FIXTURES / name).read_bytes()
                for name in ("photo.jpg", "event.json", "payload.bin")}
     members["proof.ots"] = proof_bytes(members["payload.bin"], bitcoin=bitcoin)
@@ -24,7 +25,7 @@ def make_bundle(tmp_path, changes=None, *, bitcoin=False):
     members["receipt.json"] = b'{"status":"CONFIRMED","network":"mainnet"}'
     members.update(changes or {})
     bundle = tmp_path / "bundle.zip"
-    with zipfile.ZipFile(bundle, "w") as archive:
+    with zipfile.ZipFile(bundle, "w", compression=compression) as archive:
         for name, data in members.items():
             archive.writestr(name, data)
     return bundle
@@ -89,3 +90,37 @@ def test_cli_subprocess_pending_and_missing(tmp_path):
                             capture_output=True, text=True)
     assert result.returncode == 1
     assert json.loads(result.stdout)["status"] == "ERROR"
+
+
+@pytest.mark.parametrize("corruption", ["deflate_stream", "declared_size"])
+def test_corrupt_zip_cli_is_structured_invalid_without_traceback(tmp_path, corruption):
+    bundle = make_bundle(tmp_path, compression=zipfile.ZIP_DEFLATED)
+    data = bytearray(bundle.read_bytes())
+    with zipfile.ZipFile(bundle) as archive:
+        info = archive.getinfo("photo.jpg")
+        if corruption == "deflate_stream":
+            name_length, extra_length = struct.unpack_from("<HH", data, info.header_offset + 26)
+            start = info.header_offset + 30 + name_length + extra_length
+            # RFC 1951 BTYPE=11 is reserved; this corrupts real compressed bytes
+            # rather than mocking the ZIP reader or decoder exception.
+            data[start] = (data[start] & ~0x06) | 0x06
+        else:
+            # The first central directory entry is photo.jpg. Claim one extra
+            # decoded byte while leaving the valid stream and CRC untouched.
+            struct.pack_into("<I", data, archive.start_dir + 24, info.file_size + 1)
+    bundle.write_bytes(data)
+    result = subprocess.run([sys.executable, "-m", "upp_protocol.verify_bundle", str(bundle)],
+                            capture_output=True, text=True)
+    assert result.returncode == 3, result.stderr
+    response = json.loads(result.stdout)
+    assert response["status"] == "INVALID"
+    assert response["error"]["code"] == "invalid_bundle"
+    assert "Traceback" not in result.stderr
+
+
+def test_local_bundle_io_error_is_not_misclassified_as_invalid(tmp_path, monkeypatch):
+    def denied(*args, **kwargs):
+        raise PermissionError("Filesystem failure")
+    monkeypatch.setattr(zipfile, "ZipFile", denied)
+    with pytest.raises(PermissionError):
+        verify_bundle(tmp_path / "bundle.zip")
