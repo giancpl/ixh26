@@ -43,13 +43,11 @@ interface Anchorer {
 }
 
 /**
- * Sends the exact captured JPEG bytes + SHA-256 to the PhotoAnchor Nostr web backend,
- * which stores the immutable image, pairs it to the user's Nostr inbox, and triggers
- * OpenTimestamps Bitcoin anchoring via settlement/.
+ * Sends the exact captured JPEG bytes + SHA-256 directly to the configured backend
+ * (local IP or VPN address) which stores the image and triggers OpenTimestamps Bitcoin anchoring.
  */
 class WebBridgeAnchorer(
     private val serverUrl: String,
-    private val pairingOrPubkey: String,
 ) : Anchorer {
     override suspend fun anchor(result: PhotoProcessor.Result): String = withContext(Dispatchers.IO) {
         val base = serverUrl.trim().trimEnd('/')
@@ -80,15 +78,6 @@ class WebBridgeAnchorer(
                 writeField("source", "android-photoanchor")
                 writeField("captured_at", result.capturedAtSec.toString())
                 writeField("auto_anchor", "1")
-
-                val target = pairingOrPubkey.trim()
-                if (target.isNotEmpty()) {
-                    if (target.matches(Regex("^[0-9a-fA-F]{64}$"))) {
-                        writeField("pubkey", target.lowercase())
-                    } else {
-                        writeField("pairing_code", target.uppercase())
-                    }
-                }
 
                 out.writeBytes("--$boundary\r\n")
                 out.writeBytes(
@@ -121,9 +110,9 @@ class WebBridgeAnchorer(
             val anchor = json.optJSONObject("anchor")
             val status = anchor?.optString("status") ?: "OK"
             when (status) {
-                "CONFIRMED" -> "Inviata al sito · Bitcoin CONFIRMED"
-                "PENDING" -> "Inviata al sito · OTS PENDING"
-                else -> "Inviata al sito · $status"
+                "CONFIRMED" -> "Inviata al social · Bitcoin CONFIRMED"
+                "PENDING" -> "Inviata al social · OTS PENDING"
+                else -> "Inviata al social · $status"
             }
         } finally {
             conn.disconnect()

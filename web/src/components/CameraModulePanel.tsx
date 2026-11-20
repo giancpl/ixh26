@@ -1,6 +1,5 @@
 import { Bitcoin, Hourglass, Share2 } from "./PixelIcon";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { QRCode } from "react-qr-code";
 import type {
   Board,
   CameraInboxItem,
@@ -43,11 +42,7 @@ export default function CameraModulePanel({
   notify: (msg: string) => void;
 }) {
   const [tab, setTab] = useState<CameraTab>("android");
-  const [pairing, setPairing] = useState<{
-    code: string;
-    serverUrl: string;
-    lanUrls: string[];
-  }>();
+  const [serverUrls, setServerUrls] = useState<string[]>([]);
   const [staged, setStaged] = useState<StagedPhoto>();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -55,7 +50,6 @@ export default function CameraModulePanel({
   const [tagsInput, setTagsInput] = useState("bitcoin, street");
   const [autoAnchor, setAutoAnchor] = useState(true);
 
-  // Web Camera state
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | undefined>(undefined);
   const [cameraActive, setCameraActive] = useState(false);
@@ -73,37 +67,21 @@ export default function CameraModulePanel({
 
   useEffect(() => {
     let active = true;
-    async function initPairing() {
-      try {
-        const [infoRes, pairRes] = await Promise.all([
-          fetch("/api/info"),
-          fetch("/api/pairing", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ pubkey: signer.pubkey, npub: signer.npub }),
-          }),
-        ]);
-        if (!active || !infoRes.ok || !pairRes.ok) return;
-        const info = (await infoRes.json()) as { lan_urls?: string[] };
-        const pair = (await pairRes.json()) as { code: string };
-        const lanUrls = info.lan_urls ?? [];
-        const preferred =
-          window.location.hostname === "127.0.0.1" ||
-          window.location.hostname === "localhost"
-            ? lanUrls[0] || window.location.origin
-            : window.location.origin;
-        setPairing({ code: pair.code, serverUrl: preferred, lanUrls });
-      } catch {
-        /* backend offline */
-      }
-    }
-    void initPairing();
+    void fetch("/api/info")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((info: { lan_urls?: string[] } | null) => {
+        if (!active || !info) return;
+        const urls = [...new Set([...(info.lan_urls ?? []), window.location.origin])];
+        setServerUrls(urls);
+      })
+      .catch(() => {
+        if (active) setServerUrls([window.location.origin]);
+      });
     return () => {
       active = false;
     };
-  }, [signer.pubkey, signer.npub]);
+  }, []);
 
-  // Poll Android camera inbox while this module is open
   useEffect(() => {
     void onInboxRefresh();
     const timer = setInterval(() => {
@@ -237,9 +215,7 @@ export default function CameraModulePanel({
     });
   }
 
-  const pairUri = pairing
-    ? `photoanchor://pair?url=${encodeURIComponent(pairing.serverUrl)}&code=${pairing.code}`
-    : "";
+  const mainUrl = serverUrls[0] || window.location.origin;
 
   return (
     <div>
@@ -270,90 +246,62 @@ export default function CameraModulePanel({
       <Feedback message={task.error} dismiss={task.clearError} />
 
       <div className="camera-grid">
-        {/* Left Column: Camera Source */}
         <div className="surf" style={{ padding: 20 }}>
           {tab === "android" && (
             <>
               <h3 style={{ marginBottom: 6 }}>
-                Collega la tua app Android PhotoAnchor
+                App Android PhotoAnchor (Connessione Diretta)
               </h3>
               <p className="field-hint" style={{ marginBottom: 14 }}>
-                Apri l'app <strong>PhotoAnchor</strong> sul telefono, tocca{" "}
-                <strong>Collega Web</strong> in alto e inserisci URL e Codice qui
-                sotto (oppure apri il link su telefono). Ogni scatto verrà
-                calcolato in SHA-256 sul telefono, ancorato su Bitcoin e inviato
-                subito qui.
+                Nessun pairing necessario: se i dispositivi sono sulla stessa rete
+                locale o VPN, imposta semplicemente l'URL del backend nell'app
+                Android (o precompilalo in <span className="mono">local.properties</span>).
+                Ogni scatto viene ancorato su Bitcoin e arriva qui pronto da pubblicare.
               </p>
 
-              {pairing ? (
-                <div className="pairing-box">
-                  <div className="qr-frame">
-                    <QRCode value={pairUri} size={136} />
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="field-hint">Codice Pairing</div>
-                    <div className="pairing-code-pill mono">{pairing.code}</div>
-
-                    <div className="field-hint" style={{ marginTop: 8 }}>
-                      URL Server per il telefono (stesso Wi-Fi):
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 6,
-                        marginTop: 4,
-                        alignItems: "center",
-                      }}
-                    >
-                      <input
-                        className="mono"
-                        value={pairing.serverUrl}
-                        onChange={(e) =>
-                          setPairing({ ...pairing, serverUrl: e.target.value })
-                        }
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void navigator.clipboard?.writeText(pairUri);
-                          notify("Link photoanchor://pair copiato!");
-                        }}
-                      >
-                        <Share2 size={14} />
-                      </button>
-                    </div>
-                    {pairing.lanUrls.length > 0 && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 6,
-                          marginTop: 6,
-                        }}
-                      >
-                        {pairing.lanUrls.map((u) => (
-                          <button
-                            key={u}
-                            type="button"
-                            className="chip-btn"
-                            style={{ minHeight: 28, fontSize: 11 }}
-                            onClick={() => setPairing({ ...pairing, serverUrl: u })}
-                          >
-                            {u}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div style={{ marginTop: 8 }}>
-                      <a href={pairUri} className="badge solid" style={{ textDecoration: "none" }}>
-                        Apri in PhotoAnchor Android
-                      </a>
-                    </div>
-                  </div>
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  background: "var(--soft)",
+                  border: "1px solid var(--bd)",
+                  marginBottom: 18,
+                }}
+              >
+                <div className="field-hint" style={{ marginBottom: 6 }}>
+                  Indirizzo Backend (IP locale / VPN):
                 </div>
-              ) : (
-                <p className="field-hint">Generazione codice pairing…</p>
-              )}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input className="mono" readOnly value={mainUrl} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(mainUrl);
+                      notify("URL backend copiato!");
+                    }}
+                  >
+                    <Share2 size={14} /> Copia
+                  </button>
+                </div>
+                {serverUrls.length > 1 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                    {serverUrls.map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        className="chip-btn mono"
+                        style={{ minHeight: 28, fontSize: 11 }}
+                        onClick={() => {
+                          void navigator.clipboard?.writeText(u);
+                          notify(`Copiato: ${u}`);
+                        }}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div
                 style={{
@@ -502,7 +450,6 @@ export default function CameraModulePanel({
           )}
         </div>
 
-        {/* Right Column: Publish Pin & Bitcoin Anchor Preview */}
         <div className="surf" style={{ padding: 20 }}>
           <h3 style={{ marginBottom: 12 }}>Pubblica Pin su Nostr</h3>
           {!staged ? (
@@ -637,10 +584,7 @@ export default function CameraModulePanel({
                 >
                   Annulla
                 </button>
-                <button
-                  className="btn-primary wide"
-                  disabled={task.busy}
-                >
+                <button className="btn-primary wide" disabled={task.busy}>
                   {task.busy
                     ? "Firma Nostr & pubblicazione…"
                     : "Firma con Nostr & Pubblica Pin"}

@@ -1,14 +1,11 @@
-"""SQLite persistence for Nostr events, uploaded photos, Bitcoin OTS anchors, and Android pairing."""
+"""SQLite persistence for Nostr events, uploaded photos, and Bitcoin OTS anchors."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
-import secrets
 import sqlite3
 import time
 from typing import Any
-
-ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 
 def _d_tag(tags: list[list[str]]) -> str:
@@ -66,7 +63,6 @@ class SocialStore:
                 height INTEGER,
                 source TEXT NOT NULL,
                 uploader_pubkey TEXT,
-                pairing_code TEXT,
                 title TEXT NOT NULL DEFAULT '',
                 description TEXT NOT NULL DEFAULT '',
                 board TEXT NOT NULL DEFAULT '',
@@ -86,14 +82,6 @@ class SocialStore:
                 block_time INTEGER,
                 diagnostics_json TEXT NOT NULL DEFAULT '[]',
                 updated_at INTEGER NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS pairings (
-                code TEXT PRIMARY KEY,
-                pubkey TEXT NOT NULL,
-                npub TEXT NOT NULL,
-                created_at INTEGER NOT NULL,
-                expires_at INTEGER NOT NULL
             );
             """
         )
@@ -220,31 +208,6 @@ class SocialStore:
         rows = self.conn.execute(sql, params).fetchall()
         return [json.loads(r["raw_json"]) for r in rows]
 
-    # ---- Pairing ----
-
-    def create_pairing(self, pubkey: str, npub: str, ttl_seconds: int = 86400) -> dict[str, Any]:
-        now = int(time.time())
-        for _ in range(10):
-            code = "".join(secrets.choice(ALPHABET) for _ in range(6))
-            if not self.conn.execute("SELECT 1 FROM pairings WHERE code = ?", (code,)).fetchone():
-                break
-        expires = now + ttl_seconds
-        with self.conn:
-            self.conn.execute("DELETE FROM pairings WHERE expires_at < ?", (now,))
-            self.conn.execute(
-                "INSERT INTO pairings (code, pubkey, npub, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-                (code, pubkey, npub, now, expires),
-            )
-        return {"code": code, "pubkey": pubkey, "npub": npub, "created_at": now, "expires_at": expires}
-
-    def get_pairing(self, code: str) -> dict[str, Any] | None:
-        now = int(time.time())
-        row = self.conn.execute(
-            "SELECT * FROM pairings WHERE code = ? AND expires_at >= ?",
-            (code.strip().upper(), now),
-        ).fetchone()
-        return dict(row) if row else None
-
     # ---- Photos & Anchors ----
 
     def save_photo(
@@ -258,7 +221,6 @@ class SocialStore:
         height: int | None,
         source: str,
         uploader_pubkey: str | None,
-        pairing_code: str | None,
         title: str,
         description: str,
         board: str,
@@ -270,11 +232,10 @@ class SocialStore:
                 "SELECT * FROM photos WHERE sha256 = ?", (sha256,)
             ).fetchone()
             if existing:
-                # Update inbox attribution if re-submitted by camera with pairing/pubkey
                 if uploader_pubkey and not existing["uploader_pubkey"]:
                     self.conn.execute(
-                        "UPDATE photos SET uploader_pubkey = ?, pairing_code = COALESCE(?, pairing_code) WHERE sha256 = ?",
-                        (uploader_pubkey, pairing_code, sha256),
+                        "UPDATE photos SET uploader_pubkey = ? WHERE sha256 = ?",
+                        (uploader_pubkey, sha256),
                     )
                 row = self.conn.execute("SELECT * FROM photos WHERE sha256 = ?", (sha256,)).fetchone()
                 return dict(row)
@@ -282,9 +243,9 @@ class SocialStore:
                 """
                 INSERT INTO photos (
                     sha256, ext, mime, size_bytes, width, height, source,
-                    uploader_pubkey, pairing_code, title, description, board,
+                    uploader_pubkey, title, description, board,
                     captured_at, created_at, inbox_acked
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                 """,
                 (
                     sha256,
@@ -295,7 +256,6 @@ class SocialStore:
                     height,
                     source,
                     uploader_pubkey,
-                    pairing_code,
                     title,
                     description,
                     board,
@@ -310,18 +270,12 @@ class SocialStore:
         row = self.conn.execute("SELECT * FROM photos WHERE sha256 = ?", (sha256,)).fetchone()
         return dict(row) if row else None
 
-    def get_inbox(self, pubkey: str | None = None, pairing_code: str | None = None) -> list[dict[str, Any]]:
+    def get_inbox(self, pubkey: str | None = None) -> list[dict[str, Any]]:
         clauses = ["p.inbox_acked = 0"]
         params: list[Any] = []
-        if pubkey and pairing_code:
-            clauses.append("(p.uploader_pubkey = ? OR p.pairing_code = ?)")
-            params.extend([pubkey, pairing_code.upper()])
-        elif pubkey:
-            clauses.append("p.uploader_pubkey = ?")
+        if pubkey:
+            clauses.append("(p.uploader_pubkey = ? OR (p.uploader_pubkey IS NULL AND p.source = 'android-photoanchor'))")
             params.append(pubkey)
-        elif pairing_code:
-            clauses.append("p.pairing_code = ?")
-            params.append(pairing_code.upper())
         else:
             clauses.append("p.source = 'android-photoanchor'")
 

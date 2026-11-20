@@ -78,7 +78,6 @@ def _photo_payload(row: dict[str, Any], anchor: dict[str, Any] | None) -> dict[s
         "height": row["height"],
         "source": row["source"],
         "uploader_pubkey": row["uploader_pubkey"],
-        "pairing_code": row["pairing_code"],
         "title": row["title"],
         "description": row["description"],
         "board": row["board"],
@@ -148,21 +147,6 @@ def create_app(
             }
         )
 
-    async def create_pairing(request: web.Request) -> web.Response:
-        data = await request.json()
-        pubkey = str(data.get("pubkey", "")).strip().lower()
-        npub = str(data.get("npub", "")).strip()
-        if not re.match(r"^[0-9a-f]{64}$", pubkey) or not npub.startswith("npub1"):
-            raise web.HTTPBadRequest(text="Valid pubkey and npub required.")
-        return web.json_response(store.create_pairing(pubkey, npub))
-
-    async def get_pairing(request: web.Request) -> web.Response:
-        code = request.match_info["code"]
-        pairing = store.get_pairing(code)
-        if not pairing:
-            raise web.HTTPNotFound(text="Pairing code not found or expired.")
-        return web.json_response(pairing)
-
     async def upload_photo(request: web.Request) -> web.Response:
         reader = await request.multipart()
         file_bytes: bytes | None = None
@@ -206,14 +190,8 @@ def create_app(
             raise web.HTTPBadRequest(text="Only JPEG, PNG, and WebP images are supported.")
         ext, mime = PIL_TO_MIME[fmt]
 
-        pairing_code = fields.get("pairing_code", "").upper() or None
         uploader_pubkey = fields.get("pubkey", "").lower() or None
-        if pairing_code:
-            pairing = store.get_pairing(pairing_code)
-            if not pairing:
-                raise web.HTTPBadRequest(text="Pairing code is invalid or expired.")
-            uploader_pubkey = pairing["pubkey"]
-        elif uploader_pubkey and not re.match(r"^[0-9a-f]{64}$", uploader_pubkey):
+        if uploader_pubkey and not re.match(r"^[0-9a-f]{64}$", uploader_pubkey):
             raise web.HTTPBadRequest(text="Invalid pubkey format.")
 
         source = fields.get("source") or "upload"
@@ -241,7 +219,6 @@ def create_app(
             height=height,
             source=source,
             uploader_pubkey=uploader_pubkey,
-            pairing_code=pairing_code,
             title=fields.get("title", "")[:120],
             description=fields.get("description", "")[:1000],
             board=fields.get("board", "")[:60],
@@ -285,8 +262,7 @@ def create_app(
 
     async def camera_inbox(request: web.Request) -> web.Response:
         pubkey = request.query.get("pubkey", "").lower() or None
-        pairing_code = request.query.get("pairing_code", "").upper() or None
-        rows = store.get_inbox(pubkey=pubkey, pairing_code=pairing_code)
+        rows = store.get_inbox(pubkey=pubkey)
         items = [_photo_payload(r, _enrich_anchor(store.get_anchor(r["sha256"]))) for r in rows]
         return web.json_response({"items": items})
 
@@ -364,8 +340,6 @@ def create_app(
 
     app.router.add_get("/nostr", relay.handle_ws)
     app.router.add_get("/api/info", info)
-    app.router.add_post("/api/pairing", create_pairing)
-    app.router.add_get("/api/pairing/{code}", get_pairing)
     app.router.add_post("/api/photos", upload_photo)
     app.router.add_get("/api/media/{sha256}", get_media)
     app.router.add_get("/api/camera/inbox", camera_inbox)

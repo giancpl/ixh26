@@ -7,13 +7,22 @@ export function defaultRelayUrl(): string {
   return `${proto}//${window.location.host}/nostr`;
 }
 
+function isPrivateHost(host: string): boolean {
+  if (["localhost", "127.0.0.1", "[::1]"].includes(host)) return true;
+  if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true;
+  if (/^192\.168\.\d+\.\d+$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(host)) return true;
+  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/.test(host)) return true; // Tailscale CGNAT
+  return false;
+}
+
 export function relayUrl(input: string) {
   const url = new URL(input.trim());
   const isLocal =
-    ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
+    isPrivateHost(url.hostname) ||
     (typeof window !== "undefined" && url.host === window.location.host);
   if (url.protocol !== "wss:" && !(url.protocol === "ws:" && isLocal)) {
-    throw new Error("Usa un relay wss:// oppure ws:// locale.");
+    throw new Error("Usa un relay wss:// oppure ws:// locale/VPN.");
   }
   if (url.username || url.password || url.hash || url.search) {
     throw new Error("L'URL del relay non può contenere credenziali o query.");

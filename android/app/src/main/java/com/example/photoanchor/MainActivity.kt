@@ -64,46 +64,19 @@ import kotlin.math.sin
 
 private const val PREFS_NAME = "photoanchor_prefs"
 private const val KEY_SERVER_URL = "server_url"
-private const val KEY_PAIRING = "pairing_code"
 private const val KEY_AUTO_SYNC = "auto_sync"
 
 class MainActivity : ComponentActivity() {
-    private val deepLinkState = mutableStateOf<Pair<String, String>?>(null)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        handlePairingIntent(intent)
         setContent {
-            MaterialTheme {
-                App(deepLinkState.value) { deepLinkState.value = null }
-            }
-        }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        handlePairingIntent(intent)
-    }
-
-    private fun handlePairingIntent(intent: Intent?) {
-        val data = intent?.data ?: return
-        if (data.scheme == "photoanchor" && data.host == "pair") {
-            val url = data.getQueryParameter("url").orEmpty()
-            val code = data.getQueryParameter("code").orEmpty()
-            if (url.isNotBlank()) {
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putString(KEY_SERVER_URL, url)
-                    .putString(KEY_PAIRING, code)
-                    .putBoolean(KEY_AUTO_SYNC, true)
-                    .apply()
-                deepLinkState.value = url to code
-            }
+            MaterialTheme { App() }
         }
     }
 }
 
 @Composable
-fun App(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> Unit) {
+fun App() {
     val ctx = LocalContext.current
     val wanted = remember {
         buildList {
@@ -118,7 +91,7 @@ fun App(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> Unit) {
     }
     LaunchedEffect(Unit) { if (wanted.any { !has(it) }) launcher.launch(wanted) }
     if (camera) {
-        PhotoAnchorMain(pairedFromLink, onConsumeLink)
+        PhotoAnchorMain()
     } else {
         Box(Modifier.fillMaxSize().background(Color.Black), Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -131,17 +104,21 @@ fun App(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> Unit) {
 }
 
 @Composable
-fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> Unit) {
+fun PhotoAnchorMain() {
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val prefs = remember { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
     var activeTab by remember { mutableStateOf("camera") } // "camera" | "social"
-    var serverUrl by remember { mutableStateOf(prefs.getString(KEY_SERVER_URL, "") ?: "") }
-    var pairingCode by remember { mutableStateOf(prefs.getString(KEY_PAIRING, "") ?: "") }
+    var serverUrl by remember {
+        mutableStateOf(
+            prefs.getString(KEY_SERVER_URL, null)?.takeIf { it.isNotBlank() }
+                ?: BuildConfig.DEFAULT_SERVER_URL,
+        )
+    }
     var autoSync by remember { mutableStateOf(prefs.getBoolean(KEY_AUTO_SYNC, true)) }
-    var showLinkDialog by remember { mutableStateOf(false) }
+    var showServerDialog by remember { mutableStateOf(false) }
 
     val capture = remember { ImageCapture.Builder().build() }
     var back by remember { mutableStateOf(true) }
@@ -151,16 +128,6 @@ fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> 
     var lastUri by remember { mutableStateOf<Uri?>(null) }
     var lastResult by remember { mutableStateOf<PhotoProcessor.Result?>(null) }
     var blink by remember { mutableStateOf(false) }
-
-    LaunchedEffect(pairedFromLink) {
-        if (pairedFromLink != null) {
-            serverUrl = pairedFromLink.first
-            pairingCode = pairedFromLink.second
-            autoSync = true
-            info = "Collegato al social (${pairedFromLink.second})"
-            onConsumeLink()
-        }
-    }
 
     val blinkAlpha by animateFloatAsState(if (blink) 0.8f else 0f, label = "blink")
     val previewView = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
@@ -188,9 +155,9 @@ fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> 
         if (url.isEmpty()) return
         info = "Invio & OTS Bitcoin..."
         scope.launch {
-            runCatching { WebBridgeAnchorer(url, pairingCode).anchor(res) }
+            runCatching { WebBridgeAnchorer(url).anchor(res) }
                 .onSuccess { status -> info = status }
-                .onFailure { err -> info = "Locale OK · Social offline (${err.message?.take(32)})" }
+                .onFailure { err -> info = "Locale OK · Server offline (${err.message?.take(30)})" }
         }
     }
 
@@ -260,7 +227,7 @@ fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> 
                             Surface(
                                 shape = CircleShape,
                                 color = if (serverUrl.isNotBlank()) Color(0xFF001CE0).copy(alpha = 0.85f) else Color.White.copy(alpha = 0.18f),
-                                modifier = Modifier.clickable { showLinkDialog = true },
+                                modifier = Modifier.clickable { showServerDialog = true },
                             ) {
                                 Row(
                                     Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -275,12 +242,12 @@ fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> 
                                     )
                                     Text(
                                         text = if (serverUrl.isNotBlank()) {
-                                            if (pairingCode.isNotBlank()) "Nostr · ${pairingCode.take(6)}" else "Social collegato"
+                                            serverUrl.removePrefix("http://").removePrefix("https://").take(22)
                                         } else {
-                                            "Collega Social"
+                                            "Imposta Server"
                                         },
                                         color = Color.White,
-                                        fontSize = 13.sp,
+                                        fontSize = 12.sp,
                                     )
                                 }
                             }
@@ -353,7 +320,7 @@ fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> 
             } else {
                 SocialWebScreen(
                     serverUrl = serverUrl,
-                    onConfigure = { showLinkDialog = true },
+                    onConfigure = { showServerDialog = true },
                 )
             }
         }
@@ -391,45 +358,36 @@ fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> 
         }
     }
 
-    if (showLinkDialog) {
-        LinkWebDialog(
+    if (showServerDialog) {
+        ServerConfigDialog(
             initialUrl = serverUrl,
-            initialPairing = pairingCode,
             initialAutoSync = autoSync,
             hasPendingPhoto = lastResult != null,
-            onDismiss = { showLinkDialog = false },
-            onSave = { url, code, auto ->
-                val cleanUrl = parseServerUrlInput(url)
-                val cleanCode = parsePairingInput(url, code)
-                serverUrl = cleanUrl
-                pairingCode = cleanCode
+            onDismiss = { showServerDialog = false },
+            onSave = { url, auto ->
+                val clean = url.trim().trimEnd('/')
+                serverUrl = clean
                 autoSync = auto
                 prefs.edit()
-                    .putString(KEY_SERVER_URL, cleanUrl)
-                    .putString(KEY_PAIRING, cleanCode)
+                    .putString(KEY_SERVER_URL, clean)
                     .putBoolean(KEY_AUTO_SYNC, auto)
                     .apply()
-                showLinkDialog = false
-                info = if (cleanUrl.isNotBlank()) "Collegato a $cleanUrl" else "Collegamento rimosso"
+                showServerDialog = false
+                info = if (clean.isNotBlank()) "Server: $clean" else "Server scollegato"
             },
-            onSendLast = { url, code ->
-                val cleanUrl = parseServerUrlInput(url)
-                val cleanCode = parsePairingInput(url, code)
-                serverUrl = cleanUrl
-                pairingCode = cleanCode
-                prefs.edit()
-                    .putString(KEY_SERVER_URL, cleanUrl)
-                    .putString(KEY_PAIRING, cleanCode)
-                    .apply()
-                showLinkDialog = false
+            onSendLast = { url ->
+                val clean = url.trim().trimEnd('/')
+                serverUrl = clean
+                prefs.edit().putString(KEY_SERVER_URL, clean).apply()
+                showServerDialog = false
                 lastResult?.let { syncToWeb(it) }
             },
             onOpenWeb = { url ->
-                val cleanUrl = parseServerUrlInput(url)
-                if (cleanUrl.isNotBlank()) {
-                    serverUrl = cleanUrl
-                    prefs.edit().putString(KEY_SERVER_URL, cleanUrl).apply()
-                    showLinkDialog = false
+                val clean = url.trim().trimEnd('/')
+                if (clean.isNotBlank()) {
+                    serverUrl = clean
+                    prefs.edit().putString(KEY_SERVER_URL, clean).apply()
+                    showServerDialog = false
                     activeTab = "social"
                 }
             },
@@ -454,9 +412,9 @@ private fun SocialWebScreen(
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Collega il server BitPin Nostr", fontSize = 20.sp, color = Color(0xFF001CE0))
+                Text("Indirizzo Backend BitPin", fontSize = 20.sp, color = Color(0xFF001CE0))
                 Text(
-                    "Inserisci l'indirizzo del tuo server BitPin (es. http://192.168.1.x:8787) per navigare nel social Nostr, vedere profilo, foto e bacheche degli altri utenti.",
+                    "Inserisci l'IP locale o VPN del server (es. http://192.168.1.x:8787) per aprire il social Nostr con profili, foto e bacheche.",
                     fontSize = 13.sp,
                     color = Color(0xFF202632),
                 )
@@ -464,7 +422,7 @@ private fun SocialWebScreen(
                     onClick = onConfigure,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF001CE0)),
                 ) {
-                    Text("Configura Server Social", color = Color.White)
+                    Text("Inserisci URL Server", color = Color.White)
                 }
             }
         }
@@ -490,60 +448,34 @@ private fun SocialWebScreen(
     )
 }
 
-private fun parseServerUrlInput(raw: String): String {
-    val trimmed = raw.trim()
-    if (trimmed.startsWith("photoanchor://pair", ignoreCase = true)) {
-        return Uri.parse(trimmed).getQueryParameter("url").orEmpty().trim()
-    }
-    return trimmed
-}
-
-private fun parsePairingInput(rawUrl: String, rawCode: String): String {
-    val trimmedUrl = rawUrl.trim()
-    if (trimmedUrl.startsWith("photoanchor://pair", ignoreCase = true)) {
-        val codeFromUri = Uri.parse(trimmedUrl).getQueryParameter("code").orEmpty().trim()
-        if (codeFromUri.isNotEmpty()) return codeFromUri
-    }
-    return rawCode.trim()
-}
-
 @Composable
-private fun LinkWebDialog(
+private fun ServerConfigDialog(
     initialUrl: String,
-    initialPairing: String,
     initialAutoSync: Boolean,
     hasPendingPhoto: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String, Boolean) -> Unit,
-    onSendLast: (String, String) -> Unit,
+    onSave: (String, Boolean) -> Unit,
+    onSendLast: (String) -> Unit,
     onOpenWeb: (String) -> Unit,
 ) {
     var url by remember { mutableStateOf(initialUrl) }
-    var code by remember { mutableStateOf(initialPairing) }
     var auto by remember { mutableStateOf(initialAutoSync) }
     var testStatus by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Collega Social Nostr & Bitcoin") },
+        title = { Text("Server Backend (LAN / VPN)") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "Inserisci l'indirizzo del server mostrato sul sito BitPin (o incolla il link photoanchor://pair) e il codice pairing.",
+                    "Inserisci l'IP locale o VPN del server BitPin. Nessun codice pairing richiesto.",
                     fontSize = 12.sp,
                 )
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it; testStatus = null },
                     label = { Text("URL Server (es. http://192.168.1.x:8787)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = code,
-                    onValueChange = { code = it },
-                    label = { Text("Codice Pairing o pubkey hex") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -557,7 +489,7 @@ private fun LinkWebDialog(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
-                        val target = parseServerUrlInput(url)
+                        val target = url.trim()
                         if (target.isBlank()) {
                             testStatus = "Inserisci un URL"
                         } else {
@@ -569,7 +501,7 @@ private fun LinkWebDialog(
                         }
                     }) { Text("Testa") }
                     if (hasPendingPhoto && url.isNotBlank()) {
-                        TextButton(onClick = { onSendLast(url, code) }) { Text("Invia ultima") }
+                        TextButton(onClick = { onSendLast(url) }) { Text("Invia ultima") }
                     }
                     if (url.isNotBlank()) {
                         TextButton(onClick = { onOpenWeb(url) }) { Text("Apri Social") }
@@ -579,7 +511,7 @@ private fun LinkWebDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onSave(url, code, auto) }) { Text("Salva") }
+            Button(onClick = { onSave(url, auto) }) { Text("Salva") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Chiudi") }

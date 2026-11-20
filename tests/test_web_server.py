@@ -38,20 +38,13 @@ class WebServerTestCase(AioHTTPTestCase):
         html = await resp.text()
         self.assertIn("BitPin", html)
 
-    async def test_pairing_android_upload_and_inbox_flow(self) -> None:
+    async def test_android_upload_and_inbox_flow(self) -> None:
         pubkey = "1" * 64
-        npub = "npub1" + "q" * 58
 
         info_resp = await self.client.get("/api/info")
         self.assertEqual(info_resp.status, 200)
         info = await info_resp.json()
         self.assertTrue(info["ok"])
-
-        pair_resp = await self.client.post("/api/pairing", json={"pubkey": pubkey, "npub": npub})
-        self.assertEqual(pair_resp.status, 200)
-        pairing = await pair_resp.json()
-        code = pairing["code"]
-        self.assertEqual(len(code), 6)
 
         jpg = make_jpeg_bytes()
         sha = hashlib.sha256(jpg).hexdigest()
@@ -60,15 +53,13 @@ class WebServerTestCase(AioHTTPTestCase):
         bad_form = aiohttp.FormData()
         bad_form.add_field("file", jpg, filename="bad.jpg", content_type="image/jpeg")
         bad_form.add_field("sha256", "0" * 64)
-        bad_form.add_field("pairing_code", code)
         bad_resp = await self.client.post("/api/photos", data=bad_form)
         self.assertEqual(bad_resp.status, 400)
 
-        # Valid Android camera upload with auto_anchor=0 (offline-safe check)
+        # Direct Android camera upload without pairing (LAN / VPN flow)
         form = aiohttp.FormData()
         form.add_field("file", jpg, filename="photo_1.jpg", content_type="image/jpeg")
         form.add_field("sha256", sha)
-        form.add_field("pairing_code", code)
         form.add_field("source", "android-photoanchor")
         form.add_field("auto_anchor", "0")
         up_resp = await self.client.post("/api/photos", data=form)
@@ -86,7 +77,7 @@ class WebServerTestCase(AioHTTPTestCase):
         served = await media_resp.read()
         self.assertEqual(served, jpg)
 
-        # Inbox lists un-acked photo for the paired pubkey
+        # Inbox lists un-acked Android photo for any logged-in pubkey
         inbox_resp = await self.client.get(f"/api/camera/inbox?pubkey={pubkey}")
         self.assertEqual(inbox_resp.status, 200)
         inbox = await inbox_resp.json()
