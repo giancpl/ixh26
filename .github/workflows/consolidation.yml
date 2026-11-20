@@ -2,7 +2,7 @@ name: Consolidation protocol gate
 
 on:
   push:
-    branches: [integration/project-consolidation]
+    branches: ['integration/**', main]
   pull_request:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install setuptools wheel '.[protocol,test]'
+      - run: python -m pip install setuptools wheel -c requirements-social.lock '.[social,test]'
       # The legacy aiohttp application's socket-based tests have a separate
       # migration gate. They are not part of the offline protocol suite.
       - run: python -m pytest -q --ignore=tests/test_web_server.py -m 'not network and not regtest'
@@ -30,9 +30,9 @@ jobs:
           python - <<'PY'
           import os
           from pathlib import Path
-          import settlement, upp_protocol
+          import settlement, upp_protocol, social
           root = Path(os.environ['PYTHONPATH']).resolve()
-          for module in (settlement, upp_protocol):
+          for module in (settlement, upp_protocol, social):
               assert Path(module.__file__).resolve().is_relative_to(root)
           from upp_protocol import build_payload
           print('Installed settlement and protocol imports passed')
