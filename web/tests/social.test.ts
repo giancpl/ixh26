@@ -13,6 +13,9 @@ class MemoryStorage implements Storage {
   async put<T>(key: string, value: T) {
     this.map.set(key, structuredClone(value));
   }
+  serialized() {
+    return JSON.stringify([...this.map]);
+  }
 }
 
 describe("Nostr auth & VaultService", () => {
@@ -45,7 +48,29 @@ describe("Nostr auth & VaultService", () => {
     await vault2.importBackup(backup, "pass123");
     await vault2.unlock("pass123");
     expect(vault2.publicKey).toBe(expectedPubkey);
-  });
+  }, 30_000);
+
+  it("preserves an encrypted identity after failed unlock and persists no raw credentials", async () => {
+    const store = new MemoryStorage();
+    const credentials = newCredentials();
+    const vault = new VaultService(store);
+    await vault.create(credentials, "correct password");
+    const original = await vault.exists();
+    await vault.unlock("correct password");
+    const publicKey = vault.publicKey;
+    for (const secret of [credentials.mnemonic, credentials.nostrSecret, credentials.dataKey]) {
+      expect(store.serialized()).not.toContain(secret);
+    }
+    vault.lock();
+
+    const refreshed = new VaultService(store);
+    await expect(refreshed.unlock("wrong password")).rejects.toThrow();
+    expect(await refreshed.exists()).toEqual(original);
+    expect(refreshed.unlocked).toBe(false);
+    await refreshed.unlock("correct password");
+    expect(refreshed.publicKey).toBe(publicKey);
+    refreshed.lock();
+  }, 30_000);
 
   it("interoperates between WebCrypto AES-GCM and @noble/ciphers fallback", async () => {
     const rawKey = crypto.getRandomValues(new Uint8Array(32));

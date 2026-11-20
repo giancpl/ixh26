@@ -91,6 +91,66 @@ const assets = {
     width: 2300,
     height: 2300,
   },
+  camera: {
+    file: "camera.svg",
+    viewBox: "0 0 1400 1400",
+    width: 1400,
+    height: 1400,
+  },
+  heart: {
+    file: "heart.svg",
+    viewBox: "0 0 1260 1120",
+    width: 1260,
+    height: 1120,
+  },
+  qr: {
+    file: "qr.svg",
+    viewBox: "0 0 1260 1260",
+    width: 1260,
+    height: 1260,
+  },
+  shield: {
+    file: "shield.svg",
+    viewBox: "0 0 980 1400",
+    width: 980,
+    height: 1400,
+  },
+  wrench: {
+    file: "wrench.svg",
+    viewBox: "0 0 700 1680",
+    width: 700,
+    height: 1680,
+  },
+  bookmark: {
+    file: "bookmark.svg",
+    viewBox: "0 0 980 1120",
+    width: 980,
+    height: 1120,
+  },
+  star: {
+    file: "star.svg",
+    viewBox: "0 0 1540 1400",
+    width: 1540,
+    height: 1400,
+  },
+  smartphone: {
+    file: "smartphone.svg",
+    viewBox: "0 0 980 1540",
+    width: 980,
+    height: 1540,
+  },
+  smile: {
+    file: "smile.svg",
+    viewBox: "0 0 1540 1540",
+    width: 1540,
+    height: 1540,
+  },
+  sunglasses: {
+    file: "sunglasses.svg",
+    viewBox: "0 0 1540 1540",
+    width: 1540,
+    height: 1540,
+  },
 } as const;
 
 export type PixelIconName = keyof typeof assets;
@@ -134,3 +194,13 @@ export const Hourglass = (props: IconProps) => <PixelIcon name="hourglass" {...p
 export const AlertCircle = (props: IconProps) => <PixelIcon name="warning" {...props} />;
 export const UserRound = (props: IconProps) => <PixelIcon name="user" {...props} />;
 export const Globe = (props: IconProps) => <PixelIcon name="globe" {...props} />;
+export const Camera = (props: IconProps) => <PixelIcon name="camera" {...props} />;
+export const Heart = (props: IconProps) => <PixelIcon name="heart" {...props} />;
+export const QrCode = (props: IconProps) => <PixelIcon name="qr" {...props} />;
+export const Shield = (props: IconProps) => <PixelIcon name="shield" {...props} />;
+export const Wrench = (props: IconProps) => <PixelIcon name="wrench" {...props} />;
+export const Bookmark = (props: IconProps) => <PixelIcon name="bookmark" {...props} />;
+export const Star = (props: IconProps) => <PixelIcon name="star" {...props} />;
+export const Smartphone = (props: IconProps) => <PixelIcon name="smartphone" {...props} />;
+export const EmojiSmile = (props: IconProps) => <PixelIcon name="smile" {...props} />;
+export const EmojiCool = (props: IconProps) => <PixelIcon name="sunglasses" {...props} />;

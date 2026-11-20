@@ -167,3 +167,16 @@ export interface NostrSigner {
   npub: string;
   sign(template: EventTemplate): Promise<Event>;
 }
+
+export interface AndroidBridgePort {
+  getServerUrl(): string;
+  setServerUrl(url: string): void;
+  capturePhoto(): void;
+}
+
+declare global {
+  interface Window {
+    AndroidBridge?: AndroidBridgePort;
+    __onAndroidPhotoCaptured?: (itemJson: string) => void;
+  }
+}
