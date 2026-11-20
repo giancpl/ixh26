@@ -1,0 +1,98 @@
+# Overlay: docker compose -p photoanchor -f compose.regtest.yml -f compose.social.yml ...
+name: photoanchor
+
+x-social: &social
+  image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-social:local
+  build:
+    context: .
+    dockerfile: docker/social/Dockerfile
+  networks: [regtest, social]
+  volumes:
+    - bitcoin:/bitcoin:ro
+    - social-data:/data
+    - artifacts:/artifacts
+  environment: &social-env
+    PHOTOANCHOR_DATA_DIR: /data
+    PHOTOANCHOR_PUBLIC_URL: ${PHOTOANCHOR_PUBLIC_URL:-http://127.0.0.1:8080}
+    PHOTOANCHOR_RELAY_URL: ws://relay:8080
+    PHOTOANCHOR_NETWORK: regtest
+    PHOTOANCHOR_CALENDARS: http://calendar:14788
+    PHOTOANCHOR_BITCOIN_CONF: /config/client.conf
+    PHOTOANCHOR_TIMEOUT: "10"
+
+services:
+  bitcoin:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-bitcoin:30.2
+  bootstrap:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  calendar:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-calendar:regtest
+  settlement:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  demo:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  integration:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  relay:
+    image: scsibug/nostr-rs-relay@sha256:48d54c2d2781577cf3ed2951112f0953dc2c5e7c9d2ea20c64e8c0fa37d16e4d
+    command: ["./nostr-rs-relay", "--config", "/etc/nostr.toml", "--db", "/usr/src/app/db"]
+    networks: [social]
+    ports: ["127.0.0.1:${PHOTOANCHOR_RELAY_PORT:-7777}:8080"]
+    volumes:
+      - relay-data:/usr/src/app/db
+      - ./docker/social/relay.toml:/etc/nostr.toml:ro,z
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "echo > /dev/tcp/127.0.0.1/8080"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  api:
+    <<: *social
+    ports: ["127.0.0.1:${PHOTOANCHOR_API_PORT:-8080}:8080"]
+    depends_on:
+      relay:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).close()"]
+      interval: 2s
+      timeout: 4s
+      retries: 30
+    restart: unless-stopped
+  worker:
+    <<: *social
+    command: ["python", "-m", "social.worker"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  social-demo:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "/app/scripts/social_demo.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_API_URL: http://api:8080
+    depends_on:
+      api:
+        condition: service_healthy
+  social-tests:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "pytest", "-q", "-m", "social", "tests/test_social_integration.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_API_URL: http://api:8080
+      PHOTOANCHOR_SOCIAL_TEST: "1"
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  social:
+    # A bridge is needed for Docker's loopback port publishing. Bitcoin and
+    # calendar stay exclusively on the separate internal regtest network.
+    driver: bridge
+volumes:
+  social-data:
+  relay-data:

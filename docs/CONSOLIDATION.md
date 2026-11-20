@@ -16,7 +16,7 @@ publication and timestamp contracts in the same product.
 | 1 | Shared contracts, genuine signed fixtures, protocol validation, bundle CLI, optional packaging and offline gate | Integrated; validation recorded below |
 | 2 | Add the target `/v1` application backend; durable independent relay and OTS jobs | Integrated; legacy `/api` consumers remain separate |
 | 3 | Move photo consumers to kind 20 and the signed-event OTS payload | Pending |
-| 4 | Consolidate Docker services; explicit mining by default, optional automated demo mode | Pending |
+| 4 | Consolidate Docker services; explicit operator mining, automated headless demo | Integrated; real isolated demo passed |
 | 5 | Reconcile Android with the native Compose client; selectively preserve mobile UI improvements | Pending |
 | 6 | Complete CI, fresh-volume regtest demo and the deferred two-phone acceptance | Pending |
 
@@ -158,3 +158,43 @@ their consumers are migrated. They do not share a database or proof directory
 with `social/`. Deploy the target backend for the native MVP, and do not present
 legacy image-only timestamps as signed-event timestamps. Docker orchestration,
 Android reconciliation and legacy UI migration have separate integration gates.
+
+## Stage 4: isolated Docker orchestration
+
+The backend was merged through PR [#3](https://github.com/giancpl/ixh26/pull/3)
+after hosted checks passed on both Python versions. The complete offline suite
+also passed locally on Python 3.14: 103 passed, 2 deselected (22.10 s).
+
+The social overlay, dedicated pinned relay, build images, demo and deployment
+scripts are imported from the earlier MVP. The old standalone Compose workflow
+remains available. Integration containers explicitly select their test files so
+optional legacy web or protocol dependencies do not affect standalone OTS.
+No process continuously mines blocks. `social-demo.sh` performs explicit mining
+as part of its bounded headless test; `social-mine.sh` is the operator command.
+
+Image prefix, Compose project and loopback ports are configurable independently.
+The current validation used `photoanchor-consolidation` for both project and
+image prefix, API port 18080 and relay port 17777. Existing `photoanchor` and
+`upp-regtest` containers, images and volumes were left intact.
+
+Executed real demo on newly created project volumes, 2026-11-20:
+
+- Event: `913c2b15effcf4eebdf3536551a846f51a896afd031839b82e8214050513e86e`.
+- Relay publication: `PUBLISHED`; verification before mining: `PENDING`.
+- Fresh node verification after mining: `CONFIRMED`, network `regtest`,
+  block 102, timestamp 1795206007.
+- Independent exported bundle verification passed; altered JPEG was `INVALID`.
+- Evidence directory: `social-artifacts/social-0b1f8ea382004ef1ba9b3b4d177ec6bf/`.
+- No Android device was involved. This does not replace phone acceptance.
+
+The real standalone OTS integration passed (1 test, 8.05 s), as did the real
+social integration (1 test, 10.35 s). The rebuilt social image also passed all
+103 offline checks with networking disabled (3 live tests deselected, 23.08 s).
+An actual Compose `down` without volume deletion followed by `up --wait`
+preserved the event, relay history, original JPEG and confirmed proof. Fresh
+node and independent bundle checks before/after restart returned identical
+photo, payload and proof hashes; reports are in `.local/restart-{before,after}.json`.
+
+Historical Android validation in `docs/social/VALIDATION.md` remains clearly
+labelled as belonging to the earlier MVP. The current Android reconciliation
+has a separate PR and build gate.
