@@ -20,6 +20,21 @@ It does not collect a detached credential. Do not use it as a valid receipt.
 
 On the independent host:
 
+```sh
+python -m fingerprinto check-capture capture-export.zip
+```
+
+The command streams the original, checks SHA-256 and size against the unsigned
+report, validates the diagnostic schema and refuses unexpected ZIP members,
+links, unsupported compression and oversized inputs. It does not extract files.
+Exit 2 means the file/report agree but origin is still indeterminate; exit 3
+means a digest or size mismatch; exit 1 indicates malformed input or an
+operational error. A matching report can be forged together with its image,
+so this establishes transport consistency only, not camera origin. The JSON
+includes `report_authenticated: false` and labels device data as declarations.
+
+After this automated check, proceed with credential validation:
+
 1. Preserve the ZIP and original inputs. Extract these two known members.
 2. Calculate SHA-256 of `original.jpg` and compare it to the report. Also compare
    byte size. A mismatch stops the experiment.
@@ -54,3 +69,9 @@ multi-chunk byte preservation, valid ZIP entries, unchanged source, altered
 content, size mismatch and destination failure. The Android SDK/Gradle toolchain
 is not available here, so the Compose integration has not been built, installed
 or exercised on a handset. A qualifying real capture remains outstanding.
+
+The Java writer and Python host command have also been tested together using
+`android/tests/check_capture_interop.py <compiled-test-classes>`. It executes
+the Java export fixture, checks 200,000 original bytes through the Python CLI,
+and requires exit 2 with valid file binding and indeterminate origin. The sample
+is synthetic and does not test the Android UI or a real camera credential.

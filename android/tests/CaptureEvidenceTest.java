@@ -28,6 +28,18 @@ public class CaptureEvidenceTest {
                 require(zip.getNextEntry() == null);
             }
             require(Arrays.equals(Files.readAllBytes(original), bytes));
+            if (args.length == 1) {
+                String report = "{\"format\":\"fingerprinto-capture-diagnostic/v1\","
+                    + "\"asset\":\"original.jpg\",\"sha256\":\"" + hash + "\",\"size_bytes\":" + bytes.length + ","
+                    + "\"received_at_unix_ms\":1700000000000,\"device_time_trusted\":false,"
+                    + "\"manufacturer\":\"Fixture\",\"model\":\"Test\",\"os_build\":\"test\","
+                    + "\"sdk_int\":35,\"package_name\":\"com.example.photoanchor\",\"app_version_code\":1,"
+                    + "\"app_version_name\":\"0.1\",\"capture_route\":\"CameraX ImageCapture.OutputFileOptions\","
+                    + "\"camera_library_version\":\"1.4.1\",\"lens_selection\":\"back\",\"flash_mode\":2,"
+                    + "\"origin\":\"indeterminate\",\"reason\":\"credential_not_evaluated\",\"detached_credential_collected\":false}";
+                CaptureEvidence.write(original.toFile(), hash.toString(), bytes.length, report,
+                                      new FileOutputStream(args[0]));
+            }
             byte[] changed = bytes.clone();
             changed[123] ^= 1;
             Files.write(original, changed);

@@ -258,6 +258,21 @@ Android SDK/Gradle and a supported handset are unavailable in this environment;
 the Android UI integration is source-reviewed but not compiled/device-tested.
 No real credential was obtained or validated. Existing Python parts are unchanged.
 
+## Piece 7: independent capture diagnostic check
+
+`python -m fingerprinto check-capture capture.zip` now checks the diagnostic
+export described in [capture-feasibility.md](capture-feasibility.md). It streams
+and hashes the original JPEG without extracting it, validates the unsigned
+report schema and archive limits, and reports matching/mismatched size/hash.
+It never reports accepted origin or authenticated device/app metadata.
+
+Validation: 32 Python tests passed on Windows. The Java writer was compiled and
+executed in WSL and its ZIP was checked by the actual Python CLI in a reproducible
+interop test. CRC/structure limits, modified hashes/sizes, invalid JSON/types,
+links/unknown members and incomplete-vs-invalid exit codes are covered. This is
+transport validation with synthetic evidence; Android build/device validation
+and real credential validation remain outstanding.
+
 ## Next pieces
 
 1. Establish the real camera-credential route on target hardware, as required
