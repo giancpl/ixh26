@@ -6,7 +6,6 @@ from datetime import timedelta
 import json
 import signal
 import threading
-import time
 
 from nostr_sdk import Client, Event, RelayUrl
 from settlement import Diagnostic, SettlementResult, SettlementService, Status
@@ -104,12 +103,12 @@ class Worker:
                 # replacing independently verified payload/Bitcoin evidence.
                 result.diagnostics.extend(d for d in upgraded.diagnostics
                                           if d.code not in {"not_verified"})
-            self.store.settlement(event["id"], result)
+            self.store.settlement(event["id"], result, job=job)
             self.store.finish(job, done=result.status in (Status.CONFIRMED, Status.INVALID))
         except Exception:
             result = SettlementResult(Status.ERROR, network=self.config.network,
                                       diagnostics=[Diagnostic("operation_failed", "The settlement operation could not be completed.")])
-            self.store.settlement(event["id"], result)
+            self.store.settlement(event["id"], result, job=job)
             self.store.finish(job)
 
 

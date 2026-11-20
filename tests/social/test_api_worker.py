@@ -1,6 +1,5 @@
 """Offline HTTP/storage tests; only relay/calendar/Bitcoin boundaries are fake."""
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
 from io import BytesIO
 import hashlib
 import json
@@ -14,7 +13,7 @@ import httpx
 from nostr_sdk import EventBuilder, Keys, Kind, Tag
 import pytest
 
-from settlement import BitcoinEvidence, SettlementResult, SettlementService, Status
+from settlement import BitcoinEvidence, SettlementResult, Status
 from social.api import create_app
 from social.config import Config
 from social.storage import Store
@@ -307,3 +306,133 @@ def test_configuration_environment_defaults_and_regtest(monkeypatch, tmp_path):
     assert Config().network == "mainnet"
     with pytest.raises(ValueError):
         Config(public_url="http://user:password@localhost")
+
+
+def test_lost_heartbeat_and_expired_lease_cannot_overlap_execution(config):
+    store = Store(config)
+    store.accept(EVENT)
+    started, release = threading.Event(), threading.Event()
+    calls = []
+
+    class SlowRelay:
+        def publish(self, event):
+            calls.append(event)
+            started.set()
+            assert release.wait(4)
+
+    first = Worker(config, store=store, relay=SlowRelay())
+    # Simulate the failed heartbeat after a temporary database outage.
+    first.store.renew = lambda job: False
+    thread = threading.Thread(target=first.tick)
+    thread.start()
+    assert started.wait(2)
+    time.sleep(1.1)
+    second_relay = Relay()
+    second = Worker(config, store=Store(config), relay=second_relay)
+    assert second.tick() is True  # Takes expired SQLite lease, cannot get flock.
+    assert second_relay.events == []
+    release.set()
+    thread.join(3)
+    assert not thread.is_alive() and calls == [EVENT]
+    assert store.snapshot(EVENT["id"])["publication_status"] == "QUEUED"
+    force_due(store)
+    assert second.tick() is True
+    assert second_relay.events == [EVENT]
+    assert store.snapshot(EVENT["id"])["publication_status"] == "PUBLISHED"
+
+
+def test_stale_lease_owner_cannot_replace_settlement_metadata(config):
+    store = Store(config)
+    store.accept(EVENT)
+    first = store.claim(now=10000000000)
+    replacement = store.claim(now=10000000002)
+    assert replacement["owner"] != first["owner"]
+    store.settlement(EVENT["id"], SettlementResult(Status.ERROR), job=first)
+    assert store.snapshot(EVENT["id"])["settlement"] is None
+    store.settlement(EVENT["id"], SettlementResult(Status.PENDING), job=replacement)
+    assert store.snapshot(EVENT["id"])["settlement"]["status"] == "PENDING"
+
+
+def test_stream_limit_without_content_length(client, monkeypatch):
+    monkeypatch.setattr("social.api.MAX_MEDIA_BYTES", len(PHOTO) - 1)
+    async def stream():
+        yield PHOTO[:10]
+        yield PHOTO[10:]
+    response = client.post("/v1/media", content=stream(), headers={"Content-Type": "image/jpeg"})
+    assert response.status_code == 413
+
+
+def test_default_application_does_not_submit_to_public_calendars():
+    assert Config().ots_config().calendars == ()
+
+
+def test_calendar_and_node_outages_resume_to_real_proof_confirmation(client, app, config, monkeypatch):
+    from bitcoin.core import CBlockHeader
+    from opentimestamps.core.notary import BitcoinBlockHeaderAttestation
+    from opentimestamps.core.timestamp import Timestamp
+    fake_stamp(monkeypatch)
+    accept(client)
+    worker = Worker(config, relay=Relay())
+    worker.tick()
+    worker.tick()
+    original = app.state.store.proof_path(EVENT["id"]).read_bytes()
+    state = {"calendar": False, "node": False}
+
+    class Calendar:
+        url = "http://calendar:14788"
+        def get_timestamp(self, commitment, timeout=None):
+            if not state["calendar"]:
+                raise OSError("calendar offline")
+            timestamp = Timestamp(commitment)
+            timestamp.attestations.add(BitcoinBlockHeaderAttestation(105))
+            return timestamp
+
+    class Node:
+        def _call(self, method):
+            return {"chain": "regtest", "initialblockdownload": False, "blocks": 110, "headers": 110}
+        def getblockhash(self, height):
+            assert height == 105
+            return b"\x01" * 32
+        def getblockheader(self, block_hash):
+            return CBlockHeader(hashMerkleRoot=hashlib.sha256(build_payload(EVENT)).digest(), nTime=1700000100)
+        def close(self):
+            pass
+
+    def proxy(self):
+        if not state["node"]:
+            raise OSError("node offline")
+        return Node()
+
+    monkeypatch.setattr("settlement.ots_backend.remote_calendar", lambda uri: Calendar())
+    monkeypatch.setattr("settlement.ots_backend.OTSBackend._bitcoin_proxy", proxy)
+    force_due(app.state.store)
+    worker.tick()
+    pending = app.state.store.snapshot(EVENT["id"])["settlement"]
+    assert pending["status"] == "PENDING"
+    assert "calendar_unavailable" in {d["code"] for d in pending["diagnostics"]}
+    assert app.state.store.proof_path(EVENT["id"]).read_bytes() == original
+    state["calendar"] = True
+    force_due(app.state.store)
+    worker.tick()
+    unavailable = app.state.store.snapshot(EVENT["id"])["settlement"]
+    assert unavailable["status"] == "UNVERIFIABLE"
+    assert unavailable["bitcoin"]["block_height"] is None
+    state["node"] = True
+    force_due(app.state.store)
+    Worker(config, relay=Relay()).tick()
+    confirmed = app.state.store.snapshot(EVENT["id"])["settlement"]
+    assert confirmed["status"] == "CONFIRMED"
+    assert confirmed["network"] == "regtest" and confirmed["binding_checked"]
+    assert confirmed["bitcoin"] == {"block_height": 105, "block_time": 1700000100}
+    assert "regtest_only" in {d["code"] for d in confirmed["diagnostics"]}
+
+
+def test_write_errors_are_sanitized_without_partial_media(client, app, monkeypatch):
+    def fail(*args):
+        raise OSError("/private/internal/path rpcpassword=secret")
+    monkeypatch.setattr("social.api.publish_bytes", fail)
+    response = upload(client)
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "operation_failed"
+    assert "secret" not in response.text and "internal/path" not in response.text
+    assert list(app.state.store.media.iterdir()) == []
