@@ -288,16 +288,87 @@ accepted; the attempted build was interrupted. The Gradle JUnit task remains
 unrun. The 32 Python tests were rerun successfully. Android capture UI,
 permissions, document picker and camera output still require build/device tests.
 
-## Next pieces
+## Piece 9: Android-compatible receipt construction
+
+Added `ReceiptV1.java`: deterministic CBOR encoding, bounded streaming evidence
+hashing, the exact tree through R, receipt export with a supplied unchanged DER
+signature, C and SHA256 helpers. Constructor input arrays and certificate arrays
+are copied to prevent later caller mutation. UTF-8 encoding rejects unpaired
+surrogates and enforces encoded-byte limits. Signed 64-bit times include the
+minimum negative value. No new signature, origin or enrollment decision is made.
+
+Validated using the local JDK 17 compiler and a standalone JVM, without the
+Android SDK or accepting its license. All intermediates, receipt bytes and C
+match the four manual fixtures. Four JCA signatures verify over R and fail over
+bare T. Eight additional Python-generated integer/Unicode boundary cases pass;
+tests also cover mutated caller arrays, altered asset roots, credential placement,
+empty credentials, source I/O failure and invalid Unicode/text sizes.
+Reproduce from the repository root with
+`bash android/tests/run-receipt-vectors.sh` (JDK 17+ and Python 3.11+ required).
+
+This completes the Android-side byte construction library. Keystore generation,
+attested enrollment, signing and CameraX integration are still outstanding;
+the full Android application remains unbuilt pending the SDK setup decision.
+
+## Piece 10: installation key and signing module
+
+Added `InstallationKeys.kt` with stable P-256 AndroidKeyStore provisioning,
+external enrollment challenge, explicit StrongBox requirement, serialized
+provisioning, atomic local SPKI/challenge records excluded from backup, evidence
+retrieval and signRoot guarded by the expected installation identifier. Existing
+aliases, incomplete state and key mismatches fail instead of replacing identity.
+No local state flag is treated as enrollment or camera-origin acceptance.
+
+Added `InstallationSignature.java`: exact SPKI/P-256 validation, strict DER
+and scalar validation, JCA SHA256withECDSA signing and immediate verification.
+It preserves signature bytes without s normalization. JVM tests cover genuine
+signatures, wrong root/key, invalid points, malformed DER and root-size errors.
+A fresh Java-produced signature was independently verified by the Python module.
+The standalone tests have a Gradle JUnit adapter for later use on the build
+branch. No Android SDK installation, Android app build or hardware test occurred.
+The Android-specific adapter is source-reviewed only, including atomic storage
+and process/file locking; its device behavior remains to be tested.
+
+The API is a primitive, not production receipt issuance: origin validation and
+independent enrollment acceptance must precede signing; the caller must persist
+the exact signature/receipt once and reuse it for retries. Full signed-record
+persistence and interrupted provisioning recovery remain outstanding.
+
+## Piece 11: independent enrollment verifier
+
+Added a bounded Android attestation DER reader, restricted pinned-chain and
+hardware/application policy verification, verifier-owned revocation snapshot
+checks, persistent policy-scoped challenge issuance and atomic one-use
+consumption. `enroll_receipt` checks receipt signature possession before intake;
+it returns separate enrollment/origin/signature outcomes and policy diagnostics.
+No phone-supplied trust flags, roots, time or revocation metadata are used.
+
+See [enrollment-verifier.md](enrollment-verifier.md) for inputs, API, restricted
+X.509/Android profiles and remaining deployment responsibilities. In particular,
+authenticated production revocation acquisition, real trust configuration and
+durable/historical enrollment-decision recovery are not supplied by this piece.
+No production Android hardware compatibility is claimed from synthetic tests.
+
+Validation: 44 Python tests passed, including synthetic attestation acceptance,
+bad signatures, wrong root/key/app/hardware/boot state, stale/missing revocation,
+unknown profiles, malformed DER, appended attacker certificates, policy scope,
+expiry, replay, concurrent consumption, issuer RSA/EC, StrongBox and receipt
+proof of possession. No SDK or app build was used; XRPL remains out of scope.
+
+## Next pieces (crypto-module scope)
 
 1. Establish the real camera-credential route on target hardware, as required
    by the manual, before enabling production receipt issuance.
-2. Configure and implement enrollment/origin trust verification, including
-   verifier-owned roots, revocation, policy and challenge records.
-3. Android enrollment, immutable capture records and receipt signing.
-4. Application integration and a real end-to-end lifecycle. Evidence-bundle
-   transport and Bitcoin/OTS receipt transport are implemented above;
-   the alternative XRPL backend remains unimplemented.
+2. Origin-credential validator and policy; production Android trust configuration
+   and authenticated revocation-status acquisition for the implemented enrollment
+   verifier. Validate its restricted path profile against actual target hardware.
+3. Consistent signed-record persistence/retry handling and durable, authenticated
+   enrollment-decision retention/recovery. The intake verifier and challenge
+   issuance/consumption store are implemented, but historical receipt verification
+   must be bound to retained trusted enrollment evidence.
+4. Module-level integration and tests with real evidence. Application compilation
+   and UI/server integration are deferred to another branch by user request;
+   XRPL is excluded. Existing Bitcoin/OTS module transport remains available.
 
 Hardware attestation and origin acceptance require deployment trust policy and
 real samples; synthetic fixtures cannot establish either.

@@ -40,6 +40,7 @@ class VerificationResult:
     # These are reconstructed values, not claims of ledger inclusion.
     computed: dict[str, str] = field(default_factory=dict)
     anchor_details: dict = field(default_factory=dict)
+    enrollment_details: dict = field(default_factory=dict)
     evaluated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     verifier_profile: str = "fingerprinto/v1-signature-only"
 
