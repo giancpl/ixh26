@@ -10,6 +10,7 @@ regtest-artifacts/
 .worktrees/
 .local/
 social-artifacts/
+.photoanchor/
 
 
 # Android / Gradle
