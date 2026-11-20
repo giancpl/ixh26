@@ -1,8 +1,10 @@
 # UPP Bitcoin settlement
 
-The repository is being consolidated on `integration/project-consolidation`,
-starting from `main`. The first stage adds the shared PhotoAnchor protocol and
-independent bundle verifier alongside the existing applications. See the
+The repository is being consolidated through small PRs from separate
+`integration/*` branches. Shared PhotoAnchor contracts, an independent bundle
+verifier and the target `/v1` API are available alongside the existing web app.
+Run the real local Nostr/OTS demo with `./scripts/social-demo.sh`; see the
+[social setup guide](docs/social/README.md). See the
 [consolidation checklist](docs/CONSOLIDATION.md) for the migration order,
 compatibility boundaries and checks actually run on this branch.
 

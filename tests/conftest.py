@@ -25,7 +25,7 @@ def proof_bytes(payload: bytes, *, bitcoin: bool = False) -> bytes:
 
 @pytest.fixture(autouse=True)
 def offline(request: Any, monkeypatch: Any) -> None:
-    if request.node.get_closest_marker("network") or request.node.get_closest_marker("regtest"):
+    if any(request.node.get_closest_marker(marker) for marker in ("network", "regtest", "social")):
         return
 
     def forbidden(*args: Any, **kwargs: Any) -> None:
