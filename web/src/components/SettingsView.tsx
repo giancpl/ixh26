@@ -2,42 +2,45 @@ import { useState, type FormEvent } from "react";
 import type { MessagingPort, NostrSigner } from "../services/contracts";
 import type { SocialService } from "../services/social";
 import { Globe, KeyRound, UserRound } from "./PixelIcon";
-import { Feedback, Field, PasswordInput, useOperation } from "./primitives";
+import { Feedback, Field, useOperation } from "./primitives";
 
 export default function SettingsView({
   signer,
   social,
   messenger,
   exportBackup,
-  changePassword,
+  onLogout,
   notify,
 }: {
   signer: NostrSigner;
   social: SocialService;
   messenger?: MessagingPort;
   exportBackup?: () => Promise<void>;
-  changePassword?: (curr: string, next: string) => Promise<void>;
+  onLogout?: () => void;
   notify: (msg: string) => void;
 }) {
   const existingProfile =
-    messenger?.state.profile.draft ||
-    social.state.profiles.get(signer.pubkey) || { name: "", about: "" };
+    messenger?.state.profile.draft?.name
+      ? messenger.state.profile.draft
+      : social.state.profiles.get(signer.pubkey) ||
+        messenger?.state.profile.draft || { name: "", about: "" };
 
   const [name, setName] = useState(existingProfile.name);
   const [about, setAbout] = useState(existingProfile.about);
   const [relaysText, setRelaysText] = useState(social.state.relays.join("\n"));
-  const [currPass, setCurrPass] = useState("");
-  const [nextPass, setNextPass] = useState("");
+  const androidBridge =
+    typeof window !== "undefined" ? window.AndroidBridge : undefined;
+  const [backendUrl, setBackendUrl] = useState(
+    () => androidBridge?.getServerUrl?.() ?? "",
+  );
   const task = useOperation();
 
   async function saveAndPublishProfile(e: FormEvent) {
     e.preventDefault();
     await task.run(async () => {
+      await social.publishProfile(name, about);
       if (messenger) {
         await messenger.saveProfile({ name, about });
-        await messenger.publishProfile();
-      } else {
-        await social.publishProfile(name, about);
       }
       notify("Profilo Nostr (kind-0) pubblicato sui relay!");
     });
@@ -56,14 +59,19 @@ export default function SettingsView({
     });
   }
 
-  async function updatePass(e: FormEvent) {
+  async function saveAndroidBackend(e: FormEvent) {
     e.preventDefault();
-    if (!changePassword) return;
+    if (!androidBridge) return;
     await task.run(async () => {
-      await changePassword(currPass, nextPass);
-      setCurrPass("");
-      setNextPass("");
-      notify("Password locale aggiornata.");
+      const clean = backendUrl.trim().replace(/\/+$/, "");
+      androidBridge.setServerUrl(clean);
+      setBackendUrl(clean);
+      await social.connect(social.state.relays);
+      notify(
+        clean
+          ? `Server backend impostato: ${clean}`
+          : "Modalità locale attiva.",
+      );
     });
   }
 
@@ -122,46 +130,62 @@ export default function SettingsView({
             Connetti ai relay
           </button>
         </form>
+
+        {androidBridge && (
+          <form
+            onSubmit={(e) => void saveAndroidBackend(e)}
+            style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--bd)" }}
+          >
+            <Field
+              label="Server Backend BitPin (LAN / VPN)"
+              hint="Indirizzo del server BitPin (es. http://192.168.1.x:8787 o http://10.0.2.2:8787). Lascia vuoto per usare il relay locale integrato nell'app."
+            >
+              <input
+                className="mono"
+                value={backendUrl}
+                onChange={(e) => setBackendUrl(e.target.value)}
+                placeholder="http://192.168.1.x:8787"
+              />
+            </Field>
+            <button className="btn-primary" disabled={task.busy}>
+              Salva server backend
+            </button>
+          </form>
+        )}
       </section>
 
-      {signer.mode === "vault" && exportBackup && changePassword && (
+      {signer.mode === "vault" && exportBackup && (
         <section className="surf settings-card">
           <h3 style={{ marginBottom: 12 }}>
-            <KeyRound size={18} /> Chiavi, Backup &amp; Password Vault
+            <KeyRound size={18} /> Chiavi &amp; Backup Identità
           </h3>
           <p className="field-hint" style={{ marginBottom: 12 }}>
-            Esporta un backup JSON cifrato delle tue chiavi Nostr per ripristinarle
-            su altri browser o dispositivi.
+            La tua sessione Nostr resta sempre attiva su questo dispositivo senza
+            richiedere password all'avvio. Esporta un backup JSON delle tue chiavi
+            Nostr per conservarle o ripristinarle su altri dispositivi.
           </p>
           <button
             type="button"
-            className="btn-primary"
-            style={{ marginBottom: 18 }}
+            className="btn-primary wide"
             onClick={() =>
               void task.run(async () => {
                 await exportBackup();
-                notify("Backup cifrato scaricato.");
+                notify("Backup identità scaricato.");
               })
             }
           >
-            Esporta backup cifrato (.json)
+            Esporta backup (.json)
           </button>
-
-          <form onSubmit={(e) => void updatePass(e)}>
-            <PasswordInput
-              label="Password attuale (vuota se non impostata)"
-              value={currPass}
-              onChange={setCurrPass}
-              autoComplete="current-password"
-            />
-            <PasswordInput
-              label="Nuova password locale"
-              value={nextPass}
-              onChange={setNextPass}
-              autoComplete="new-password"
-            />
-            <button disabled={task.busy}>Aggiorna password</button>
-          </form>
+          {onLogout && (
+            <button
+              type="button"
+              className="wide"
+              style={{ marginTop: 10 }}
+              onClick={onLogout}
+            >
+              Cambia profilo / Esci
+            </button>
+          )}
         </section>
       )}
     </div>

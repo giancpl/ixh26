@@ -67,33 +67,24 @@ export default function MessagesView({
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 14,
-          flexWrap: "wrap",
-          gap: 10,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="section-header-bar">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LockKeyhole size={18} />
-          <span className="field-hint">
-            Chat cifrate end-to-end Nostr (NIP-17 / NIP-44 / NIP-59) · Stato:{" "}
-            <strong>{chat.status}</strong>
+          <h2 style={{ fontSize: 18 }}>Messaggi privati</h2>
+          <span className={`badge ${chat.status === "connected" ? "ok" : ""}`}>
+            {chat.status}
           </span>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
           <button type="button" onClick={onShareProfile}>
-            <Share2 size={14} /> Condividi mio QR
+            <Share2 size={14} /> Mio QR
           </button>
           <button
             type="button"
             className="btn-primary"
             onClick={() => setShowAdd(!showAdd)}
           >
-            + Nuovo contatto
+            + Contatto
           </button>
         </div>
       </div>

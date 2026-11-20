@@ -228,3 +228,55 @@ user's explicit request. It is not imported into the Nostr payload or Android
 capture path. Web UX and the automatic-mining legacy branch require their own
 compatibility review; successful native integration does not imply that their
 distinct contracts have been migrated.
+
+## Compatible web UX recovery
+
+The `feature-mobileApp` source is being recovered selectively on
+`integration/consolidate-web-ux`. It improves the responsive layout, capture
+flow, profile/settings views, messaging and pixel icons in `web/`, with its
+own production-build and unit-test CI job. Navigation preferences are public
+UI state; the existing encrypted vault and password unlock remain unchanged.
+
+The source branch's persisted raw credentials, passwordless automatic profile
+replacement and disabled session locking are deliberately excluded. Its
+Android WebView bridge and generated web bundles are also excluded: the native
+client is the chosen Android app, and built frontend assets stay build outputs.
+The source branch is retained; it is not declared fully merged or deleted.
+
+Executed locally: `npm ci`, `npm run build` (TypeScript and Vite) and `npm test`:
+5 passed. The tests include encrypted backup/signing interoperability and
+preservation of identity after a wrong password. The real PBKDF2 work factor
+is retained; those tests have a 30-second allowance. No credential is written
+to plain localStorage or IndexedDB by the recovered code.
+
+This is a legacy UI compatibility PR, not a web implementation of the `/v1`
+contract. Web photos still use kind 1 and image-byte timestamps; the native
+client uses kind 20 and signed-event payloads. The `server/` API is unchanged
+by this UX recovery. Browser/device acceptance is not inferred from the build.
+
+## PR ledger and remaining gates
+
+| PR | Scope | Outcome |
+|---|---|---|
+| [#2](https://github.com/giancpl/ixh26/pull/2) | Shared contracts/protocol | Merged after Python 3.11/3.14 CI passed |
+| [#3](https://github.com/giancpl/ixh26/pull/3) | Durable /v1 backend | Merged after Python 3.11/3.14 CI passed |
+| [#4](https://github.com/giancpl/ixh26/pull/4) | Docker infrastructure | Merged after CI, real demo and restart checks |
+| [#5](https://github.com/giancpl/ixh26/pull/5) | Native Android reconciliation | Merged after Python CI and hosted APK/JVM/lint passed |
+| [#6](https://github.com/giancpl/ixh26/pull/6) | Compatible web UX | CI gate before merge |
+
+Android's initial hosted setup failed because the action requested the retired
+SDK package `tools`. Selecting `platform-tools` fixed setup; both subsequent
+hosted Android builds passed, in 3 min 35 s and 3 min 57 s. The locally built
+APK SHA-256 is
+`9594210e1851cbb4d9346f940adf9fbcade37a9da657b0bd29b068d46dc1771c`.
+Hosted APKs use the runner's own debug signing key and need not have that hash.
+
+The original worktrees and source branches are preserved. Remaining gates:
+
+- The legacy automatic-mining branch needs a separate opt-in configuration
+  review, including its verification fallback and proof-write behavior; do not
+  merge it wholesale into the explicit-mining native MVP.
+- Migrate legacy web posts and media URLs only with a versioned compatibility
+  plan; preserve old signed events and image-byte proofs verbatim.
+- Perform actual two-phone acceptance when the user resumes it.
+- Keep `leomain` separate as explicitly requested; it is outside this sequence.

@@ -1,4 +1,11 @@
-import { Bitcoin, Hourglass, Share2 } from "./PixelIcon";
+import {
+  ArrowRight,
+  Bitcoin,
+  Camera,
+  Globe,
+  Hourglass,
+  Smartphone,
+} from "./PixelIcon";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   Board,
@@ -11,8 +18,6 @@ import type { SocialService } from "../services/social";
 import { AnchorBadge } from "./PinCard";
 import { Feedback, Field, formatTime, sha256File, useOperation } from "./primitives";
 
-type CameraTab = "android" | "web" | "file";
-
 type StagedPhoto = {
   sha256: string;
   url: string;
@@ -23,6 +28,19 @@ type StagedPhoto = {
   anchor: CameraInboxItem["anchor"];
   fromInbox?: boolean;
 };
+
+function stageFromItem(item: CameraInboxItem, fromInbox: boolean): StagedPhoto {
+  return {
+    sha256: item.sha256,
+    url: item.url,
+    mime: item.mime || "image/jpeg",
+    width: item.width,
+    height: item.height,
+    source: item.source || "android-photoanchor",
+    anchor: item.anchor,
+    fromInbox,
+  };
+}
 
 export default function CameraModulePanel({
   signer,
@@ -41,17 +59,17 @@ export default function CameraModulePanel({
   onPublished: (pin: PhotoPin) => void;
   notify: (msg: string) => void;
 }) {
-  const [tab, setTab] = useState<CameraTab>("android");
-  const [serverUrls, setServerUrls] = useState<string[]>([]);
+  const isAndroidApp =
+    typeof window !== "undefined" && Boolean(window.AndroidBridge);
   const [staged, setStaged] = useState<StagedPhoto>();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [board, setBoard] = useState(boards[0]?.title || "PhotoAnchor");
-  const [tagsInput, setTagsInput] = useState("bitcoin, street");
-  const [autoAnchor, setAutoAnchor] = useState(true);
+  const [tagsInput, setTagsInput] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | undefined>(undefined);
+  const autoLaunched = useRef(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [facingBack, setFacingBack] = useState(true);
   const [flashBlink, setFlashBlink] = useState(false);
@@ -65,33 +83,45 @@ export default function CameraModulePanel({
     setCameraActive(false);
   }
 
+  function openNativeCamera() {
+    window.AndroidBridge?.capturePhoto();
+  }
+
+  // Native Android camera result.
   useEffect(() => {
-    let active = true;
-    void fetch("/api/info")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((info: { lan_urls?: string[] } | null) => {
-        if (!active || !info) return;
-        const urls = [...new Set([...(info.lan_urls ?? []), window.location.origin])];
-        setServerUrls(urls);
-      })
-      .catch(() => {
-        if (active) setServerUrls([window.location.origin]);
-      });
-    return () => {
-      active = false;
+    if (typeof window === "undefined") return;
+    window.__onAndroidPhotoCaptured = (itemJson: string) => {
+      try {
+        const data = JSON.parse(itemJson) as CameraInboxItem;
+        setStaged(stageFromItem(data, true));
+        setTitle((prev) => prev || "");
+        notify("Foto certificata! Dai un titolo e pubblica.");
+        void onInboxRefresh();
+      } catch {
+        /* ignore malformed payload */
+      }
     };
-  }, []);
+    return () => {
+      window.__onAndroidPhotoCaptured = undefined;
+    };
+  }, [notify, onInboxRefresh]);
+
+  // On the Android app, tapping "Scatta" opens the camera straight away.
+  useEffect(() => {
+    if (!isAndroidApp || autoLaunched.current || staged) return;
+    autoLaunched.current = true;
+    openNativeCamera();
+  }, [isAndroidApp, staged]);
 
   useEffect(() => {
     void onInboxRefresh();
-    const timer = setInterval(() => {
-      void onInboxRefresh();
-    }, 2500);
+    const timer = setInterval(() => void onInboxRefresh(), 4000);
     return () => clearInterval(timer);
   }, [onInboxRefresh]);
 
+  // Browser camera (desktop / mobile web only).
   useEffect(() => {
-    if (tab !== "web") {
+    if (isAndroidApp || staged) {
       stopStream();
       return;
     }
@@ -101,7 +131,7 @@ export default function CameraModulePanel({
       setCamError("");
       if (!navigator.mediaDevices?.getUserMedia) {
         setCamError(
-          "Fotocamera browser non disponibile (richiede HTTPS o localhost). Usa l'app Android PhotoAnchor o carica un file.",
+          "Fotocamera non disponibile: serve HTTPS o localhost, oppure usa l'app Android.",
         );
         return;
       }
@@ -118,7 +148,7 @@ export default function CameraModulePanel({
         if (videoRef.current) videoRef.current.srcObject = s;
         setCameraActive(true);
       } catch {
-        setCamError("Permesso fotocamera negato o nessuna webcam trovata.");
+        setCamError("Permesso fotocamera negato o nessuna fotocamera trovata.");
       }
     }
     void start();
@@ -129,35 +159,20 @@ export default function CameraModulePanel({
       window.removeEventListener("pagehide", onHide);
       stopStream();
     };
-  }, [tab, facingBack]);
+  }, [isAndroidApp, staged, facingBack]);
 
-  async function uploadBlob(blob: Blob, filename: string, source: PhotoSource) {
+  async function uploadCapture(blob: Blob) {
     const sha256 = await sha256File(blob);
     const fd = new FormData();
-    fd.append("file", blob, filename);
+    fd.append("file", blob, `photoanchor_${Date.now()}.jpg`);
     fd.append("sha256", sha256);
     fd.append("pubkey", signer.pubkey);
-    fd.append("source", source);
-    fd.append("auto_anchor", autoAnchor ? "1" : "0");
+    fd.append("source", "web-camera");
+    fd.append("auto_anchor", "1");
     const resp = await fetch("/api/photos", { method: "POST", body: fd });
     if (!resp.ok) throw new Error(await resp.text());
     const data = (await resp.json()) as CameraInboxItem;
-    setStaged({
-      sha256: data.sha256,
-      url: data.url,
-      mime: data.mime,
-      width: data.width,
-      height: data.height,
-      source: data.source,
-      anchor: data.anchor,
-    });
-    if (!title) {
-      setTitle(
-        source === "web-camera"
-          ? "Scatto dalla Fotocamera"
-          : "Foto PhotoAnchor",
-      );
-    }
+    setStaged(stageFromItem(data, false));
   }
 
   async function shootWebCamera() {
@@ -175,9 +190,14 @@ export default function CameraModulePanel({
       canvas.toBlob(resolve, "image/jpeg", 0.92),
     );
     if (!blob) throw new Error("Acquisizione fotogramma non riuscita.");
-    await task.run(() =>
-      uploadBlob(blob, `photoanchor_web_${Date.now()}.jpg`, "web-camera"),
-    );
+    await task.run(() => uploadCapture(blob));
+  }
+
+  function resetForm() {
+    setStaged(undefined);
+    setTitle("");
+    setDescription("");
+    setTagsInput("");
   }
 
   async function handlePublish(e: FormEvent) {
@@ -207,348 +227,73 @@ export default function CameraModulePanel({
         await social.ackCameraInbox(staged.sha256, pin.id);
         await onInboxRefresh();
       }
-      setStaged(undefined);
-      setTitle("");
-      setDescription("");
-      notify("Foto firmata con Nostr e pubblicata nella tua bacheca!");
+      resetForm();
+      notify("Pin pubblicato su Nostr!");
       onPublished(pin);
     });
   }
 
-  const mainUrl = serverUrls[0] || window.location.origin;
+  /* ---------- Step 2: publish ---------- */
+  if (staged) {
+    return (
+      <div className="camera-centered-shell">
+        <Feedback message={task.error} dismiss={task.clearError} />
+        <section className="surf camera-card-single">
+          <div className="step-indicator">
+            <span className="step done">1 · Scatto</span>
+            <span className="step active">2 · Pubblica</span>
+          </div>
 
-  return (
-    <div>
-      <div className="segmented" role="tablist">
-        <button
-          type="button"
-          className={tab === "android" ? "selected" : ""}
-          onClick={() => setTab("android")}
-        >
-          App Android PhotoAnchor ({inbox.length})
-        </button>
-        <button
-          type="button"
-          className={tab === "web" ? "selected" : ""}
-          onClick={() => setTab("web")}
-        >
-          Fotocamera Browser
-        </button>
-        <button
-          type="button"
-          className={tab === "file" ? "selected" : ""}
-          onClick={() => setTab("file")}
-        >
-          Carica da Galleria
-        </button>
-      </div>
-
-      <Feedback message={task.error} dismiss={task.clearError} />
-
-      <div className="camera-grid">
-        <div className="surf" style={{ padding: 20 }}>
-          {tab === "android" && (
-            <>
-              <h3 style={{ marginBottom: 6 }}>
-                App Android PhotoAnchor (Connessione Diretta)
-              </h3>
-              <p className="field-hint" style={{ marginBottom: 14 }}>
-                Nessun pairing necessario: se i dispositivi sono sulla stessa rete
-                locale o VPN, imposta semplicemente l'URL del backend nell'app
-                Android (o precompilalo in <span className="mono">local.properties</span>).
-                Ogni scatto viene ancorato su Bitcoin e arriva qui pronto da pubblicare.
-              </p>
-
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 12,
-                  background: "var(--soft)",
-                  border: "1px solid var(--bd)",
-                  marginBottom: 18,
-                }}
-              >
-                <div className="field-hint" style={{ marginBottom: 6 }}>
-                  Indirizzo Backend (IP locale / VPN):
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input className="mono" readOnly value={mainUrl} />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(mainUrl);
-                      notify("URL backend copiato!");
-                    }}
-                  >
-                    <Share2 size={14} /> Copia
-                  </button>
-                </div>
-                {serverUrls.length > 1 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                    {serverUrls.map((u) => (
-                      <button
-                        key={u}
-                        type="button"
-                        className="chip-btn mono"
-                        style={{ minHeight: 28, fontSize: 11 }}
-                        onClick={() => {
-                          void navigator.clipboard?.writeText(u);
-                          notify(`Copiato: ${u}`);
-                        }}
-                      >
-                        {u}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 10,
-                }}
-              >
-                <h4>Scatti in arrivo dalla Fotocamera ({inbox.length})</h4>
-                <button
-                  type="button"
-                  style={{ minHeight: 34, padding: "4px 10px", fontSize: 12 }}
-                  onClick={() => void onInboxRefresh()}
-                >
-                  Aggiorna
-                </button>
-              </div>
-
-              {inbox.length === 0 ? (
-                <div
-                  style={{
-                    padding: 18,
-                    borderRadius: 12,
-                    border: "1px dashed var(--bd)",
-                    textAlign: "center",
-                  }}
-                >
-                  <p className="field-hint">
-                    Nessuna foto in attesa dall'app Android. Scatta una foto con
-                    PhotoAnchor per vederla apparire qui in tempo reale.
-                  </p>
-                </div>
-              ) : (
-                <div className="inbox-list">
-                  {inbox.map((item) => (
-                    <div key={item.sha256} className="inbox-row">
-                      <img src={item.url} alt="Anteprima scatto" />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="mono" style={{ fontSize: 11 }}>
-                          {item.sha256.slice(0, 16)}…
-                        </div>
-                        <div className="field-hint">
-                          {formatTime(item.captured_at)} ·{" "}
-                          {Math.round(item.size_bytes / 1024)} KB
-                        </div>
-                        <div style={{ marginTop: 4 }}>
-                          <AnchorBadge anchor={item.anchor} />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={() => {
-                          setStaged({
-                            sha256: item.sha256,
-                            url: item.url,
-                            mime: item.mime,
-                            width: item.width,
-                            height: item.height,
-                            source: item.source,
-                            anchor: item.anchor,
-                            fromInbox: true,
-                          });
-                          setTitle(item.title || "Scatto PhotoAnchor");
-                        }}
-                      >
-                        Seleziona
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {tab === "web" && (
-            <div>
-              <Feedback message={camError} />
-              <div className="phone-viewfinder">
-                <video ref={videoRef} autoPlay playsInline muted />
-                <div className={`vf-flash ${flashBlink ? "on" : ""}`} />
-                <div className="vf-bar">
-                  <span className="badge solid">PhotoAnchor Web</span>
-                  <button
-                    type="button"
-                    className="shutter-ring"
-                    aria-label="Scatta foto"
-                    disabled={!cameraActive || task.busy}
-                    onClick={() => void shootWebCamera()}
-                  >
-                    <span className="shutter-core" />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-pill"
-                    style={{
-                      background: "rgba(255,255,255,0.2)",
-                      color: "#fff",
-                      border: 0,
-                    }}
-                    onClick={() => setFacingBack(!facingBack)}
-                  >
-                    Gira
-                  </button>
-                </div>
-              </div>
-              <p className="field-hint" style={{ marginTop: 10 }}>
-                Calcola SHA-256 nel browser prima dell'invio e ancora su Bitcoin
-                con OpenTimestamps.
-              </p>
-            </div>
-          )}
-
-          {tab === "file" && (
-            <div>
-              <h3 style={{ marginBottom: 8 }}>
-                Importa da Galleria o Pictures/PhotoAnchor
-              </h3>
-              <p className="field-hint" style={{ marginBottom: 14 }}>
-                Seleziona una foto JPEG, PNG o WebP salvata dal tuo modulo
-                fotocamera Android o dal computer. Calcoliamo l'impronta SHA-256
-                esatta senza ricomprimere i byte originali.
-              </p>
-              <Field label="Seleziona file immagine">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      void task.run(() => uploadBlob(f, f.name, "upload"));
-                    }
-                  }}
-                />
-              </Field>
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={autoAnchor}
-                  onChange={(e) => setAutoAnchor(e.target.checked)}
-                />
-                Ancora automaticamente su Bitcoin (OpenTimestamps) al caricamento
-              </label>
-            </div>
-          )}
-        </div>
-
-        <div className="surf" style={{ padding: 20 }}>
-          <h3 style={{ marginBottom: 12 }}>Pubblica Pin su Nostr</h3>
-          {!staged ? (
-            <div
-              style={{
-                padding: 28,
-                borderRadius: 14,
-                background: "var(--soft)",
-                border: "1px dashed var(--bd)",
-                textAlign: "center",
-              }}
-            >
-              <Bitcoin size={28} />
-              <p style={{ fontWeight: 700, marginTop: 10 }}>
-                Seleziona o scatta una foto a sinistra
-              </p>
-              <p className="field-hint" style={{ marginTop: 6 }}>
-                Potrai assegnare un titolo, scegliere una bacheca stile
-                Pinterest, verificare l'ancoraggio OpenTimestamps e firmare il
-                post con la tua chiave Nostr.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={(e) => void handlePublish(e)}>
-              <div
-                style={{
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  border: "1px solid var(--bd)",
-                  marginBottom: 14,
-                  maxHeight: 260,
-                  background: "#0d1124",
-                }}
-              >
-                <img
-                  src={staged.url}
-                  alt="Foto pronta"
-                  style={{
-                    width: "100%",
-                    maxHeight: 260,
-                    objectFit: "contain",
-                    display: "block",
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                <span className="mono" style={{ fontSize: 11 }}>
-                  SHA-256: {staged.sha256.slice(0, 18)}…
-                </span>
+          <form onSubmit={(e) => void handlePublish(e)}>
+            <div className="staged-preview-box">
+              <img src={staged.url} alt="Foto scattata" />
+              <div className="staged-preview-badge">
                 <AnchorBadge anchor={staged.anchor} />
               </div>
+            </div>
 
-              {staged.anchor.status === "UNANCHORED" && (
-                <button
-                  type="button"
-                  style={{ marginBottom: 12 }}
-                  onClick={() =>
-                    void task.run(async () => {
-                      const next = await social.stampAnchor(staged.sha256);
-                      setStaged({ ...staged, anchor: next });
-                    })
-                  }
-                >
-                  <Hourglass size={14} /> Esegui anchoring OpenTimestamps ora
-                </button>
-              )}
+            {staged.anchor.status === "UNANCHORED" && (
+              <button
+                type="button"
+                className="wide"
+                style={{ marginBottom: 14 }}
+                disabled={task.busy}
+                onClick={() =>
+                  void task.run(async () => {
+                    const next = await social.stampAnchor(staged.sha256);
+                    setStaged({ ...staged, anchor: next });
+                  })
+                }
+              >
+                <Hourglass size={14} /> Certifica su Bitcoin
+              </button>
+            )}
 
-              <Field label="Titolo del Pin">
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Es. Tramonto al Politecnico"
-                  maxLength={120}
-                  required
-                />
-              </Field>
+            <Field label="Titolo">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Dai un titolo al tuo scatto"
+                maxLength={120}
+                autoFocus
+                required
+              />
+            </Field>
 
-              <Field label="Descrizione (opzionale)">
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Racconta questo scatto..."
-                  rows={2}
-                  maxLength={500}
-                />
-              </Field>
+            <Field label="Descrizione (opzionale)">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Racconta questo scatto…"
+                rows={2}
+                maxLength={500}
+              />
+            </Field>
 
-              <div className="two-cols">
-                <Field label="Bacheca (Board)">
+            <details className="more-options">
+              <summary>Bacheca e tag</summary>
+              <div className="two-cols" style={{ marginTop: 12 }}>
+                <Field label="Bacheca">
                   <input
                     value={board}
                     onChange={(e) => setBoard(e.target.value)}
@@ -561,39 +306,139 @@ export default function CameraModulePanel({
                       <option key={b.id} value={b.title} />
                     ))}
                     <option value="PhotoAnchor" />
-                    <option value="Architettura" />
                     <option value="Street" />
                     <option value="Bitcoin" />
                   </datalist>
                 </Field>
-
-                <Field label="Tag (#)">
+                <Field label="Tag">
                   <input
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
-                    placeholder="bitcoin, torino, street"
+                    placeholder="torino, street"
                   />
                 </Field>
               </div>
+            </details>
 
-              <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setStaged(undefined)}
-                  disabled={task.busy}
-                >
-                  Annulla
-                </button>
-                <button className="btn-primary wide" disabled={task.busy}>
-                  {task.busy
-                    ? "Firma Nostr & pubblicazione…"
-                    : "Firma con Nostr & Pubblica Pin"}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+            <div className="publish-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  resetForm();
+                  if (isAndroidApp) openNativeCamera();
+                }}
+                disabled={task.busy}
+              >
+                Riscatta
+              </button>
+              <button className="btn-primary wide" disabled={task.busy}>
+                {task.busy ? "Pubblicazione…" : "Pubblica"}
+              </button>
+            </div>
+          </form>
+        </section>
       </div>
+    );
+  }
+
+  /* ---------- Step 1: capture ---------- */
+  return (
+    <div className="camera-centered-shell">
+      <Feedback message={task.error} dismiss={task.clearError} />
+
+      {isAndroidApp ? (
+        <section className="surf camera-card-single camera-launch">
+          <button
+            type="button"
+            className="shutter-launch"
+            aria-label="Apri fotocamera"
+            onClick={openNativeCamera}
+            disabled={task.busy}
+          >
+            <span />
+          </button>
+          <h2>Scatta una foto</h2>
+          <p className="field-hint camera-launch-hint">
+            Solo foto scattate ora: ogni scatto viene firmato e certificato su
+            Bitcoin prima di essere pubblicato.
+          </p>
+          <ol className="camera-steps">
+            <li>
+              <Camera size={13} /> Scatta
+            </li>
+            <li>
+              <Bitcoin size={13} /> Certifica
+            </li>
+            <li>
+              <Globe size={13} /> Pubblica
+            </li>
+          </ol>
+        </section>
+      ) : (
+        <section className="surf camera-card-single">
+          <Feedback message={camError} />
+          <div className="phone-viewfinder">
+            <video ref={videoRef} autoPlay playsInline muted />
+            <div className={`vf-flash ${flashBlink ? "on" : ""}`} />
+            <div className="vf-bar">
+              <span style={{ width: 56 }} />
+              <button
+                type="button"
+                className="shutter-ring"
+                aria-label="Scatta foto"
+                disabled={!cameraActive || task.busy}
+                onClick={() => void shootWebCamera()}
+              >
+                <span className="shutter-core" />
+              </button>
+              <button
+                type="button"
+                className="btn-pill vf-flip"
+                onClick={() => setFacingBack(!facingBack)}
+                aria-label="Cambia fotocamera"
+              >
+                <Smartphone size={16} />
+              </button>
+            </div>
+          </div>
+          <p className="field-hint" style={{ marginTop: 10, textAlign: "center" }}>
+            {task.busy
+              ? "Calcolo SHA-256 e certificazione su Bitcoin…"
+              : "Solo foto scattate ora vengono certificate e pubblicate."}
+          </p>
+        </section>
+      )}
+
+      {inbox.length > 0 && (
+        <section className="surf camera-card-single" style={{ marginTop: 16 }}>
+          <h4 style={{ textAlign: "center", marginBottom: 12 }}>
+            Scatti da pubblicare ({inbox.length})
+          </h4>
+          <div className="inbox-list">
+            {inbox.map((item) => (
+              <button
+                key={item.sha256}
+                type="button"
+                className="inbox-row inbox-row-btn"
+                onClick={() => setStaged(stageFromItem(item, true))}
+              >
+                <img src={item.url} alt="Anteprima scatto" />
+                <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                  <div style={{ fontWeight: 700 }}>
+                    {formatTime(item.captured_at)}
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <AnchorBadge anchor={item.anchor} />
+                  </div>
+                </div>
+                <span className="inbox-row-cta">
+                  Pubblica <ArrowRight size={13} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

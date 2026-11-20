@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { NostrUserSummary } from "../services/contracts";
 import { initials, shortNpub } from "../services/identity";
-import { MessageSquare, UserRound } from "./PixelIcon";
+import { MessageSquare, Star, UserRound } from "./PixelIcon";
 
 export default function UsersView({
   myPubkey,
@@ -36,21 +36,11 @@ export default function UsersView({
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 12,
-          marginBottom: 18,
-        }}
-      >
+      <div className="section-header-bar">
         <div>
-          <h2>Community su Nostr</h2>
+          <h2>Community</h2>
           <p className="field-hint">
-            Esplora i profili Nostr, guarda le foto degli altri utenti e seguili
-            (evento <span className="mono">kind-3</span>).
+            Scopri e segui gli altri fotografi su BitPin.
           </p>
         </div>
 
@@ -72,7 +62,7 @@ export default function UsersView({
         </div>
       </div>
 
-      <div style={{ maxWidth: 420, marginBottom: 18 }}>
+      <div style={{ maxWidth: 460, margin: "0 auto 18px" }}>
         <input
           type="search"
           value={query}
@@ -184,7 +174,13 @@ export default function UsersView({
                           void onToggleFollow(u.pubkey).finally(() => setBusyPk(null));
                         }}
                       >
-                        {following ? "Seguito ✓" : "Segui"}
+                        {following ? (
+                          <>
+                            <Star size={13} /> Seguito
+                          </>
+                        ) : (
+                          "Segui"
+                        )}
                       </button>
                       <button
                         type="button"

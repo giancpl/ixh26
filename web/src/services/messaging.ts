@@ -114,7 +114,54 @@ export class MessagingService implements MessagingPort {
   private profileBusy = false;
   private pendingProfile?: Event;
   private previews = new Map<string, ContactPreview>();
-  constructor(private vault: VaultService) {}
+  constructor(private vault: VaultService) {
+    this.restoreCacheSync();
+  }
+  private cacheKey() {
+    try {
+      return this.vault.unlocked
+        ? `bitpin-msg-cache:${this.vault.publicKey}`
+        : "";
+    } catch {
+      return "";
+    }
+  }
+  private restoreCacheSync() {
+    try {
+      if (typeof localStorage === "undefined") return;
+      const key = this.cacheKey();
+      if (!key) return;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const data = JSON.parse(raw) as Partial<MessengerState>;
+      if (Array.isArray(data.contacts)) this.state.contacts = data.contacts;
+      if (Array.isArray(data.messages)) this.state.messages = data.messages;
+      if (Array.isArray(data.relays) && data.relays.length)
+        this.state.relays = data.relays;
+      if (data.profile?.draft) this.state.profile = data.profile;
+      this.state.initialized = true;
+    } catch {
+      /* ignore */
+    }
+  }
+  private persistCacheSync() {
+    try {
+      if (typeof localStorage === "undefined") return;
+      const key = this.cacheKey();
+      if (!key) return;
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          contacts: this.state.contacts,
+          messages: this.state.messages.slice(-200),
+          relays: this.state.relays,
+          profile: this.state.profile,
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }
   subscribe(listener: () => void) {
     this.listeners.add(listener);
     return () => {
@@ -122,6 +169,7 @@ export class MessagingService implements MessagingPort {
     };
   }
   private emit() {
+    this.persistCacheSync();
     if (!this.stopped) this.listeners.forEach((fn) => fn());
   }
   private save() {
@@ -186,16 +234,12 @@ export class MessagingService implements MessagingPort {
     }
     this.state.initialized = true;
     this.emit();
-    this.state.messages = this.state.messages.map((m) =>
-      m.status === "pending"
-        ? {
-            ...m,
-            status: "failed",
-            error: "Sessione interrotta. Riprova l'invio.",
-          }
-        : m,
-    );
     await this.reconnect();
+    for (const pendingItem of this.outbox) {
+      if (!pendingItem.recipientAccepted || !pendingItem.senderAccepted) {
+        void this.deliver(pendingItem);
+      }
+    }
     void this.restorePublishedProfile().catch(() => {});
     if (!this.stopped)
       this.poll = setInterval(() => {
@@ -647,17 +691,7 @@ export class MessagingService implements MessagingPort {
     this.inboxes.clear();
     this.secret?.fill(0);
     this.secret = undefined;
-    this.state = {
-      contacts: [],
-      messages: [],
-      relays: [defaultRelayUrl()],
-      status: "disconnected",
-      profile: emptyProfile(),
-      initialized: false,
-    };
-    this.pendingProfile = undefined;
+    this.state.status = "disconnected";
     this.previews.clear();
-    this.outbox = [];
-    this.listeners.clear();
   }
 }
