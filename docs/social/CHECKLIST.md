@@ -10,11 +10,12 @@ No default-branch change, history rewrite or force push is part of this work.
 |---|---|---|---|
 | A | `feat/nostr-contracts` | `8b9425f`, `00cb5cb`: contracts, protocol, bundle CLI | 76 Python tests passed, 2 skipped before social integration was added |
 | B | `feat/social-api` | In progress | Pending |
-| C | `feat/android-nostr` | In progress | Pending |
+| C | `feat/android-nostr` | Foundation `d6ab7b0`; full app in progress | Base APK and native SDK JVM smoke test passed |
 | D/coordinator | `feat/social-infra` | Packaging, Compose, scripts, CI, docs | In progress |
 
-Shared phase-gate commit and final integrated validation will be recorded here
-after the base Android SDK build. Contracts are `contracts/openapi.json` and
+Shared phase-gate commit: `ef664b34b6ca5e0a8b7d7dc3183bc003762b0be2`.
+Both backend and Android consumer worktrees were fast-forwarded to this commit
+before parallel feature implementation. Contracts are `contracts/openapi.json` and
 `contracts/fixtures/`; changes must update consumers and vectors together.
 
 ## Automatic acceptance
@@ -22,12 +23,12 @@ after the base Android SDK build. Contracts are `contracts/openapi.json` and
 - [x] Frozen SDK-signed event, JPEG, payload and hashes; negative variants.
 - [x] Unicode, JSON escapes, tag order and profile rename Python vectors.
 - [x] Independent bundle CLI ignores receipt and reconstructs payload.
-- [ ] Android base build with official Nostr SDK and JDK 17.
+- [x] Android base build with official Nostr SDK and JDK 17 (APK + native JVM test).
 - [ ] Backend media/post limits, concurrency, restart and independent retry.
-- [ ] Existing 46 settlement offline checks remain passing.
+- [x] Existing 46 settlement offline checks remain passing.
 - [ ] Python/Kotlin shared vectors, actual native SDK checks.
 - [ ] Debug APK, unit tests and lint pass.
-- [ ] Real standalone regtest integration remains passing.
+- [x] Real standalone regtest integration remains passing (1 passed, 4.71 s).
 - [ ] Real social Docker lifecycle from fresh project volumes succeeds.
 - [ ] Bundle pending/confirmed and modified JPEG rejection through CLI.
 - [ ] Service restart retains posts, media and proofs.
