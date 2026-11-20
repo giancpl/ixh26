@@ -198,3 +198,28 @@ photo, payload and proof hashes; reports are in `.local/restart-{before,after}.j
 Historical Android validation in `docs/social/VALIDATION.md` remains clearly
 labelled as belonging to the earlier MVP. The current Android reconciliation
 has a separate PR and build gate.
+
+## Compatible web UX recovery
+
+The `feature-mobileApp` source is being recovered selectively on
+`integration/consolidate-web-ux`. It improves the responsive layout, capture
+flow, profile/settings views, messaging and pixel icons in `web/`, with its
+own production-build and unit-test CI job. Navigation preferences are public
+UI state; the existing encrypted vault and password unlock remain unchanged.
+
+The source branch's persisted raw credentials, passwordless automatic profile
+replacement and disabled session locking are deliberately excluded. Its
+Android WebView bridge and generated web bundles are also excluded: the native
+client is the chosen Android app, and built frontend assets stay build outputs.
+The source branch is retained; it is not declared fully merged or deleted.
+
+Executed locally: `npm ci`, `npm run build` (TypeScript and Vite) and `npm test`:
+5 passed. The tests include encrypted backup/signing interoperability and
+preservation of identity after a wrong password. The real PBKDF2 work factor
+is retained; those tests have a 30-second allowance. No credential is written
+to plain localStorage or IndexedDB by the recovered code.
+
+This is a legacy UI compatibility PR, not a web implementation of the `/v1`
+contract. Web photos still use kind 1 and image-byte timestamps; the native
+client uses kind 20 and signed-event payloads. The `server/` API is unchanged
+by this UX recovery. Browser/device acceptance is not inferred from the build.
