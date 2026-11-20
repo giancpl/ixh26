@@ -2,7 +2,6 @@ package com.example.photoanchor
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -14,228 +13,226 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import android.content.ContentValues
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.MediaStore
-import android.util.Size
-import android.widget.Toast
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.drawscope.scale
-import kotlin.math.cos
-import kotlin.math.sin
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.File
+import java.util.UUID
+import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { App() } }
+        setContent { MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF12695E))) { PhotoAnchorApp() } }
     }
 }
 
 @Composable
-fun App() {
-    val ctx = LocalContext.current
-    val wanted = remember {
-        buildList {
-            add(Manifest.permission.CAMERA)
-            // Android 13+: media images; Android 10-12: read external storage (writing to MediaStore needs none)
-            add(if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)
-        }.toTypedArray()
+private fun PhotoAnchorApp(model: PhotoAnchorModel = viewModel()) {
+    val state by model.state.collectAsStateWithLifecycle()
+    var tab by remember { mutableStateOf("Feed") }
+    LaunchedEffect(state.ready) { if (state.ready && state.name.isBlank()) tab = "Profile" }
+    val saveBundle = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) model.export(uri)
     }
-    fun has(p: String) = ContextCompat.checkSelfPermission(ctx, p) == PackageManager.PERMISSION_GRANTED
-    var camera by remember { mutableStateOf(has(Manifest.permission.CAMERA)) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        camera = has(Manifest.permission.CAMERA)
+    val checkCopy = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) model.verifyCopy(uri)
     }
-    LaunchedEffect(Unit) { if (wanted.any { !has(it) }) launcher.launch(wanted) }
-    if (camera) CameraScreen() else Box(Modifier.fillMaxSize(), Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Permesso fotocamera necessario")
-            Button(onClick = { launcher.launch(wanted) }) { Text("Concedi permessi") }
+    Scaffold(
+        topBar = {
+            Surface(color = MaterialTheme.colorScheme.primaryContainer) {
+                Column(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp)) {
+                    Text("PhotoAnchor", style = MaterialTheme.typography.headlineSmall)
+                    Text("Local Nostr · Bitcoin regtest", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        },
+        bottomBar = {
+            NavigationBar {
+                listOf("Feed", "Camera", "Profile").forEach { name ->
+                    NavigationBarItem(selected = tab == name, onClick = { tab = name },
+                        enabled = state.ready, icon = { Text(when (name) { "Feed" -> "▤"; "Camera" -> "◎"; else -> "○" }) },
+                        label = { Text(name) })
+                }
+            }
+        }
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Text(state.message, Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall)
+            if (state.queued > 0) Text("${state.queued} signed event(s) queued · retries preserve the signature",
+                Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
+            if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            when (tab) {
+                "Profile" -> ProfileScreen(state, model::saveProfile)
+                "Camera" -> if (state.name.isBlank()) {
+                    Text("Create your local profile first.", Modifier.padding(24.dp))
+                } else if (state.captured != null) {
+                    PublishScreen(state, model::publish, model::discard)
+                } else CameraScreen(state.busy, model::captured, model::cameraError)
+                else -> FeedScreen(state, model::refresh, model::select)
+            }
+        }
+    }
+    state.selected?.let { selected ->
+        AlertDialog(onDismissRequest = model::dismiss,
+            title = { Text("Verify photo") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    VerificationLine("Signature and event ID", state.verification?.event ?: "Checking on this device…")
+                    VerificationLine("JPEG integrity", state.verification?.integrity ?: "Checking original bytes…")
+                    VerificationLine("Bitcoin timestamp", state.verification?.timestamp ?: "Requesting a fresh local node check…")
+                    VerificationLine("Relay publication", state.verification?.publication ?: "Unknown")
+                    Text("The timestamp is verified by the configured local node. Regtest is a development blockchain, not a mainnet anchor.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("Names, captions and posted time are author declarations. A signature does not establish the scene's authenticity or capture time.",
+                        style = MaterialTheme.typography.bodySmall)
+                    SelectionContainer { Text("Signer: ${selected.pubkey}\nEvent: ${selected.id}", style = MaterialTheme.typography.labelSmall) }
+                    OutlinedButton(onClick = { checkCopy.launch(arrayOf("image/jpeg")) }, enabled = !state.busy) { Text("Check a JPEG copy") }
+                    state.copyResult?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    OutlinedButton(onClick = { saveBundle.launch("photoanchor-${selected.id.take(12)}.zip") }, enabled = !state.busy) {
+                        Text("Export proof bundle")
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = model::verify) { Text("Verify again") } },
+            dismissButton = { TextButton(onClick = model::dismiss) { Text("Close") } })
+    }
+}
+
+@Composable
+private fun VerificationLine(title: String, value: String) {
+    Column {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        Text(value, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun ProfileScreen(state: PhotoAnchorState, save: (String) -> Unit) {
+    var name by remember(state.name) { mutableStateOf(state.name) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Your local profile", style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(name, { if (it.length <= 80) name = it }, label = { Text("Display name (declared)") }, modifier = Modifier.fillMaxWidth())
+        Button(onClick = { save(name) }, enabled = state.ready && !state.busy && name.isNotBlank()) { Text("Save and publish profile") }
+        Text("One key is generated on this device. The private key is encrypted using Android Keystore and excluded from backups. There is no key recovery in this demo.",
+            style = MaterialTheme.typography.bodyMedium)
+        Text("Public signing key", style = MaterialTheme.typography.titleSmall)
+        SelectionContainer { Text(state.pubkey, style = MaterialTheme.typography.bodySmall) }
+        Text("Your name can change. Existing photo signatures remain bound to this public key.", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun FeedScreen(state: PhotoAnchorState, refresh: () -> Unit, select: (PhotoPost) -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Local photo feed", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = refresh) { Text("Refresh") }
+        }
+        if (state.feed.isEmpty()) Text("No local photos yet. Publish from Camera; the feed refreshes automatically.", Modifier.padding(20.dp))
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            items(state.feed, key = { it.post.id }) { entry ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(entry.name.ifBlank { entry.post.pubkey.take(16) + "…" }, style = MaterialTheme.typography.titleMedium)
+                        Text("Declared name · signer ${entry.post.pubkey.take(12)}…", style = MaterialTheme.typography.labelSmall)
+                        entry.preview?.let { image -> Image(image.asImageBitmap(), "Photo preview", Modifier.fillMaxWidth().heightIn(max = 360.dp), contentScale = ContentScale.Fit) }
+                            ?: Text("Preview unavailable; original bytes are checked in Verify.")
+                        if (entry.post.caption.isNotEmpty()) Text(entry.post.caption)
+                        Text("Signature checked locally · timestamp checked separately", style = MaterialTheme.typography.labelSmall)
+                        Button(onClick = { select(entry.post) }) { Text("Verify photo") }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun CameraScreen() {
-    val ctx = LocalContext.current
+private fun PublishScreen(state: PhotoAnchorState, publish: (String) -> Unit, discard: () -> Unit) {
+    var caption by remember(state.captured) { mutableStateOf("") }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Publish original JPEG", style = MaterialTheme.typography.titleLarge)
+        state.preview?.let { Image(it.asImageBitmap(), "Captured photo", Modifier.fillMaxWidth().heightIn(max = 320.dp), contentScale = ContentScale.Fit) }
+        OutlinedTextField(caption, { if (it.length <= 1000) caption = it }, label = { Text("Caption (optional)") }, modifier = Modifier.fillMaxWidth())
+        Text("This exact JPEG will be hashed and the post signed once. Bitcoin timestamps may remain pending until the operator mines blocks.", style = MaterialTheme.typography.bodySmall)
+        Button(onClick = { publish(caption) }, enabled = !state.busy) { Text("Sign and publish") }
+        OutlinedButton(onClick = discard, enabled = !state.busy) { Text("Discard and retake") }
+    }
+}
+
+@Composable
+private fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () -> Unit) {
+    val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
-    val capture = remember { ImageCapture.Builder().build() }
+    var permitted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { permitted = it }
     var back by remember { mutableStateOf(true) }
-    var flashOn by remember { mutableStateOf(false) }
-    var info by remember { mutableStateOf<String?>(null) }
-    var thumb by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
-    var lastUri by remember { mutableStateOf<Uri?>(null) }
-    var pressed by remember { mutableStateOf(false) }
-    var blink by remember { mutableStateOf(false) }
-    val inner by animateFloatAsState(if (pressed) 0.82f else 1f, label = "shutter")
-    val blinkAlpha by animateFloatAsState(if (blink) 0.8f else 0f, label = "blink")
-    val previewView = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
-
-    LaunchedEffect(Unit) {
-        runCatching { latestPhoto(ctx) }.getOrNull()?.let { lastUri = it; thumb = loadThumb(ctx, it) }
-    }
-    LaunchedEffect(back) {
-        val provider = ProcessCameraProvider.getInstance(ctx).get()
-        val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-        provider.unbindAll()
-        provider.bindToLifecycle(owner,
-            if (back) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA, preview, capture)
-    }
-    capture.flashMode = if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
-
-    fun shoot() {
-        blink = true
-        val file = File(ctx.filesDir, "photo_${System.currentTimeMillis()}.jpg")
-        capture.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(),
-            ContextCompat.getMainExecutor(ctx), object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(r: ImageCapture.OutputFileResults) {
-                    blink = false
-                    val res = PhotoProcessor.process(file)
-                    info = "SHA-256 ${res.sha256.take(12)}…"
-                    runCatching { saveToGallery(ctx, file) }
-                        .onSuccess { u ->
-                            if (u != null) { lastUri = u; thumb = loadThumb(ctx, u); info = "Salvata in Immagini/PhotoAnchor" }
-                            else info = "Salvataggio in galleria non riuscito"
-                        }
-                        .onFailure { info = "Errore salvataggio: ${it.message}" }
-                }
-                override fun onError(e: ImageCaptureException) { blink = false; info = "Errore: ${e.message}" }
-            })
-    }
-
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize().padding(bottom = 140.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)))
-        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = blinkAlpha)))
-
-        // top bar
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            RoundIcon(40, { drawFlash(flashOn) }) { flashOn = !flashOn }
-            info?.let {
-                Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.45f)) {
-                    Text(it, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color.White)
-                }
-            }
+    var flash by remember { mutableStateOf(false) }
+    var capturing by remember { mutableStateOf(false) }
+    val capture = remember { ImageCapture.Builder().build() }
+    val executor = remember { Executors.newSingleThreadExecutor() }
+    val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
+    DisposableEffect(Unit) { onDispose { executor.shutdown() } }
+    LaunchedEffect(Unit) { if (!permitted) permission.launch(Manifest.permission.CAMERA) }
+    if (!permitted) {
+        Column(Modifier.padding(24.dp)) {
+            Text("Camera permission is required to take a photo.")
+            Button(onClick = { permission.launch(Manifest.permission.CAMERA) }) { Text("Allow camera") }
         }
-
-        // bottom controls
-        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(140.dp).navigationBarsPadding(),
-            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(52.dp).clip(CircleShape).background(Color.DarkGray).border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape)
-                .clickable {
-                    val u = lastUri
-                    if (u == null) Toast.makeText(ctx, "Nessuna foto", Toast.LENGTH_SHORT).show()
-                    else runCatching {
-                        ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(u, "image/*")
-                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
-                    }.onFailure { Toast.makeText(ctx, "Nessuna app per aprire la foto", Toast.LENGTH_SHORT).show() }
-                }) {
-                thumb?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-            }
-            Box(Modifier.size(84.dp).clickable(remember { MutableInteractionSource() }, null) { shoot() }
-                , contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
-                    drawCircle(Color.White, radius = size.minDimension / 2 - 3.dp.toPx(), style = Stroke(4.dp.toPx()))
-                    drawCircle(Color.White, radius = (size.minDimension / 2 - 10.dp.toPx()) * inner)
-                }
-            }
-            RoundIcon(52, { drawFlip() }) { back = !back }
+        return
+    }
+    DisposableEffect(owner, back) {
+        val future = ProcessCameraProvider.getInstance(context)
+        var provider: ProcessCameraProvider? = null
+        var disposed = false
+        future.addListener({
+            if (!disposed) runCatching {
+                provider = future.get()
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                provider!!.unbindAll()
+                provider!!.bindToLifecycle(owner, if (back) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA, preview, capture)
+            }.onFailure { onError() }
+        }, ContextCompat.getMainExecutor(context))
+        onDispose { disposed = true; provider?.unbindAll() }
+    }
+    capture.flashMode = if (flash) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
+    Column(Modifier.fillMaxSize()) {
+        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxWidth().weight(1f))
+        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { back = !back }, enabled = !capturing && !busy) { Text("Flip") }
+            Button(onClick = {
+                capturing = true
+                val file = File(context.filesDir, "capture-${UUID.randomUUID()}.jpg")
+                capture.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(), executor, object : ImageCapture.OnImageSavedCallback {
+                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                        ContextCompat.getMainExecutor(context).execute { capturing = false; onCaptured(file) }
+                    }
+                    override fun onError(exception: ImageCaptureException) {
+                        ContextCompat.getMainExecutor(context).execute { capturing = false; onError() }
+                    }
+                })
+            }, enabled = !capturing && !busy) { Text(if (capturing) "Saving…" else "Capture") }
+            OutlinedButton(onClick = { flash = !flash }, enabled = !capturing && !busy) { Text(if (flash) "Flash on" else "Flash off") }
         }
     }
 }
-
-@Composable
-fun RoundIcon(size: Int, icon: DrawScope.() -> Unit, onClick: () -> Unit) {
-    Box(Modifier.size(size.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.18f))
-        .clickable(remember { MutableInteractionSource() }, null, onClick = onClick), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size((size * 0.55f).dp)) { icon() }
-    }
-}
-
-// Icons drawn on a 24x24 grid
-private fun DrawScope.drawFlash(on: Boolean) {
-    val k = size.minDimension / 24f
-    val c = if (on) Color(0xFFFFD60A) else Color.White
-    val p = Path().apply {
-        moveTo(13f * k, 2f * k); lineTo(4f * k, 14f * k); lineTo(11f * k, 14f * k)
-        lineTo(10f * k, 22f * k); lineTo(20f * k, 9f * k); lineTo(13f * k, 9f * k); close()
-    }
-    if (on) drawPath(p, c) else {
-        drawPath(p, c, style = Stroke(2f * k))
-        drawLine(c, Offset(3f * k, 3f * k), Offset(21f * k, 21f * k), 2.2f * k, StrokeCap.Round)
-    }
-}
-
-private fun DrawScope.drawFlip() {
-    val k = size.minDimension / 24f
-    val r = 8f * k
-    val ctr = Offset(12f * k, 12f * k)
-    for (start in listOf(200f, 20f)) {
-        drawArc(Color.White, start, 120f, false, Offset(ctr.x - r, ctr.y - r),
-            androidx.compose.ui.geometry.Size(2 * r, 2 * r), style = Stroke(2f * k, cap = StrokeCap.Round))
-        val a = Math.toRadians((start + 120f).toDouble())
-        val tip = Offset(ctr.x + r * cos(a).toFloat(), ctr.y + r * sin(a).toFloat())
-        val tx = -sin(a).toFloat(); val ty = cos(a).toFloat()   // tangent
-        val nx = cos(a).toFloat(); val ny = sin(a).toFloat()    // radial
-        val h = 4.5f * k
-        val head = Path().apply {
-            moveTo(tip.x + tx * h, tip.y + ty * h)
-            lineTo(tip.x + nx * h * 0.9f, tip.y + ny * h * 0.9f)
-            lineTo(tip.x - nx * h * 0.9f, tip.y - ny * h * 0.9f); close()
-        }
-        drawPath(head, Color.White)
-    }
-}
-
-private fun saveToGallery(ctx: Context, file: File): Uri? {
-    val cv = ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, file.name)
-        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhotoAnchor")
-        put(MediaStore.Images.Media.IS_PENDING, 1)
-    }
-    val r = ctx.contentResolver
-    val uri = r.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv) ?: return null
-    r.openOutputStream(uri)?.use { o -> file.inputStream().use { it.copyTo(o) } }
-    r.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
-    return uri
-}
-
-private fun latestPhoto(ctx: Context): Uri? =
-    ctx.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Images.Media._ID),
-        "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?", arrayOf("Pictures/PhotoAnchor%"),
-        "${MediaStore.Images.Media.DATE_ADDED} DESC")?.use {
-        if (it.moveToFirst()) android.content.ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, it.getLong(0)) else null
-    }
-
-private fun loadThumb(ctx: Context, uri: Uri) =
-    runCatching { ctx.contentResolver.loadThumbnail(uri, Size(200, 200), null).asImageBitmap() }.getOrNull()
