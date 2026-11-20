@@ -3,6 +3,8 @@
 The repository is being consolidated through small PRs from separate
 `integration/*` branches. Shared PhotoAnchor contracts, an independent bundle
 verifier and the target `/v1` API are available alongside the existing web app.
+The native Android client uses these contracts; build it with
+`./scripts/social-build-android.sh` and see [android/README.md](android/README.md).
 Run the real local Nostr/OTS demo with `./scripts/social-demo.sh`; see the
 [social setup guide](docs/social/README.md). See the
 [consolidation checklist](docs/CONSOLIDATION.md) for the migration order,
