@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -5,5 +6,49 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+
+# Settlement / Runtime data
 proofs/
 regtest-artifacts/
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite*
+
+# Web
+web/node_modules/
+web/dist/
+web/.vite/
+web/coverage/
+*.tsbuildinfo
+
+# Android / Gradle
+.gradle/
+.kotlin/
+local.properties
+captures/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.keystore
+*.jks
+*.hprof
+android/**/build/
+
+# Design reference (local clones)
+design/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS / env
+.DS_Store
+Thumbs.db
+.env
+.env.*
+*.log
