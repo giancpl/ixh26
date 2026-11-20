@@ -7,3 +7,29 @@ build/
 dist/
 proofs/
 regtest-artifacts/
+
+
+# Android / Gradle
+.gradle/
+local.properties
+captures/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.keystore
+*.jks
+android/**/build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS / env
+.DS_Store
+Thumbs.db
+.env
+.env.*
+*.log
