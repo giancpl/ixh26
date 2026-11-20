@@ -1,4 +1,18 @@
-# UPP Bitcoin settlement
+# PhotoAnchor
+
+PhotoAnchor is a local Android/Nostr photo sharing demo with independently
+checkable signatures, original JPEG hashes and standard OpenTimestamps proofs.
+Start the Docker lifecycle with `./scripts/social-demo.sh`; build the debug APK
+with `./scripts/social-build-android.sh`. See the [social demo guide](docs/social/README.md)
+for two-phone setup, manual mining, verification, API contracts and limitations.
+The [delivery checklist](docs/social/CHECKLIST.md) separates automated checks
+from acceptance on actual Android phones.
+
+The application adapter lives in `upp_protocol/` and `social/`. The existing
+`settlement/` package remains a standalone opaque-byte component with mainnet
+as its default. Its documentation follows below.
+
+## UPP Bitcoin settlement
 
 A standalone Python 3.11+ component that timestamps arbitrary **opaque binary
 files** with OpenTimestamps (OTS). It hashes locally, stores standard portable
@@ -6,7 +20,7 @@ files** with OpenTimestamps (OTS). It hashes locally, stores standard portable
 locally configured, synchronized Bitcoin Core node. Mainnet is the default;
 regtest must be selected explicitly.
 
-It does not parse manifests, process photos, verify signatures, generate keys,
+The settlement package does not parse manifests, process photos, verify signatures, generate keys,
 or implement camera, device, C2PA, wallet, or authentication functionality.
 No Bitcoin balance, wallet, seed, API key, or paid transaction is needed.
 The optional local regtest calendar has its own development wallet with mined
@@ -123,9 +137,11 @@ On Linux or another POSIX platform with Python 3.11+:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[test]'
+python -m pip install -c requirements-social.lock -e '.[social,test]'
 ```
 
+For settlement alone, install `pip install .` without the application extras.
+The full development installation above also includes the Nostr/API dependencies.
 This installs the official `opentimestamps-client==0.8.0` and
 `opentimestamps==0.5.0`. POSIX file locks protect cooperating writers. Use a
 local filesystem supporting advisory locks, hard links, and atomic renames.
