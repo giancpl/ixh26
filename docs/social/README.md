@@ -70,6 +70,9 @@ application has only the configured local relay/calendar as destinations.
 Named project volumes preserve blockchain, calendar, relay database, social
 SQLite/media/proofs and demo artifacts. The standalone
 `./scripts/regtest-demo.sh` remains separate under project `upp-regtest`.
+The overlay also uses `photoanchor-*` image tags for Core, bootstrap and
+calendar, so rebuilding the social environment does not replace standalone
+settlement image tags used by other work.
 
 ## Build and connect Alice and Bob
 
@@ -82,8 +85,11 @@ adb devices -l
 The APK is `social-artifacts/photoanchor-debug.apk`. The build runs the Gradle
 8.11.1 wrapper with JDK 17, AGP 8.9.1, Kotlin 2.0.21 and SDK/build-tools 35,
 including JVM unit tests and Android lint. The official SDK is pinned to
-`org.nostrdevkit:nostr-sdk:0.45.1`. See Android dependency notes for the
+`org.nostrdevkit:nostr-sdk:0.45.1`. See the [Android dependency notes](../../android/README.md) for the
 Kotlin-compatible coroutine constraint and desktop native SDK used by tests.
+The build retains its debug signing key in Docker volume
+`photoanchor-android-home`, so subsequent `adb install -r` updates can preserve
+the installed profile. This build key is separate from on-device Nostr keys.
 
 The install script installs on every authorized connected device and runs:
 
@@ -115,6 +121,12 @@ not invalid signatures or photos. Export a bundle for independent checking.
 Restart services/apps and confirm profiles, posts and proofs remain available.
 Record actual phone results in [CHECKLIST.md](CHECKLIST.md); successful builds
 and headless demos alone are not phone acceptance.
+
+To prepare a changed JPEG for the phone's **Check a JPEG copy** action, download
+the original into `social-artifacts/`, append a byte to a separate copy and
+transfer that copy to the phone's Downloads directory with `adb push`. The
+image may still display normally; the byte hash must fail. Preserve the signed
+post and original JPEG while performing this check.
 
 One profile is kept per installation. The private signing key is encrypted with
 AES-GCM using an Android Keystore key and excluded from backup/export. It never

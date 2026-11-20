@@ -15,6 +15,7 @@ social-artifacts/
 
 # Android / Gradle
 .gradle/
+.kotlin/
 local.properties
 captures/
 .cxx/

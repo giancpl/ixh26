@@ -21,6 +21,18 @@ x-social: &social
     PHOTOANCHOR_TIMEOUT: "10"
 
 services:
+  bitcoin:
+    image: photoanchor-bitcoin:30.2
+  bootstrap:
+    image: photoanchor-settlement:regtest
+  calendar:
+    image: photoanchor-calendar:regtest
+  settlement:
+    image: photoanchor-settlement:regtest
+  demo:
+    image: photoanchor-settlement:regtest
+  integration:
+    image: photoanchor-settlement:regtest
   relay:
     image: scsibug/nostr-rs-relay@sha256:48d54c2d2781577cf3ed2951112f0953dc2c5e7c9d2ea20c64e8c0fa37d16e4d
     command: ["./nostr-rs-relay", "--config", "/etc/nostr.toml", "--db", "/usr/src/app/db"]
