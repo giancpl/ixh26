@@ -15,9 +15,9 @@ publication and timestamp contracts in the same product.
 |---|---|---|
 | 1 | Shared contracts, genuine signed fixtures, protocol validation, bundle CLI, optional packaging and offline gate | Integrated; validation recorded below |
 | 2 | Add the target `/v1` application backend; durable independent relay and OTS jobs | Integrated; legacy `/api` consumers remain separate |
-| 3 | Move photo consumers to kind 20 and the signed-event OTS payload | Pending |
+| 3 | Move photo consumers to kind 20 and the signed-event OTS payload | Native client integrated; legacy web remains separate |
 | 4 | Consolidate Docker services; explicit operator mining, automated headless demo | Integrated; real isolated demo passed |
-| 5 | Reconcile Android with the native Compose client; selectively preserve mobile UI improvements | Pending |
+| 5 | Reconcile Android with the native Compose client; selectively preserve mobile UI improvements | Native client integrated; web UX reviewed separately |
 | 6 | Complete CI, fresh-volume regtest demo and the deferred two-phone acceptance | Pending |
 
 The agreed target is a native Android client, the official Nostr SDK, one
@@ -199,6 +199,36 @@ Historical Android validation in `docs/social/VALIDATION.md` remains clearly
 labelled as belonging to the earlier MVP. The current Android reconciliation
 has a separate PR and build gate.
 
+## Stage 5: native Android reconciliation
+
+Docker orchestration was merged through PR
+[#4](https://github.com/giancpl/ixh26/pull/4), after hosted Python checks passed.
+The Android integration keeps main's launcher icons and the existing
+`PhotoProcessor.kt` compatibility component. It adopts the verified native
+Compose/Nostr client from `da53dbd`, rather than overwriting main wholesale
+or embedding the legacy web application in the same activity.
+
+The native app uses kind 20, the `/v1` media/post contract, immutable captured
+JPEGs and persistent signed-event retries. Its profile key stays encrypted
+with Android Keystore; backups are disabled. It independently checks event ID,
+Schnorr signature and image hash. Timestamp results explicitly refer to the
+configured local regtest node and are checked against the expected payload.
+Only the debug variant permits the configured loopback HTTP endpoints.
+
+Executed build on 2026-11-20 using the existing JDK 17/SDK 35 Docker builder:
+`assembleDebug testDebugUnitTest lintDebug` passed in 4 min 14 s, with 53 tasks
+executed. The 11 native JVM tests passed with zero failures, errors or skips;
+lint passed. The actual device acceptance remains deferred by the user.
+GitHub Actions now builds the APK and runs JVM tests/lint independently of
+the Python gate. Images used by the build script support the same isolated
+prefix as the Compose environment.
+
+The `leomain` crypto/capture protocol stays on its separate branch at the
+user's explicit request. It is not imported into the Nostr payload or Android
+capture path. Web UX and the automatic-mining legacy branch require their own
+compatibility review; successful native integration does not imply that their
+distinct contracts have been migrated.
+
 ## Compatible web UX recovery
 
 The `feature-mobileApp` source is being recovered selectively on
@@ -223,3 +253,30 @@ This is a legacy UI compatibility PR, not a web implementation of the `/v1`
 contract. Web photos still use kind 1 and image-byte timestamps; the native
 client uses kind 20 and signed-event payloads. The `server/` API is unchanged
 by this UX recovery. Browser/device acceptance is not inferred from the build.
+
+## PR ledger and remaining gates
+
+| PR | Scope | Outcome |
+|---|---|---|
+| [#2](https://github.com/giancpl/ixh26/pull/2) | Shared contracts/protocol | Merged after Python 3.11/3.14 CI passed |
+| [#3](https://github.com/giancpl/ixh26/pull/3) | Durable /v1 backend | Merged after Python 3.11/3.14 CI passed |
+| [#4](https://github.com/giancpl/ixh26/pull/4) | Docker infrastructure | Merged after CI, real demo and restart checks |
+| [#5](https://github.com/giancpl/ixh26/pull/5) | Native Android reconciliation | Merged after Python CI and hosted APK/JVM/lint passed |
+| [#6](https://github.com/giancpl/ixh26/pull/6) | Compatible web UX | CI gate before merge |
+
+Android's initial hosted setup failed because the action requested the retired
+SDK package `tools`. Selecting `platform-tools` fixed setup; both subsequent
+hosted Android builds passed, in 3 min 35 s and 3 min 57 s. The locally built
+APK SHA-256 is
+`9594210e1851cbb4d9346f940adf9fbcade37a9da657b0bd29b068d46dc1771c`.
+Hosted APKs use the runner's own debug signing key and need not have that hash.
+
+The original worktrees and source branches are preserved. Remaining gates:
+
+- The legacy automatic-mining branch needs a separate opt-in configuration
+  review, including its verification fallback and proof-write behavior; do not
+  merge it wholesale into the explicit-mining native MVP.
+- Migrate legacy web posts and media URLs only with a versioned compatibility
+  plan; preserve old signed events and image-byte proofs verbatim.
+- Perform actual two-phone acceptance when the user resumes it.
+- Keep `leomain` separate as explicitly requested; it is outside this sequence.
