@@ -2,7 +2,6 @@
 from io import BytesIO
 import hashlib
 import json
-from pathlib import Path
 import re
 import warnings
 import zipfile
@@ -212,6 +211,5 @@ def create_app(config=None, *, service=None):
     return app
 
 
-# Importing application tooling should not create storage until an ASGI process
-# actually loads this module. Uvicorn's configured module import creates one app.
+# Uvicorn loads one application using the configured persistent data directory.
 app = create_app()

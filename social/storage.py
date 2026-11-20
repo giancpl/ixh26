@@ -1,6 +1,5 @@
 """SQLite transactions and leases survive worker/process restarts."""
 from contextlib import contextmanager
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -108,9 +107,15 @@ class Store:
     def proof_path(self, event_id):
         return self.proofs / (event_id + ".bin.ots")
 
-    def settlement(self, event_id, result):
+    def settlement(self, event_id, result, *, job=None):
         with self.connection() as db:
-            db.execute("UPDATE posts SET settlement=? WHERE id=?", (canonical(result.to_dict()), event_id))
+            if job is None:
+                db.execute("UPDATE posts SET settlement=? WHERE id=?", (canonical(result.to_dict()), event_id))
+            else:
+                # A recovered lease owner fences stale worker metadata writes.
+                db.execute("""UPDATE posts SET settlement=? WHERE id=? AND EXISTS
+                           (SELECT 1 FROM jobs WHERE event_id=? AND kind=? AND owner=?)""",
+                           (canonical(result.to_dict()), event_id, event_id, job["kind"], job["owner"]))
 
     def snapshot(self, event_id):
         row = self.get(event_id)
