@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import pytest
+from nostr_sdk import EventBuilder, Keys, Kind, Tag, Timestamp
 
 from upp_protocol import (ProtocolError, build_payload, validate_photo_event,
                           validate_profile_event, verify_photo_bytes)
@@ -59,3 +60,48 @@ def test_profile_changes_do_not_change_old_photo_validity():
     assert first["pubkey"] == updated["pubkey"] == photo.pubkey
     assert first["content"] != updated["content"]
     assert build_payload(photo.event) == (FIXTURES / "payload.bin").read_bytes()
+
+
+def sign_event(*, tags=None, kind=20, content=None):
+    base = load("event.json")
+    signed = (EventBuilder(Kind(kind), base["content"] if content is None else content)
+              .tags([Tag.parse(t) for t in (base["tags"] if tags is None else tags)])
+              .custom_created_at(Timestamp.from_secs(base["created_at"]))
+              .finalize(Keys.parse("0" * 63 + "1")))
+    return json.loads(signed.as_json())
+
+
+@pytest.mark.parametrize("change", [
+    lambda t: t + [t[0]],
+    lambda t: [x for x in t if x[0] != "x"],
+    lambda t: [["m", "image/png"] if x[0] == "m" else x for x in t],
+    lambda t: [["title", "Different"] if x[0] == "title" else x for x in t],
+    lambda t: [["imeta", *x[1:], "x " + "0" * 64] if x[0] == "imeta" else x for x in t],
+    lambda t: [["imeta", *[v.replace("64x48", "0x48") for v in x[1:]]] if x[0] == "imeta" else x for x in t],
+    lambda t: [["imeta", *[v for v in x[1:] if not v.startswith("dim ")]] if x[0] == "imeta" else x for x in t],
+])
+def test_sdk_signed_but_incompatible_photo_metadata(change):
+    # Signatures are genuine: contract validation must run after cryptography.
+    signed = sign_event(tags=change(load("event.json")["tags"]))
+    with pytest.raises(ProtocolError) as exc:
+        validate_photo_event(signed)
+    assert exc.value.code == "invalid_photo_tags"
+
+
+@pytest.mark.parametrize("change", [
+    lambda e: dict(e, sig=e["sig"].upper()),
+    lambda e: dict(e, created_at=True),
+    lambda e: dict(e, tags=[["m", 1]]),
+    lambda e: dict(e, unexpected="field"),
+    lambda e: {k: v for k, v in e.items() if k != "pubkey"},
+])
+def test_malformed_envelope(change):
+    with pytest.raises(ProtocolError) as exc:
+        validate_photo_event(change(load("event.json")))
+    assert exc.value.code == "invalid_event"
+
+
+def test_photo_requires_kind_20_even_with_valid_signature():
+    with pytest.raises(ProtocolError) as exc:
+        validate_photo_event(sign_event(kind=1))
+    assert exc.value.code == "unsupported_kind"
