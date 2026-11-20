@@ -1,0 +1,12 @@
+FROM python:3.11-slim-bookworm
+WORKDIR /app
+COPY pyproject.toml ./
+COPY settlement ./settlement
+RUN pip install --no-cache-dir '.[test]'
+COPY tests ./tests
+COPY examples ./examples
+COPY scripts ./scripts
+COPY docker/regtest/client.conf /config/client.conf
+COPY docker/regtest/bootstrap.py /app/bootstrap.py
+COPY README.md ./
+ENTRYPOINT ["python", "-m", "settlement"]

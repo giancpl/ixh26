@@ -1,0 +1,20 @@
+FROM debian:bookworm-slim
+ARG TARGETARCH
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+# Official Bitcoin Core 30.2 binaries, SHA256SUMS pinned for both architectures.
+RUN set -eu; \
+    case "$TARGETARCH" in \
+      amd64) arch=x86_64; checksum=6aa7bb4feb699c4c6262dd23e4004191f6df7f373b5d5978b5bcdd4bb72f75d8 ;; \
+      arm64) arch=aarch64; checksum=73e76c14edc79808a0511c744d102ffbb494807ee90cbcba176568243254b532 ;; \
+      *) exit 1 ;; \
+    esac; \
+    curl -4 -fL --progress-bar --connect-timeout 15 --max-time 600 \
+      --speed-limit 1024 --speed-time 60 --retry 2 \
+      "https://bitcoincore.org/bin/bitcoin-core-30.2/bitcoin-30.2-$arch-linux-gnu.tar.gz" -o /tmp/bitcoin.tar.gz; \
+    echo "$checksum  /tmp/bitcoin.tar.gz" | sha256sum -c -; \
+    tar -xzf /tmp/bitcoin.tar.gz -C /tmp; \
+    install -m 0755 /tmp/bitcoin-30.2/bin/bitcoind /tmp/bitcoin-30.2/bin/bitcoin-cli /usr/local/bin/; \
+    rm -rf /tmp/bitcoin*
+COPY docker/regtest/bitcoin.conf /etc/bitcoin.conf
+ENTRYPOINT ["bitcoind", "-conf=/etc/bitcoin.conf", "-datadir=/bitcoin"]

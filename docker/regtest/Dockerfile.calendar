@@ -1,0 +1,11 @@
+FROM python:3.11-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates build-essential libleveldb-dev \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/otsserver
+RUN curl -fsSL https://codeload.github.com/opentimestamps/opentimestamps-server/tar.gz/1e955ea3b036453bf795505d923f2643f773810c \
+    | tar -xz --strip-components=1
+RUN pip install --no-cache-dir -r requirements.txt
+RUN mkdir -p /root/.bitcoin
+COPY docker/regtest/client.conf /root/.bitcoin/bitcoin.conf
+ENTRYPOINT ["python", "/opt/otsserver/otsd", "--btc-regtest", "--btc-wallet", "ots", "--calendar", "/calendar", "--rpc-address", "0.0.0.0", "--btc-min-tx-interval", "1", "--btc-min-confirmations", "2"]

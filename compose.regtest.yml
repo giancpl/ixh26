@@ -1,0 +1,83 @@
+name: upp-regtest
+
+x-settlement: &settlement
+  image: upp-settlement:regtest
+  build:
+    context: .
+    dockerfile: docker/regtest/Dockerfile.settlement
+  networks: [regtest]
+  volumes:
+    - bitcoin:/bitcoin:ro
+    - artifacts:/artifacts
+
+services:
+  bitcoin:
+    image: upp-bitcoin:30.2
+    build:
+      context: .
+      dockerfile: docker/regtest/Dockerfile.bitcoin
+    networks: [regtest]
+    volumes:
+      - bitcoin:/bitcoin
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-conf=/etc/bitcoin.conf", "-datadir=/bitcoin", "getblockchaininfo"]
+      interval: 2s
+      timeout: 5s
+      retries: 45
+    stop_grace_period: 30s
+  bootstrap:
+    <<: *settlement
+    entrypoint: ["python", "/app/bootstrap.py"]
+    volumes:
+      - bitcoin:/bitcoin:ro
+      - calendar:/calendar
+    depends_on:
+      bitcoin:
+        condition: service_healthy
+  calendar:
+    image: upp-calendar:regtest
+    build:
+      context: .
+      dockerfile: docker/regtest/Dockerfile.calendar
+    networks: [regtest]
+    volumes:
+      - bitcoin:/bitcoin:ro
+      - calendar:/calendar
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:14788/', timeout=3).close()"]
+      interval: 2s
+      timeout: 5s
+      retries: 45
+  settlement:
+    <<: *settlement
+    profiles: [tools]
+    depends_on:
+      calendar:
+        condition: service_healthy
+  demo:
+    <<: *settlement
+    profiles: [tools]
+    entrypoint: ["python", "/app/scripts/regtest_demo.py"]
+    depends_on:
+      calendar:
+        condition: service_healthy
+  integration:
+    <<: *settlement
+    profiles: [tools]
+    entrypoint: ["python", "-m", "pytest", "-q", "-m", "regtest"]
+    environment:
+      UPP_REGTEST_TEST: "1"
+    depends_on:
+      calendar:
+        condition: service_healthy
+
+networks:
+  regtest:
+    internal: true
+volumes:
+  bitcoin:
+  calendar:
+  artifacts:
