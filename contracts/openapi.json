@@ -1,0 +1,667 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PhotoAnchor local MVP",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080"
+    }
+  ],
+  "paths": {
+    "/v1/media": {
+      "post": {
+        "operationId": "uploadMedia",
+        "description": "Raw original JPEG, at most 20 MiB. Content-Type image/jpeg. Same bytes return the same URL.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New JPEG stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Media"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Identical JPEG already stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Media"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Media exceeds 20 MiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JPEG required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JPEG",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/media/{sha256}": {
+      "get": {
+        "operationId": "getMedia",
+        "parameters": [
+          {
+            "name": "sha256",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original JPEG bytes, no transformation",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Media not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/posts": {
+      "post": {
+        "operationId": "createPost",
+        "description": "At most 16 KiB. Standard signed kind 20 with exactly one JPEG imeta. Local media URL/hash only. Preserve the event on retry.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "event"
+                ],
+                "properties": {
+                  "event": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                }
+              },
+              "example": {
+                "event": {
+                  "id": "8dde31d4aefacba4eca503449e2b8d8cd4c6934eeecb6004941072ce53fde8ca",
+                  "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+                  "created_at": 1700000000,
+                  "kind": 20,
+                  "tags": [
+                    [
+                      "title",
+                      "PhotoAnchor fixture"
+                    ],
+                    [
+                      "imeta",
+                      "url http://127.0.0.1:8080/v1/media/91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+                      "m image/jpeg",
+                      "x 91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+                      "dim 64x48"
+                    ],
+                    [
+                      "m",
+                      "image/jpeg"
+                    ],
+                    [
+                      "x",
+                      "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920"
+                    ]
+                  ],
+                  "content": "PhotoAnchor fixture",
+                  "sig": "62177455ec035abfbf58f57bfa5684e6ce34782bc78a1be429b5ccf10eb4f38291467f3a11423c670e086226238d0b686ae0570ec7c8cac97880d5a792266f57"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Post persisted and independent relay/settlement jobs queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Identical signed event already accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Incompatible event with an existing ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid event, signature, media reference or hash",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/posts/{event_id}": {
+      "get": {
+        "operationId": "getPost",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post and current job metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/posts/{event_id}/verify": {
+      "post": {
+        "operationId": "verifyPost",
+        "description": "Fresh local proof plus Bitcoin Core verification. Never returns a cached confirmation as fresh evidence.",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post with refreshed settlement result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found or proof_not_ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/posts/{event_id}/proof": {
+      "get": {
+        "operationId": "getProof",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Standard OpenTimestamps detached proof",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post missing or proof_not_ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/posts/{event_id}/bundle": {
+      "get": {
+        "operationId": "getBundle",
+        "description": "Pending and confirmed proofs export equally. ZIP names: photo.jpg, event.json, payload.bin, proof.ots, README.txt. Receipts are optional, untrusted metadata.",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portable verification bundle",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "proof_not_ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "HTTP and database accessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "const": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "pubkey",
+          "created_at",
+          "kind",
+          "tags",
+          "content",
+          "sig"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "pubkey": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "created_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "content": {
+            "type": "string"
+          },
+          "sig": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{128}$"
+          }
+        }
+      },
+      "Media": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sha256",
+          "url",
+          "mime",
+          "size"
+        ],
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "mime": {
+            "const": "image/jpeg"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20971520
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Settlement": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "backend",
+          "network",
+          "status",
+          "payload_sha256",
+          "proof_sha256",
+          "proof_url",
+          "binding_checked",
+          "bitcoin",
+          "diagnostics"
+        ],
+        "properties": {
+          "version": {
+            "const": "upp-settlement/0.1"
+          },
+          "backend": {
+            "const": "opentimestamps-bitcoin"
+          },
+          "network": {
+            "enum": [
+              "mainnet",
+              "regtest"
+            ]
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "INVALID",
+              "UNVERIFIABLE",
+              "ERROR"
+            ]
+          },
+          "payload_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "proof_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "proof_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "binding_checked": {
+            "type": "boolean"
+          },
+          "bitcoin": {
+            "type": "object",
+            "required": [
+              "block_height",
+              "block_time"
+            ],
+            "properties": {
+              "block_height": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "block_time": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Post": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "publication_status",
+          "settlement"
+        ],
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/Event"
+          },
+          "publication_status": {
+            "enum": [
+              "QUEUED",
+              "PUBLISHED",
+              "ERROR"
+            ]
+          },
+          "settlement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Settlement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
