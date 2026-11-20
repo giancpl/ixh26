@@ -2,10 +2,11 @@ FROM python:3.11-slim-bookworm@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f279567
 WORKDIR /app
 COPY pyproject.toml ./
 COPY requirements-social.lock ./
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-social.lock
 COPY settlement ./settlement
 COPY upp_protocol ./upp_protocol
 COPY social ./social
-RUN --mount=type=cache,target=/root/.cache/pip pip install -c requirements-social.lock '.[social,test]'
+RUN --mount=type=cache,target=/root/.cache/pip pip install --no-deps . && pip check
 COPY contracts ./contracts
 COPY tests ./tests
 COPY scripts ./scripts
