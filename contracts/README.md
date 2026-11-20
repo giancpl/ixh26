@@ -48,6 +48,21 @@ Bundle ZIP members are `photo.jpg`, `event.json`, `payload.bin`, `proof.ots`,
 and `README.txt`. A receipt may be included as optional untrusted metadata.
 No user key belongs in this API or bundle.
 
+Independent bundle verification (no API connection or receipt required):
+
+```sh
+photoanchor-bundle exported.zip --network regtest --bitcoin-conf /path/to/bitcoin.conf
+# Equivalent: python -m upp_protocol.verify_bundle exported.zip ...
+```
+
+The verifier reads the expected ZIP entries without extracting arbitrary paths,
+verifies ID/signature and JPEG hash, reconstructs and compares `payload.bin`,
+then invokes local-only settlement verification of `proof.ots`. It prints JSON.
+Exit codes match settlement verification: 0 confirmed, 2 pending, 3 invalid,
+4 unverifiable, 1 local/configuration error. Mainnet remains the default; select
+regtest explicitly. A valid `.ots` commitment is network neutral, so only the
+explicitly configured node determines the Bitcoin network being verified.
+
 Author name, caption and capture metadata remain declarations. These checks
 establish key ownership of a signature, byte integrity and Bitcoin temporal
 evidence; they do not establish the scene's authenticity or capture time.
