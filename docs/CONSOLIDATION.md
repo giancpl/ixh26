@@ -1,0 +1,117 @@
+# Project consolidation
+
+Work happens on `integration/project-consolidation`, in an isolated worktree,
+starting from `main` commit `4f5f28ad9689e217653a50322bc939390b4ded7b`.
+Existing feature branches, the original checkout and the default branch must
+not be switched, rewritten or deleted by this consolidation.
+
+## Migration order
+
+Each stage must be independently reviewable. Importing the old MVP wholesale
+would conflict with the newer Android application and leave incompatible
+publication and timestamp contracts in the same product.
+
+| Stage | Scope | Status |
+|---|---|---|
+| 1 | Shared contracts, genuine signed fixtures, protocol validation, bundle CLI, optional packaging and offline gate | Integrated; validation recorded below |
+| 2 | Select and migrate the application backend to `/v1`; durable independent relay and OTS jobs | Pending |
+| 3 | Move photo consumers to kind 20 and the signed-event OTS payload | Pending |
+| 4 | Consolidate Docker services; explicit mining by default, optional automated demo mode | Pending |
+| 5 | Reconcile Android with the native Compose client; selectively preserve mobile UI improvements | Pending |
+| 6 | Complete CI, fresh-volume regtest demo and the deferred two-phone acceptance | Pending |
+
+The agreed target is a native Android client, the official Nostr SDK, one
+application API, a dedicated relay and the existing opaque-byte settlement
+package. The current web application remains available while its consumers
+are migrated; its legacy contracts are not silently reinterpreted as the new
+ones. Do not re-sign or rewrite already published events or replace their OTS
+payloads. Historical image proofs and new event-payload proofs certify different
+byte sequences and need an explicit format boundary in consumers.
+
+## Branch inventory at the start
+
+| Branch | Tip | Role |
+|---|---|---|
+| `main` | `4f5f28a` | Current web/server and Android baseline; settlement included |
+| `feature-mobileApp` | `c2a5bd4` | Four commits beyond main: WebView bridge, mobile UX, icons |
+| `feat/regtest-auto-settlement` | `c0043ad` | Local-only web integration with automatic regtest mining |
+| `feat/nostr-contracts` | `42e6264` | Protocol, fixtures and bundle verifier |
+| `feat/social-api` | `aa90d5b` | FastAPI backend and durable workers |
+| `feat/android-nostr` | `da53dbd` | Native Compose/Nostr client |
+| `integration/nostr-photo-mvp` | `68ff268` | Complete earlier MVP with recorded Docker and Android validation |
+| `feat/social-infra` | `68ff268` | Same integrated tip; not an infrastructure-only delivery |
+| `validation/nostr-photo-mvp` | `68ff268` | Local alias of the integrated tip |
+| `feature/bitcoin-settlement-regtest` | `1052ed6` | Historical local branch, already contained in main |
+
+All worktrees were clean during the audit. Contract, backend and Android source
+directories in their specialist branches match the earlier integrated MVP.
+The settlement package also matches main. Branch deletion and stash cleanup
+are not part of the current stage.
+
+## Compatibility boundaries
+
+| Concern | Existing web/mobile | Target PhotoAnchor MVP |
+|---|---|---|
+| Photo event | Nostr kind 1 | Nostr kind 20 with the frozen JPEG tags |
+| Timestamp payload | Original image bytes | Exact `upp-nostr-photo/1` envelope containing event ID, pubkey and signature |
+| HTTP API | `server/`, `/api/*` | Frozen `/v1/*` schema in `contracts/openapi.json` |
+| Relay | Embedded aiohttp implementation | Dedicated pinned relay with native SDK clients |
+| Android | Existing camera app; WebView bridge on mobile branch | Native Compose application with Keystore-backed identity |
+| Mining | Automatic on local regtest feature branch | Explicit operator action; automation only as an optional demo mode |
+
+The embedded relay currently checks the canonical event ID and signature
+format, but not the Schnorr signature cryptographically. Its existing relay
+test even uses a placeholder signature. This is a known migration issue;
+the new protocol validator rejects such signatures using the official SDK.
+Adding the validator library does not itself change the legacy relay.
+
+Merge simulations found four conflicting paths between main (or the mobile
+branch) and the earlier MVP: `.gitignore`, Android Gradle, manifest and activity.
+The automatic regtest branch adds conflicts in `.dockerignore`, `pyproject.toml`
+and `tests/conftest.py`. A clean textual merge of other paths is not evidence
+of matching product semantics.
+
+## Stage 1 delivery and checks
+
+Imported source commits: `8b9425f`, `00cb5cb`, `42e6264`. Only `contracts/`,
+`upp_protocol/` and `tests/protocol/` come from those commits. Packaging exposes
+the optional `protocol` extra and `photoanchor-bundle` console command. The
+settlement package, existing applications, Android and regtest environment are
+unchanged by this stage.
+
+```sh
+python -m pip install '.[protocol,test]'
+python -m pytest -q --ignore=tests/test_web_server.py -m 'not network and not regtest'
+python -m upp_protocol.verify_bundle --help
+photoanchor-bundle --help
+```
+
+The offline gate includes all existing settlement tests and the imported
+protocol tests. It blocks network connections through the existing pytest
+fixture. The old socket-based web tests are explicitly outside this gate;
+they must be addressed when migrating the backend, rather than labelled as
+passing offline. Likewise this stage does not revalidate the old Android APK
+or imply that the `/v1` endpoints are already served.
+
+Executed on 2026-11-20:
+
+| Check | Result |
+|---|---|
+| Python 3.11, existing Docker image, `--network none`, read-only source mount | 81 passed, 2 deselected (11.55 s) |
+| Python 3.14, existing test venv, socket-blocking fixture | 81 passed, 2 deselected (15.10 s) |
+| Build wheel, install into a clean target directory, import outside checkout | Passed in a Docker container with networking disabled; both module paths checked |
+| Installed `upp-settlement`, `photoanchor-bundle`, module CLI help | Passed |
+| `git diff --check` | Passed |
+| Diff against main for settlement, server, web, Android, regtest Compose and shared pytest fixture | Empty |
+
+The two deselected tests are the opt-in live calendar and regtest integrations.
+The 81 passing checks comprise 46 settlement and 35 protocol tests. Wheel
+installation used `--no-deps` with dependencies already in the container, so
+this validates packaging and entry points, not a fresh network dependency
+download. The new GitHub Actions gate is configured for Python 3.11 and 3.14;
+hosted execution is separate from the local checks reported here.
+
+Prior MVP reports on other branches are historical evidence, not validation
+of this new branch. Physical two-phone acceptance remains deferred at the
+user's request. No new Docker lifecycle or Android build was needed for this
+protocol-only stage, whose application source diff is empty.

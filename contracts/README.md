@@ -1,6 +1,16 @@
 # PhotoAnchor contracts v1
 
-`openapi.json` is the shared HTTP contract. `fixtures/` contains a real 64×48
+`openapi.json` is the target shared HTTP contract for the PhotoAnchor MVP.
+It is not the API currently served by the existing `server/` web application;
+see [the staged migration checklist](../docs/CONSOLIDATION.md).
+
+Install the protocol adapter and its official SDK with:
+
+```sh
+python -m pip install ".[protocol]"
+```
+
+`fixtures/` contains a real 64×48
 JPEG, a valid SDK-signed Nostr kind 20, its exact OTS payload and expected
 SHA-256 values. All SDK operations use `nostr-sdk==0.45.1`. Fixture identity uses
 the publicly known secret scalar 1 for tests only; never use that key in an app.

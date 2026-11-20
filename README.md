@@ -1,5 +1,18 @@
 # UPP Bitcoin settlement
 
+The repository is being consolidated on `integration/project-consolidation`,
+starting from `main`. The first stage adds the shared PhotoAnchor protocol and
+independent bundle verifier alongside the existing applications. See the
+[consolidation checklist](docs/CONSOLIDATION.md) for the migration order,
+compatibility boundaries and checks actually run on this branch.
+
+Install the optional protocol adapter with `pip install ".[protocol]"`.
+Its signed kind-20 fixtures and payload format are documented in
+[contracts/README.md](contracts/README.md). The OpenAPI document specifies the
+target `/v1` API; it does not describe the existing web server's `/api` routes.
+The settlement package below continues to accept opaque bytes and does not
+depend on the Nostr SDK.
+
 A standalone Python 3.11+ component that timestamps arbitrary **opaque binary
 files** with OpenTimestamps (OTS). It hashes locally, stores standard portable
 `.ots` proofs, retrieves upgrades, and verifies Bitcoin attestations against a
