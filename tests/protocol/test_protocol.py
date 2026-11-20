@@ -105,3 +105,16 @@ def test_photo_requires_kind_20_even_with_valid_signature():
     with pytest.raises(ProtocolError) as exc:
         validate_photo_event(sign_event(kind=1))
     assert exc.value.code == "unsupported_kind"
+
+
+@pytest.mark.parametrize("dimension", ["9" * 5000 + "x48", "2147483648x48"])
+def test_signed_extreme_dimensions_are_protocol_errors(dimension):
+    # This validly signed event fits the HTTP body limit, but used to reach
+    # Python's integer-string digit limit and escape the protocol error boundary.
+    tags = [["imeta", *[v.replace("64x48", dimension) for v in t[1:]]]
+            if t[0] == "imeta" else t for t in load("event.json")["tags"]]
+    event = sign_event(tags=tags)
+    assert len(json.dumps({"event": event}).encode()) < 16 * 1024
+    with pytest.raises(ProtocolError) as exc:
+        validate_photo_event(event)
+    assert exc.value.code == "invalid_photo_tags"

@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 from typing import Any
 import zipfile
+import zlib
 
 from settlement import OTSConfig, SettlementService
 
@@ -32,8 +33,16 @@ def verify_bundle(bundle_path: str | Path, config: OTSConfig | None = None) -> d
                 info = archive.getinfo(name)
                 if not 0 < info.file_size <= limit:
                     raise ProtocolError("invalid_bundle", "A required bundle member has an invalid size.")
-                members[name] = archive.read(name)
-    except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError):
+                if info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+                    raise ProtocolError("invalid_bundle", "The ZIP compression method is unsupported.")
+                # A ZIP header is untrusted input. Bound decompression even when
+                # it declares a small size, and check the actual decoded bytes.
+                with archive.open(info) as member:
+                    data = member.read(limit + 1)
+                if len(data) != info.file_size or len(data) > limit:
+                    raise ProtocolError("invalid_bundle", "A required bundle member has an invalid size.")
+                members[name] = data
+    except (zipfile.BadZipFile, zlib.error, RuntimeError, NotImplementedError, EOFError):
         raise ProtocolError("invalid_bundle", "The ZIP bundle is malformed or unsupported.") from None
     try:
         event = json.loads(members["event.json"])

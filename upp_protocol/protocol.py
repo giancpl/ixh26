@@ -11,7 +11,7 @@ MAX_MEDIA_BYTES = 20 * 1024 * 1024
 MAX_POST_BYTES = 16 * 1024
 _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 _HEX128 = re.compile(r"[0-9a-f]{128}\Z")
-_DIM = re.compile(r"([1-9][0-9]*)x([1-9][0-9]*)\Z")
+_DIM = re.compile(r"([1-9][0-9]{0,9})x([1-9][0-9]{0,9})\Z")
 _FIELDS = {"id", "pubkey", "created_at", "kind", "tags", "content", "sig"}
 
 
@@ -92,12 +92,15 @@ def validate_photo_event(event: Mapping[str, Any], *, expected_media_url: str | 
     dim = _DIM.fullmatch(entries["dim"])
     if entries["m"] != "image/jpeg" or entries["x"] != digest[1] or not dim:
         raise ProtocolError("invalid_photo_tags", "Inconsistent JPEG metadata.")
+    width, height = int(dim[1]), int(dim[2])
+    if width > 2**31 - 1 or height > 2**31 - 1:
+        raise ProtocolError("invalid_photo_tags", "Photo dimensions must be positive 32-bit integers.")
     if expected_media_url is not None and entries["url"] != expected_media_url:
         raise ProtocolError("external_media_url", "The photo URL must reference this service's media archive.")
     if expected_sha256 is not None and digest[1] != expected_sha256:
         raise ProtocolError("photo_hash_mismatch", "The photo hash does not match the stored JPEG.")
     return PhotoEvent(event["id"], event["pubkey"], event["sig"], digest[1], entries["url"],
-                      "image/jpeg", int(dim[1]), int(dim[2]), event)
+                      "image/jpeg", width, height, event)
 
 
 def build_payload(event: Mapping[str, Any]) -> bytes:
