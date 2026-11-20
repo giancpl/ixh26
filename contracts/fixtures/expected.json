@@ -1,0 +1,11 @@
+{
+  "photo_sha256": "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+  "photo_size": 991,
+  "photo_dimensions": [
+    64,
+    48
+  ],
+  "event_id": "8dde31d4aefacba4eca503449e2b8d8cd4c6934eeecb6004941072ce53fde8ca",
+  "payload_sha256": "12868b68cac8ab414c71ea9483b4d08f1b98781397c9d8748d436ead8061008c",
+  "payload_size": 286
+}

@@ -1,0 +1,142 @@
+[
+  {
+    "name": "basic",
+    "event": {
+      "id": "8dde31d4aefacba4eca503449e2b8d8cd4c6934eeecb6004941072ce53fde8ca",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700000000,
+      "kind": 20,
+      "tags": [
+        [
+          "title",
+          "PhotoAnchor fixture"
+        ],
+        [
+          "imeta",
+          "url http://127.0.0.1:8080/v1/media/91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "m image/jpeg",
+          "x 91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "dim 64x48"
+        ],
+        [
+          "m",
+          "image/jpeg"
+        ],
+        [
+          "x",
+          "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920"
+        ]
+      ],
+      "content": "PhotoAnchor fixture",
+      "sig": "62177455ec035abfbf58f57bfa5684e6ce34782bc78a1be429b5ccf10eb4f38291467f3a11423c670e086226238d0b686ae0570ec7c8cac97880d5a792266f57"
+    },
+    "photo_sha256": "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+    "payload_utf8": "[\"upp-nostr-photo/1\",\"8dde31d4aefacba4eca503449e2b8d8cd4c6934eeecb6004941072ce53fde8ca\",\"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798\",\"62177455ec035abfbf58f57bfa5684e6ce34782bc78a1be429b5ccf10eb4f38291467f3a11423c670e086226238d0b686ae0570ec7c8cac97880d5a792266f57\"]",
+    "payload_sha256": "12868b68cac8ab414c71ea9483b4d08f1b98781397c9d8748d436ead8061008c"
+  },
+  {
+    "name": "unicode",
+    "event": {
+      "id": "ed8bf780b556f61b1363444f0c94feed3432fd7a6cbc7115738e62ab29c0ccf9",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700000000,
+      "kind": 20,
+      "tags": [
+        [
+          "title",
+          "Caffè ☕ — 東京 📷"
+        ],
+        [
+          "imeta",
+          "url http://127.0.0.1:8080/v1/media/91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "m image/jpeg",
+          "x 91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "dim 64x48"
+        ],
+        [
+          "m",
+          "image/jpeg"
+        ],
+        [
+          "x",
+          "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920"
+        ]
+      ],
+      "content": "Caffè ☕ — 東京 📷",
+      "sig": "6b149a024d227db99dd418da285f1ff4e80ba604ee0229150a9d55ffc15456a6a2d8d1a32fd98dcf40d5cf50f58d3ab9259090ae4e06b4d668a82401166ef757"
+    },
+    "photo_sha256": "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+    "payload_utf8": "[\"upp-nostr-photo/1\",\"ed8bf780b556f61b1363444f0c94feed3432fd7a6cbc7115738e62ab29c0ccf9\",\"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798\",\"6b149a024d227db99dd418da285f1ff4e80ba604ee0229150a9d55ffc15456a6a2d8d1a32fd98dcf40d5cf50f58d3ab9259090ae4e06b4d668a82401166ef757\"]",
+    "payload_sha256": "0ea77117fbcd6f6e81c110633f3b7c9d6aac0f51d6d8c3201f4bf976df8f4be3"
+  },
+  {
+    "name": "escaping_and_tag_order",
+    "event": {
+      "id": "75c4555af329fafa7a2eaafd4fe99a3416c85e22f50f82d8b7ddbd3506c15b88",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700000000,
+      "kind": 20,
+      "tags": [
+        [
+          "x",
+          "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920"
+        ],
+        [
+          "imeta",
+          "url http://127.0.0.1:8080/v1/media/91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "m image/jpeg",
+          "x 91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "dim 64x48"
+        ],
+        [
+          "title",
+          "Quote: \"hello\"; slash \\; newline\nnext\ttab"
+        ],
+        [
+          "m",
+          "image/jpeg"
+        ]
+      ],
+      "content": "Quote: \"hello\"; slash \\; newline\nnext\ttab",
+      "sig": "a2f4c0e5eb899301c79e1138f5b721fce336f600f7ae38e3a04d60ea263af5786bfe30e9a2f836f27e467eff934cdf5ec7ab3ece72c830811f5e27333946a0d9"
+    },
+    "photo_sha256": "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+    "payload_utf8": "[\"upp-nostr-photo/1\",\"75c4555af329fafa7a2eaafd4fe99a3416c85e22f50f82d8b7ddbd3506c15b88\",\"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798\",\"a2f4c0e5eb899301c79e1138f5b721fce336f600f7ae38e3a04d60ea263af5786bfe30e9a2f836f27e467eff934cdf5ec7ab3ece72c830811f5e27333946a0d9\"]",
+    "payload_sha256": "1d15f43b891a23c027a4928d0d8f5f2a5c2abb96efe7d2fe28da82a60bce9fb2"
+  },
+  {
+    "name": "empty_caption",
+    "event": {
+      "id": "adc78a806556f5255dc513889efa1589fae5b4b95ec3502f53845cc2811e0180",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700000000,
+      "kind": 20,
+      "tags": [
+        [
+          "title",
+          "Photo"
+        ],
+        [
+          "imeta",
+          "url http://127.0.0.1:8080/v1/media/91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "m image/jpeg",
+          "x 91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+          "dim 64x48"
+        ],
+        [
+          "m",
+          "image/jpeg"
+        ],
+        [
+          "x",
+          "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920"
+        ]
+      ],
+      "content": "",
+      "sig": "4d01e6cf214d6ca8a38b0fd59ce74450b42e7dd263654f17cd9154ac19aa897c54dc925fa962635d513162425ddbe7e571ad40d33f6758c292d3bc79205acfb7"
+    },
+    "photo_sha256": "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+    "payload_utf8": "[\"upp-nostr-photo/1\",\"adc78a806556f5255dc513889efa1589fae5b4b95ec3502f53845cc2811e0180\",\"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798\",\"4d01e6cf214d6ca8a38b0fd59ce74450b42e7dd263654f17cd9154ac19aa897c54dc925fa962635d513162425ddbe7e571ad40d33f6758c292d3bc79205acfb7\"]",
+    "payload_sha256": "e1abf91d33ce6079c071fdca9149ef6f29dc2771eb0b804c1b7cb156bb44814e"
+  }
+]

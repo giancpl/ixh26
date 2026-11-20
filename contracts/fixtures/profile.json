@@ -1,0 +1,9 @@
+{
+  "id": "567ed19f819f731e1d4d7a44dff3744100712eda22bbea15979ab53efb10c7c0",
+  "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+  "created_at": 1700000000,
+  "kind": 0,
+  "tags": [],
+  "content": "{\"name\":\"Alice fixture\"}",
+  "sig": "45e88baa9250e5d0d77dc9f8a69ffbe5ebcb4f72b38ae4757935382be276e2ca6f53e9cfabdb783daf9cdeba1f0d1911f1e67382cc094d7a9e5d5f9a16e3147e"
+}
