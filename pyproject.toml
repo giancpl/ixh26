@@ -23,4 +23,4 @@ include = ["settlement*", "upp_protocol*", "social*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["network: opt-in real calendar submission", "regtest: opt-in real local Docker integration"]
+markers = ["network: opt-in real calendar submission", "regtest: opt-in real local Docker integration", "social: opt-in real local social integration"]

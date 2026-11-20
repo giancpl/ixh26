@@ -19,7 +19,7 @@ jobs:
       - run: python -m pip install setuptools wheel -c requirements-social.lock '.[social,test]'
       # The legacy aiohttp application's socket-based tests have a separate
       # migration gate. They are not part of the offline protocol suite.
-      - run: python -m pytest -q --ignore=tests/test_web_server.py -m 'not network and not regtest'
+      - run: python -m pytest -q --ignore=tests/test_web_server.py -m 'not network and not regtest and not social'
       - name: Build and inspect installed distribution outside source checkout
         shell: bash
         run: |
