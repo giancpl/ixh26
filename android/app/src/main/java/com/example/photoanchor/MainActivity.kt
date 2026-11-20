@@ -1,9 +1,22 @@
 package com.example.photoanchor
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.content.ContentUris
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Size
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -14,60 +27,87 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import android.content.ContentValues
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.MediaStore
-import android.util.Size
-import android.widget.Toast
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.drawscope.scale
-import kotlin.math.cos
-import kotlin.math.sin
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.cos
+import kotlin.math.sin
+
+private const val PREFS_NAME = "photoanchor_prefs"
+private const val KEY_SERVER_URL = "server_url"
+private const val KEY_PAIRING = "pairing_code"
+private const val KEY_AUTO_SYNC = "auto_sync"
 
 class MainActivity : ComponentActivity() {
+    private val deepLinkState = mutableStateOf<Pair<String, String>?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { App() } }
+        handlePairingIntent(intent)
+        setContent {
+            MaterialTheme {
+                App(deepLinkState.value) { deepLinkState.value = null }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handlePairingIntent(intent)
+    }
+
+    private fun handlePairingIntent(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme == "photoanchor" && data.host == "pair") {
+            val url = data.getQueryParameter("url").orEmpty()
+            val code = data.getQueryParameter("code").orEmpty()
+            if (url.isNotBlank()) {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putString(KEY_SERVER_URL, url)
+                    .putString(KEY_PAIRING, code)
+                    .putBoolean(KEY_AUTO_SYNC, true)
+                    .apply()
+                deepLinkState.value = url to code
+            }
+        }
     }
 }
 
 @Composable
-fun App() {
+fun App(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> Unit) {
     val ctx = LocalContext.current
     val wanted = remember {
         buildList {
             add(Manifest.permission.CAMERA)
-            // Android 13+: media images; Android 10-12: read external storage (writing to MediaStore needs none)
             add(if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)
         }.toTypedArray()
     }
@@ -77,111 +117,490 @@ fun App() {
         camera = has(Manifest.permission.CAMERA)
     }
     LaunchedEffect(Unit) { if (wanted.any { !has(it) }) launcher.launch(wanted) }
-    if (camera) CameraScreen() else Box(Modifier.fillMaxSize(), Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Permesso fotocamera necessario")
-            Button(onClick = { launcher.launch(wanted) }) { Text("Concedi permessi") }
+    if (camera) {
+        PhotoAnchorMain(pairedFromLink, onConsumeLink)
+    } else {
+        Box(Modifier.fillMaxSize().background(Color.Black), Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Permesso fotocamera necessario", color = Color.White)
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { launcher.launch(wanted) }) { Text("Concedi permessi") }
+            }
         }
     }
 }
 
 @Composable
-fun CameraScreen() {
+fun PhotoAnchorMain(pairedFromLink: Pair<String, String>?, onConsumeLink: () -> Unit) {
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    val prefs = remember { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
+
+    var activeTab by remember { mutableStateOf("camera") } // "camera" | "social"
+    var serverUrl by remember { mutableStateOf(prefs.getString(KEY_SERVER_URL, "") ?: "") }
+    var pairingCode by remember { mutableStateOf(prefs.getString(KEY_PAIRING, "") ?: "") }
+    var autoSync by remember { mutableStateOf(prefs.getBoolean(KEY_AUTO_SYNC, true)) }
+    var showLinkDialog by remember { mutableStateOf(false) }
+
     val capture = remember { ImageCapture.Builder().build() }
     var back by remember { mutableStateOf(true) }
     var flashOn by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<String?>(null) }
-    var thumb by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var thumb by remember { mutableStateOf<ImageBitmap?>(null) }
     var lastUri by remember { mutableStateOf<Uri?>(null) }
-    var pressed by remember { mutableStateOf(false) }
+    var lastResult by remember { mutableStateOf<PhotoProcessor.Result?>(null) }
     var blink by remember { mutableStateOf(false) }
-    val inner by animateFloatAsState(if (pressed) 0.82f else 1f, label = "shutter")
+
+    LaunchedEffect(pairedFromLink) {
+        if (pairedFromLink != null) {
+            serverUrl = pairedFromLink.first
+            pairingCode = pairedFromLink.second
+            autoSync = true
+            info = "Collegato al social (${pairedFromLink.second})"
+            onConsumeLink()
+        }
+    }
+
     val blinkAlpha by animateFloatAsState(if (blink) 0.8f else 0f, label = "blink")
     val previewView = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
 
     LaunchedEffect(Unit) {
         runCatching { latestPhoto(ctx) }.getOrNull()?.let { lastUri = it; thumb = loadThumb(ctx, it) }
     }
-    LaunchedEffect(back) {
-        val provider = ProcessCameraProvider.getInstance(ctx).get()
-        val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-        provider.unbindAll()
-        provider.bindToLifecycle(owner,
-            if (back) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA, preview, capture)
+    LaunchedEffect(back, activeTab) {
+        if (activeTab == "camera") {
+            val provider = ProcessCameraProvider.getInstance(ctx).get()
+            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+            provider.unbindAll()
+            provider.bindToLifecycle(
+                owner,
+                if (back) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA,
+                preview,
+                capture,
+            )
+        }
     }
     capture.flashMode = if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
+
+    fun syncToWeb(res: PhotoProcessor.Result) {
+        val url = serverUrl.trim()
+        if (url.isEmpty()) return
+        info = "Invio & OTS Bitcoin..."
+        scope.launch {
+            runCatching { WebBridgeAnchorer(url, pairingCode).anchor(res) }
+                .onSuccess { status -> info = status }
+                .onFailure { err -> info = "Locale OK · Social offline (${err.message?.take(32)})" }
+        }
+    }
 
     fun shoot() {
         blink = true
         val file = File(ctx.filesDir, "photo_${System.currentTimeMillis()}.jpg")
-        capture.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(),
-            ContextCompat.getMainExecutor(ctx), object : ImageCapture.OnImageSavedCallback {
+        capture.takePicture(
+            ImageCapture.OutputFileOptions.Builder(file).build(),
+            ContextCompat.getMainExecutor(ctx),
+            object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(r: ImageCapture.OutputFileResults) {
                     blink = false
                     val res = PhotoProcessor.process(file)
+                    lastResult = res
                     info = "SHA-256 ${res.sha256.take(12)}…"
                     runCatching { saveToGallery(ctx, file) }
                         .onSuccess { u ->
-                            if (u != null) { lastUri = u; thumb = loadThumb(ctx, u); info = "Salvata in Immagini/PhotoAnchor" }
-                            else info = "Salvataggio in galleria non riuscito"
+                            if (u != null) {
+                                lastUri = u
+                                thumb = loadThumb(ctx, u)
+                                info = if (serverUrl.isNotBlank() && autoSync) {
+                                    "Salvata · Invio al social..."
+                                } else {
+                                    "Salvata in Immagini/PhotoAnchor"
+                                }
+                            } else {
+                                info = "Salvataggio in galleria non riuscito"
+                            }
                         }
                         .onFailure { info = "Errore salvataggio: ${it.message}" }
+
+                    if (serverUrl.isNotBlank() && autoSync) {
+                        syncToWeb(res)
+                    }
                 }
-                override fun onError(e: ImageCaptureException) { blink = false; info = "Errore: ${e.message}" }
-            })
+
+                override fun onError(e: ImageCaptureException) {
+                    blink = false
+                    info = "Errore: ${e.message}"
+                }
+            },
+        )
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize().padding(bottom = 140.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)))
-        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = blinkAlpha)))
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (activeTab == "camera") {
+                Box(Modifier.fillMaxSize()) {
+                    AndroidView(
+                        factory = { previewView },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 128.dp)
+                            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+                    )
+                    Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = blinkAlpha)))
 
-        // top bar
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            RoundIcon(40, { drawFlash(flashOn) }) { flashOn = !flashOn }
-            info?.let {
-                Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.45f)) {
-                    Text(it, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color.White)
+                    // Top bar
+                    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RoundIcon(40, { drawFlash(flashOn) }) { flashOn = !flashOn }
+
+                            Surface(
+                                shape = CircleShape,
+                                color = if (serverUrl.isNotBlank()) Color(0xFF001CE0).copy(alpha = 0.85f) else Color.White.copy(alpha = 0.18f),
+                                modifier = Modifier.clickable { showLinkDialog = true },
+                            ) {
+                                Row(
+                                    Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(if (serverUrl.isNotBlank()) Color(0xFF4ADE80) else Color.White.copy(alpha = 0.5f)),
+                                    )
+                                    Text(
+                                        text = if (serverUrl.isNotBlank()) {
+                                            if (pairingCode.isNotBlank()) "Nostr · ${pairingCode.take(6)}" else "Social collegato"
+                                        } else {
+                                            "Collega Social"
+                                        },
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                    )
+                                }
+                            }
+                        }
+
+                        info?.let { msg ->
+                            Spacer(Modifier.height(10.dp))
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.Black.copy(alpha = 0.65f),
+                                modifier = Modifier
+                                    .align(Alignment.CenterHorizontally)
+                                    .clickable { lastResult?.let { if (serverUrl.isNotBlank()) syncToWeb(it) } },
+                            ) {
+                                Text(msg, Modifier.padding(horizontal = 14.dp, vertical = 6.dp), color = Color.White, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    // Bottom camera shutter controls
+                    Row(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(128.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(Color.DarkGray)
+                                .border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                                .clickable {
+                                    val u = lastUri
+                                    if (u == null) {
+                                        Toast.makeText(ctx, "Nessuna foto", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        runCatching {
+                                            ctx.startActivity(
+                                                Intent(Intent.ACTION_VIEW)
+                                                    .setDataAndType(u, "image/*")
+                                                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                                            )
+                                        }.onFailure {
+                                            Toast.makeText(ctx, "Nessuna app per aprire la foto", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                        ) {
+                            thumb?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                        }
+
+                        Box(
+                            Modifier
+                                .size(82.dp)
+                                .clickable(remember { MutableInteractionSource() }, null) { shoot() },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Canvas(Modifier.fillMaxSize()) {
+                                drawCircle(Color.White, radius = size.minDimension / 2 - 3.dp.toPx(), style = Stroke(4.dp.toPx()))
+                                drawCircle(Color.White, radius = size.minDimension / 2 - 10.dp.toPx())
+                            }
+                        }
+
+                        RoundIcon(52, { drawFlip() }) { back = !back }
+                    }
                 }
+            } else {
+                SocialWebScreen(
+                    serverUrl = serverUrl,
+                    onConfigure = { showLinkDialog = true },
+                )
             }
         }
 
-        // bottom controls
-        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(140.dp).navigationBarsPadding(),
-            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(52.dp).clip(CircleShape).background(Color.DarkGray).border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape)
-                .clickable {
-                    val u = lastUri
-                    if (u == null) Toast.makeText(ctx, "Nessuna foto", Toast.LENGTH_SHORT).show()
-                    else runCatching {
-                        ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(u, "image/*")
-                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
-                    }.onFailure { Toast.makeText(ctx, "Nessuna app per aprire la foto", Toast.LENGTH_SHORT).show() }
-                }) {
-                thumb?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+        // Bottom app switcher: Fotocamera | Social Nostr
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF0A1028))
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            val isCam = activeTab == "camera"
+            Button(
+                onClick = { activeTab = "camera" },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isCam) Color(0xFF001CE0) else Color(0xFF1A2242),
+                    contentColor = Color.White,
+                ),
+            ) {
+                Text("Fotocamera")
             }
-            Box(Modifier.size(84.dp).clickable(remember { MutableInteractionSource() }, null) { shoot() }
-                , contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
-                    drawCircle(Color.White, radius = size.minDimension / 2 - 3.dp.toPx(), style = Stroke(4.dp.toPx()))
-                    drawCircle(Color.White, radius = (size.minDimension / 2 - 10.dp.toPx()) * inner)
-                }
+            Button(
+                onClick = { activeTab = "social" },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (!isCam) Color(0xFF001CE0) else Color(0xFF1A2242),
+                    contentColor = Color.White,
+                ),
+            ) {
+                Text("Social Nostr")
             }
-            RoundIcon(52, { drawFlip() }) { back = !back }
         }
     }
+
+    if (showLinkDialog) {
+        LinkWebDialog(
+            initialUrl = serverUrl,
+            initialPairing = pairingCode,
+            initialAutoSync = autoSync,
+            hasPendingPhoto = lastResult != null,
+            onDismiss = { showLinkDialog = false },
+            onSave = { url, code, auto ->
+                val cleanUrl = parseServerUrlInput(url)
+                val cleanCode = parsePairingInput(url, code)
+                serverUrl = cleanUrl
+                pairingCode = cleanCode
+                autoSync = auto
+                prefs.edit()
+                    .putString(KEY_SERVER_URL, cleanUrl)
+                    .putString(KEY_PAIRING, cleanCode)
+                    .putBoolean(KEY_AUTO_SYNC, auto)
+                    .apply()
+                showLinkDialog = false
+                info = if (cleanUrl.isNotBlank()) "Collegato a $cleanUrl" else "Collegamento rimosso"
+            },
+            onSendLast = { url, code ->
+                val cleanUrl = parseServerUrlInput(url)
+                val cleanCode = parsePairingInput(url, code)
+                serverUrl = cleanUrl
+                pairingCode = cleanCode
+                prefs.edit()
+                    .putString(KEY_SERVER_URL, cleanUrl)
+                    .putString(KEY_PAIRING, cleanCode)
+                    .apply()
+                showLinkDialog = false
+                lastResult?.let { syncToWeb(it) }
+            },
+            onOpenWeb = { url ->
+                val cleanUrl = parseServerUrlInput(url)
+                if (cleanUrl.isNotBlank()) {
+                    serverUrl = cleanUrl
+                    prefs.edit().putString(KEY_SERVER_URL, cleanUrl).apply()
+                    showLinkDialog = false
+                    activeTab = "social"
+                }
+            },
+        )
+    }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun SocialWebScreen(
+    serverUrl: String,
+    onConfigure: () -> Unit,
+) {
+    val clean = serverUrl.trim()
+    if (clean.isEmpty()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF9F9F9))
+                .statusBarsPadding()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Collega il server BitPin Nostr", fontSize = 20.sp, color = Color(0xFF001CE0))
+                Text(
+                    "Inserisci l'indirizzo del tuo server BitPin (es. http://192.168.1.x:8787) per navigare nel social Nostr, vedere profilo, foto e bacheche degli altri utenti.",
+                    fontSize = 13.sp,
+                    color = Color(0xFF202632),
+                )
+                Button(
+                    onClick = onConfigure,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF001CE0)),
+                ) {
+                    Text("Configura Server Social", color = Color.White)
+                }
+            }
+        }
+        return
+    }
+
+    AndroidView(
+        modifier = Modifier.fillMaxSize().statusBarsPadding(),
+        factory = { ctx ->
+            WebView(ctx).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.databaseEnabled = true
+                settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                webViewClient = WebViewClient()
+                webChromeClient = WebChromeClient()
+                loadUrl(clean)
+            }
+        },
+        update = { wv ->
+            if (wv.url.isNullOrEmpty()) wv.loadUrl(clean)
+        },
+    )
+}
+
+private fun parseServerUrlInput(raw: String): String {
+    val trimmed = raw.trim()
+    if (trimmed.startsWith("photoanchor://pair", ignoreCase = true)) {
+        return Uri.parse(trimmed).getQueryParameter("url").orEmpty().trim()
+    }
+    return trimmed
+}
+
+private fun parsePairingInput(rawUrl: String, rawCode: String): String {
+    val trimmedUrl = rawUrl.trim()
+    if (trimmedUrl.startsWith("photoanchor://pair", ignoreCase = true)) {
+        val codeFromUri = Uri.parse(trimmedUrl).getQueryParameter("code").orEmpty().trim()
+        if (codeFromUri.isNotEmpty()) return codeFromUri
+    }
+    return rawCode.trim()
+}
+
+@Composable
+private fun LinkWebDialog(
+    initialUrl: String,
+    initialPairing: String,
+    initialAutoSync: Boolean,
+    hasPendingPhoto: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (String, String, Boolean) -> Unit,
+    onSendLast: (String, String) -> Unit,
+    onOpenWeb: (String) -> Unit,
+) {
+    var url by remember { mutableStateOf(initialUrl) }
+    var code by remember { mutableStateOf(initialPairing) }
+    var auto by remember { mutableStateOf(initialAutoSync) }
+    var testStatus by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Collega Social Nostr & Bitcoin") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Inserisci l'indirizzo del server mostrato sul sito BitPin (o incolla il link photoanchor://pair) e il codice pairing.",
+                    fontSize = 12.sp,
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it; testStatus = null },
+                    label = { Text("URL Server (es. http://192.168.1.x:8787)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { code = it },
+                    label = { Text("Codice Pairing o pubkey hex") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Invia & ancora dopo ogni scatto", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Switch(checked = auto, onCheckedChange = { auto = it })
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        val target = parseServerUrlInput(url)
+                        if (target.isBlank()) {
+                            testStatus = "Inserisci un URL"
+                        } else {
+                            testStatus = "Verifica..."
+                            scope.launch {
+                                testStatus = runCatching { WebBridgeAnchorer.ping(target) }
+                                    .getOrElse { "Errore: ${it.message}" }
+                            }
+                        }
+                    }) { Text("Testa") }
+                    if (hasPendingPhoto && url.isNotBlank()) {
+                        TextButton(onClick = { onSendLast(url, code) }) { Text("Invia ultima") }
+                    }
+                    if (url.isNotBlank()) {
+                        TextButton(onClick = { onOpenWeb(url) }) { Text("Apri Social") }
+                    }
+                }
+                testStatus?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary) }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(url, code, auto) }) { Text("Salva") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Chiudi") }
+        },
+    )
 }
 
 @Composable
 fun RoundIcon(size: Int, icon: DrawScope.() -> Unit, onClick: () -> Unit) {
-    Box(Modifier.size(size.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.18f))
-        .clickable(remember { MutableInteractionSource() }, null, onClick = onClick), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier
+            .size(size.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.18f))
+            .clickable(remember { MutableInteractionSource() }, null, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(Modifier.size((size * 0.55f).dp)) { icon() }
     }
 }
 
-// Icons drawn on a 24x24 grid
 private fun DrawScope.drawFlash(on: Boolean) {
     val k = size.minDimension / 24f
     val c = if (on) Color(0xFFFFD60A) else Color.White
@@ -200,17 +619,27 @@ private fun DrawScope.drawFlip() {
     val r = 8f * k
     val ctr = Offset(12f * k, 12f * k)
     for (start in listOf(200f, 20f)) {
-        drawArc(Color.White, start, 120f, false, Offset(ctr.x - r, ctr.y - r),
-            androidx.compose.ui.geometry.Size(2 * r, 2 * r), style = Stroke(2f * k, cap = StrokeCap.Round))
+        drawArc(
+            Color.White,
+            start,
+            120f,
+            false,
+            Offset(ctr.x - r, ctr.y - r),
+            androidx.compose.ui.geometry.Size(2 * r, 2 * r),
+            style = Stroke(2f * k, cap = StrokeCap.Round),
+        )
         val a = Math.toRadians((start + 120f).toDouble())
         val tip = Offset(ctr.x + r * cos(a).toFloat(), ctr.y + r * sin(a).toFloat())
-        val tx = -sin(a).toFloat(); val ty = cos(a).toFloat()   // tangent
-        val nx = cos(a).toFloat(); val ny = sin(a).toFloat()    // radial
+        val tx = -sin(a).toFloat()
+        val ty = cos(a).toFloat()
+        val nx = cos(a).toFloat()
+        val ny = sin(a).toFloat()
         val h = 4.5f * k
         val head = Path().apply {
             moveTo(tip.x + tx * h, tip.y + ty * h)
             lineTo(tip.x + nx * h * 0.9f, tip.y + ny * h * 0.9f)
-            lineTo(tip.x - nx * h * 0.9f, tip.y - ny * h * 0.9f); close()
+            lineTo(tip.x - nx * h * 0.9f, tip.y - ny * h * 0.9f)
+            close()
         }
         drawPath(head, Color.White)
     }
@@ -231,10 +660,14 @@ private fun saveToGallery(ctx: Context, file: File): Uri? {
 }
 
 private fun latestPhoto(ctx: Context): Uri? =
-    ctx.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Images.Media._ID),
-        "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?", arrayOf("Pictures/PhotoAnchor%"),
-        "${MediaStore.Images.Media.DATE_ADDED} DESC")?.use {
-        if (it.moveToFirst()) android.content.ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, it.getLong(0)) else null
+    ctx.contentResolver.query(
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        arrayOf(MediaStore.Images.Media._ID),
+        "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?",
+        arrayOf("Pictures/PhotoAnchor%"),
+        "${MediaStore.Images.Media.DATE_ADDED} DESC",
+    )?.use {
+        if (it.moveToFirst()) ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, it.getLong(0)) else null
     }
 
 private fun loadThumb(ctx: Context, uri: Uri) =

@@ -1,0 +1,31 @@
+{
+  "name": "photoanchor-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@scure/bip39": "2.0.1",
+    "@zxing/browser": "0.1.5",
+    "@zxing/library": "0.21.3",
+    "idb": "8.0.3",
+    "nostr-tools": "2.26.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-qr-code": "2.0.18"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "4.1.12"
+  }
+}
