@@ -273,6 +273,21 @@ links/unknown members and incomplete-vs-invalid exit codes are covered. This is
 transport validation with synthetic evidence; Android build/device validation
 and real credential validation remain outstanding.
 
+## Piece 8: reproducible Android build configuration
+
+Added Gradle Wrapper 8.11.1 with the official distribution SHA-256, Windows and
+POSIX launchers, and [Android build instructions](../android/README.md). The
+existing standalone export test is now included in `testDebugUnitTest` through
+a JUnit adapter. Downloaded local JDK/Gradle/command-line tools live in the
+ignored `.tools-android/` directory; no global Java/Gradle installation changed.
+
+Wrapper generation completed successfully. The Android app build did not
+complete: SDK package installation required acceptance of the Google license,
+and the user explicitly chose to prepare configuration only. No license was
+accepted; the attempted build was interrupted. The Gradle JUnit task remains
+unrun. The 32 Python tests were rerun successfully. Android capture UI,
+permissions, document picker and camera output still require build/device tests.
+
 ## Next pieces
 
 1. Establish the real camera-credential route on target hardware, as required

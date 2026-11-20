@@ -25,6 +25,7 @@ web/coverage/
 *.tsbuildinfo
 
 # Android / Gradle
+.tools-android/
 .gradle/
 .kotlin/
 local.properties
