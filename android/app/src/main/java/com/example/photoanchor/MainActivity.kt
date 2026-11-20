@@ -58,7 +58,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.UUID
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -127,7 +131,41 @@ fun PhotoAnchorMain() {
     var thumb by remember { mutableStateOf<ImageBitmap?>(null) }
     var lastUri by remember { mutableStateOf<Uri?>(null) }
     var lastResult by remember { mutableStateOf<PhotoProcessor.Result?>(null) }
+    var lastReport by remember { mutableStateOf<String?>(null) }
+    var exportPending by remember { mutableStateOf<Pair<PhotoProcessor.Result, String>?>(null) }
+    var exporting by remember { mutableStateOf(false) }
+    var capturing by remember { mutableStateOf(false) }
     var blink by remember { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri ->
+        val pending = exportPending
+        exportPending = null
+        if (uri != null && pending != null) {
+            scope.launch {
+                exporting = true
+                val outcome = runCatching {
+                    withContext(Dispatchers.IO) {
+                        val output = ctx.contentResolver.openOutputStream(uri, "w")
+                            ?: error("Impossibile aprire il file")
+                        output.use {
+                            CaptureEvidence.write(pending.first.file, pending.first.sha256,
+                                pending.first.sizeBytes, pending.second, it)
+                        }
+                    }
+                }
+                exporting = false
+                outcome.onSuccess { info = "Originale e rapporto esportati" }
+                    .onFailure {
+                        withContext(Dispatchers.IO) {
+                            runCatching { android.provider.DocumentsContract.deleteDocument(ctx.contentResolver, uri) }
+                        }
+                        info = "Esportazione non riuscita; scarta eventuali file incompleti"
+                    }
+            }
+        }
+    }
 
     val blinkAlpha by animateFloatAsState(if (blink) 0.8f else 0f, label = "blink")
     val previewView = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
@@ -162,40 +200,64 @@ fun PhotoAnchorMain() {
     }
 
     fun shoot() {
+        if (capturing) return
+        capturing = true
         blink = true
-        val file = File(ctx.filesDir, "photo_${System.currentTimeMillis()}.jpg")
+        val selectedLens = if (back) "back" else "front"
+        val selectedFlash = capture.flashMode
+        val file = File(ctx.filesDir, "photo_${UUID.randomUUID()}.jpg")
         capture.takePicture(
             ImageCapture.OutputFileOptions.Builder(file).build(),
             ContextCompat.getMainExecutor(ctx),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(r: ImageCapture.OutputFileResults) {
                     blink = false
-                    val res = PhotoProcessor.process(file)
-                    lastResult = res
-                    info = "SHA-256 ${res.sha256.take(12)}…"
-                    runCatching { saveToGallery(ctx, file) }
-                        .onSuccess { u ->
-                            if (u != null) {
-                                lastUri = u
-                                thumb = loadThumb(ctx, u)
-                                info = if (serverUrl.isNotBlank() && autoSync) {
-                                    "Salvata · Invio al social..."
-                                } else {
-                                    "Salvata in Immagini/PhotoAnchor"
-                                }
-                            } else {
-                                info = "Salvataggio in galleria non riuscito"
+                    val receivedAtMillis = System.currentTimeMillis()
+                    scope.launch {
+                        try {
+                            val processed = withContext(Dispatchers.IO) {
+                                val res = PhotoProcessor.process(file)
+                                val report = CaptureReport.create(ctx, res, receivedAtMillis, selectedLens, selectedFlash)
+                                File(file.parentFile, file.name + ".capture.json").writeText(report, Charsets.UTF_8)
+                                Pair(res, report)
                             }
-                        }
-                        .onFailure { info = "Errore salvataggio: ${it.message}" }
+                            val (res, report) = processed
+                            lastResult = res
+                            lastReport = report
+                            info = "SHA-256 ${res.sha256.take(12)}…"
+                            runCatching { saveToGallery(ctx, file) }
+                                .onSuccess { u ->
+                                    if (u != null) {
+                                        lastUri = u
+                                        thumb = loadThumb(ctx, u)
+                                        info = if (serverUrl.isNotBlank() && autoSync) {
+                                            "Salvata · Invio al social..."
+                                        } else {
+                                            "Salvata in Immagini/PhotoAnchor"
+                                        }
+                                    } else {
+                                        info = "Salvataggio in galleria non riuscito"
+                                    }
+                                }
+                                .onFailure { info = "Errore salvataggio: ${it.message}" }
 
-                    if (serverUrl.isNotBlank() && autoSync) {
-                        syncToWeb(res)
+                            if (serverUrl.isNotBlank() && autoSync) {
+                                syncToWeb(res)
+                            }
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Exception) {
+                            info = "Errore preparazione foto: ${error.message?.take(60)}"
+                        } finally {
+                            capturing = false
+                        }
                     }
                 }
 
                 override fun onError(e: ImageCaptureException) {
                     blink = false
+                    capturing = false
+                    file.delete()
                     info = "Errore: ${e.message}"
                 }
             },
@@ -323,6 +385,17 @@ fun PhotoAnchorMain() {
                     onConfigure = { showServerDialog = true },
                 )
             }
+        }
+
+        if (activeTab == "camera" && lastResult != null && lastReport != null) {
+            TextButton(
+                enabled = !exporting && exportPending == null,
+                onClick = {
+                    exportPending = Pair(lastResult!!, lastReport!!)
+                    exportLauncher.launch("capture-${lastResult!!.sha256.take(12)}.zip")
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (exporting) "Esportazione..." else "Esporta originale e rapporto") }
         }
 
         // Bottom app switcher: Fotocamera | Social Nostr

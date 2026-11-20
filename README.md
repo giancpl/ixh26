@@ -1,5 +1,10 @@
 # UPP Bitcoin settlement
 
+The proposed FingerprinTO receipt implementation is in `fingerprinto/`.
+Its independent bundle CLI, current checks and remaining Android/origin work
+are described in [implementation progress](docs/implementation-progress.md).
+The proposed protocol is in [the cryptographic manual](docs/crypto.md).
+
 A standalone Python 3.11+ component that timestamps arbitrary **opaque binary
 files** with OpenTimestamps (OTS). It hashes locally, stores standard portable
 `.ots` proofs, retrieves upgrades, and verifies Bitcoin attestations against a
