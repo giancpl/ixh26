@@ -5,7 +5,7 @@ COPY requirements-social.lock ./
 COPY settlement ./settlement
 COPY upp_protocol ./upp_protocol
 COPY social ./social
-RUN pip install --no-cache-dir -c requirements-social.lock '.[social,test]'
+RUN --mount=type=cache,target=/root/.cache/pip pip install -c requirements-social.lock '.[social,test]'
 COPY contracts ./contracts
 COPY tests ./tests
 COPY scripts ./scripts

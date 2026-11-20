@@ -67,7 +67,7 @@ services:
   integration:
     <<: *settlement
     profiles: [tools]
-    entrypoint: ["python", "-m", "pytest", "-q", "-m", "regtest"]
+    entrypoint: ["python", "-m", "pytest", "-q", "-m", "regtest", "tests/test_regtest_integration.py"]
     environment:
       UPP_REGTEST_TEST: "1"
     depends_on:
