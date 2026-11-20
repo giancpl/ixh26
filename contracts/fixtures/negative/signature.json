@@ -1,0 +1,29 @@
+{
+  "id": "8dde31d4aefacba4eca503449e2b8d8cd4c6934eeecb6004941072ce53fde8ca",
+  "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+  "created_at": 1700000000,
+  "kind": 20,
+  "tags": [
+    [
+      "title",
+      "PhotoAnchor fixture"
+    ],
+    [
+      "imeta",
+      "url http://127.0.0.1:8080/v1/media/91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+      "m image/jpeg",
+      "x 91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+      "dim 64x48"
+    ],
+    [
+      "m",
+      "image/jpeg"
+    ],
+    [
+      "x",
+      "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920"
+    ]
+  ],
+  "content": "PhotoAnchor fixture",
+  "sig": "02177455ec035abfbf58f57bfa5684e6ce34782bc78a1be429b5ccf10eb4f38291467f3a11423c670e086226238d0b686ae0570ec7c8cac97880d5a792266f57"
+}
