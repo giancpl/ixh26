@@ -2,12 +2,16 @@
 
 This is a restore/handover point, **not a production-readiness declaration**.
 The user requested this checkpoint before a substantial change of direction.
-Do not automatically continue the old backlog: read the next user instructions
-and decide which assumptions/modules survive the redesign first.
+Do not automatically continue the old backlog. The user has now supplied a new
+v3 manufacturer/PRNU proposal in `docs/crypto.md`; read it and the next user
+instructions before deciding which old assumptions/modules survive.
 
-Branch: `leomain`. Parent before this checkpoint: `7c3ea88` (`ADD: verifier
-module`). The commit containing this file also saves the pending hybrid v2,
-hardware-wrapping, journal and transport implementation. Locate its exact ID:
+Branch: `leomain`. Implementation save commit: **`db5a857` (`ADD: partial 1`)**,
+whose parent is `7c3ea88` (`ADD: verifier module`). It saves the hybrid v2,
+hardware-wrapping, journal and transport implementation, this handover's initial
+version, and the user's updated **v3 specification**. The v3 text is a proposal
+to implement, not evidence that its code exists. A subsequent documentation-only
+correction makes that split explicit. Find this document's history with:
 
 ```sh
 git log --oneline -- docs/CRYPTO-CHECKPOINT-2026-11-21.md
@@ -25,14 +29,16 @@ git log --oneline -- docs/CRYPTO-CHECKPOINT-2026-11-21.md
 - The user explicitly approved **P-256 hardware identity + AES hardware wrapping
   of software ML-DSA-65/Ed25519 keys**, acknowledging plaintext keys in app RAM
   during signing. Native hardware ML-DSA/Ed25519 was never established.
-- Preserve this checkpoint before changing formats, algorithms or trust model.
-  The upcoming direction has not yet been specified in this document.
+- Preserve the v1/v2 implementation checkpoint before changing formats,
+  algorithms or trust model. The new v3 proposal is summarised below and remains
+  unimplemented here. It proposes P-256, while v2 is a separate hybrid experiment;
+  do not silently combine their schemas or infer a migration policy.
 
 ## Read these files first
 
 | File | Role |
 |---|---|
-| `docs/crypto.md` | Original proposed **v1 P-256** protocol; not the hybrid specification |
+| `docs/crypto.md` | **New v3 P-256 manufacturer/PRNU proposal first**; original v1 and its vectors survive in a historical appendix |
 | `docs/hybrid-v2.md` | Experimental v2 suite, byte contracts, wrapping boundary, APIs/CLI |
 | `docs/enrollment-verifier.md` | Restricted attestation intake, caller-owned trust/status inputs and limits |
 | `docs/capture-feasibility.md` | Real-capture experiment and unsigned diagnostic ZIP |
@@ -57,6 +63,59 @@ git log --oneline -- docs/CRYPTO-CHECKPOINT-2026-11-21.md
 The existing `server/`, `web/` and ordinary photo upload do not automatically
 use this full crypto lifecycle. A photo-only OTS proof cannot prove inclusion
 of the new signed-receipt commitment.
+
+## New direction already supplied: v3 delta, not implemented
+
+At `db5a857`, `docs/crypto.md` targets wire version **3**, with manufacturer and
+PRNU checks on the same immutable photo. There is no v3 codec, PRNU engine,
+reference enrollment or evidence-level reducer in the saved implementation.
+No v1/v2 test result below validates v3. Keep the legacy vectors unchanged.
+
+The module backlog for that direction is:
+
+1. **v3 byte contract and attachments.** Implement the seven-item E array,
+   absent/embedded/detached credential modes, raw-byte policy/report hashes,
+   `photo/evidence-v3` and `fingerprinto/evidence-v3` domains, and the v3 P-256
+   schema exactly as proposed. Add strict version dispatch without v1/v2 fallback.
+   Check the version registry before assigning 3; the saved codecs currently
+   implement only 1 and 2. Add shared golden vectors and per-field tamper tests.
+   Extend the explicit bundle allowlist/limits for mandatory policy and report
+   JSON (1 MiB each, counted toward the aggregate), duplicate-key rejection,
+   attachment completeness and report/receipt agreement. Existing bundle members
+   and v1/v2 parsing must not acquire new semantics silently.
+2. **Shared evidence reducer.** Implement a pure module-level reducer used by
+   producer and verifier. Both checks always run. A definitive failure wins even
+   if the other check passes. Otherwise manufacturer pass outranks PRNU pass;
+   neither pass gives no verification. Keep unavailable/inconclusive distinct
+   from fail, and pending required signature/enrollment checks distinct from
+   completed acceptance. Test all result pairs, false claimed anchors and missing
+   mandatory evidence. A local personal trust choice never changes C or overrides
+   failure. UI rendering/choice persistence stays on the application branch.
+3. **PRNU reference and scorer.** Freeze the decoder, channel/orientation,
+   crop/geometry, wavelet implementation/settings, masks, numeric precision,
+   artifact suppression and correlation/PCE definition in a versioned policy.
+   Implement streaming reference estimation and independent query scoring;
+   never enroll a query into its own reference. Enroll each physical lens/mode
+   and retain provenance. Bind refHash to a trusted installation/camera association.
+   Missing geometry, reference or calibration is unavailable/inconclusive, not
+   a made-up match. The proposal's 30 frames are a starting experiment, not a
+   proved universal sample count.
+4. **Calibration and empirical evidence.** Keep enrollment, threshold development
+   and final test images disjoint; include other physical units of the same
+   model and real app captures. Validate acceptance and rejection regions
+   independently, report false-match/rejection/inconclusive rates and counts.
+   Until then scores remain experimental/inconclusive. Do not ship an arbitrary
+   PCE threshold or represent PRNU as authenticity, truth or capture time.
+5. **Manufacturer check and enrollment retention.** Apply the v3 rules for absent,
+   unknown-policy and explicitly rejected issuers, binding/signature failure and
+   conflicting capture semantics. Keep the older mandatory-manufacturer gate
+   only for v1. Complete retained enrollment/status verification as described
+   below, then orchestrate both checks, receipt/journal and anchor states for v3.
+
+The v3 specification also describes calibration/detail screens and upload-queue
+changes. Those are integration work, outside the crypto-module-only branch
+scope unless the user changes that scope. Do not start an SDK install or revive
+XRPL because the historical appendix mentions its old conventions.
 
 ## Invariants that must not be silently lost in a redesign
 
@@ -86,11 +145,12 @@ of the new signed-receipt commitment.
 
 ### A. Decide the new direction before extending current assumptions
 
-Resolve with the user's next instructions: which signature suite survives,
-whether hardware identity/wrapping remains, which provenance claim is intended,
-and whether v1/v2 formats remain compatible/readable. Then update the relevant
-specification and expected-profile policy before changing code. This checkpoint
-does not pre-approve any replacement design.
+Use the new v3 proposal and the user's next instructions to settle the signature
+suite, hardware identity/wrapping, provenance claim and compatibility/migration
+policy. The current proposal says P-256 v3 and separate hybrid v2; earlier chat
+instructions requested hybrid keys. Reconcile any remaining ambiguity explicitly
+instead of silently transplanting v2 into v3. No runtime redesign is included
+in this documentation checkpoint.
 
 ### B. Origin validation and policy — not implemented
 
@@ -217,6 +277,6 @@ their existence/content is not part of the committed restore point.
 
 For a future redesign, inspect the checkpoint commit and create an isolated
 checkout/branch if useful. Do not reset/delete the user's later work to restore
-this snapshot. Update this handover with the new direction only after it is
-actually specified; preserve the old profile/fixtures intentionally if migration
+this snapshot. Keep the implementation/proposal distinction current as the new
+direction is implemented; preserve the old profile/fixtures intentionally if migration
 compatibility is required.

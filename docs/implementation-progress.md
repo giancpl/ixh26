@@ -7,6 +7,13 @@ The numbered sections below are historical snapshots, not cumulative claims
 that every later requirement has already been satisfied. Read the user's new
 direction before continuing the old backlog.
 
+At save commit `db5a857` (`ADD: partial 1`), `docs/crypto.md` already introduces
+the **v3 P-256 manufacturer/PRNU proposal** and moves v1 into a historical
+appendix. The implementation recorded below remains v1/v2. The v3 codec,
+evidence reducer, PRNU reference/scoring/calibration and new attachments are
+not implemented; their module-level delta is listed in the checkpoint document.
+The prior v1/v2 test counts are not validation of v3.
+
 ## Piece 1: deterministic encoding and commitments
 
 Implemented in `fingerprinto/`, independently of Android and the existing OTS
