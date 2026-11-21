@@ -1,0 +1,40 @@
+# Optional legacy image-byte API. Does not change the native /v1 application.
+services:
+  bitcoin:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor-server}-bitcoin:30.2
+  bootstrap:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor-server}-settlement:regtest
+  calendar:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor-server}-calendar:regtest
+  server:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor-server}-api:local
+    build:
+      context: .
+      dockerfile: docker/regtest/Dockerfile.server
+    networks: [regtest, server]
+    ports: ["127.0.0.1:${IXH26_PORT:-8787}:8787"]
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      IXH26_DATA_DIR: /data
+      IXH26_NETWORK: regtest
+      IXH26_BITCOIN_CONF: /config/client.conf
+      IXH26_CALENDARS: http://calendar:14788
+      IXH26_AUTO_CONFIRM_REGTEST: ${IXH26_AUTO_CONFIRM_REGTEST:-0}
+    volumes:
+      - bitcoin:/bitcoin:ro
+      - server-data:/data
+      - artifacts:/artifacts
+    depends_on:
+      calendar:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/api/info', timeout=3).close()"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+networks:
+  server:
+    driver: bridge
+volumes:
+  server-data:

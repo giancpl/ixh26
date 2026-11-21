@@ -114,6 +114,8 @@ def create_app(
     dist_dir: Path | None = None,
     network: str = "mainnet",
     bitcoin_conf: str | None = None,
+    calendars: tuple[str, ...] | None = None,
+    auto_confirm_regtest: bool | None = None,
 ) -> web.Application:
     root = Path(__file__).resolve().parent.parent
     data_root = data_dir or Path(os.environ.get("IXH26_DATA_DIR", root / "data"))
@@ -121,7 +123,8 @@ def create_app(
 
     store = SocialStore(data_root)
     relay = NostrRelay(store)
-    anchors = AnchorManager(store, network=network, bitcoin_conf=bitcoin_conf)
+    anchors = AnchorManager(store, network=network, bitcoin_conf=bitcoin_conf,
+                            calendars=calendars, auto_confirm_regtest=auto_confirm_regtest)
 
     app = web.Application(middlewares=[cors_middleware], client_max_size=MAX_UPLOAD_BYTES + 1024 * 1024)
     app[STORE_KEY] = store
@@ -327,8 +330,8 @@ def create_app(
         sha = request.match_info["sha256"].lower()
         if not SHA256_RE.match(sha):
             raise web.HTTPBadRequest(text="Invalid SHA-256.")
-        proof_path = store.proofs_dir / f"{sha}.ots"
-        if not proof_path.is_file():
+        proof_path = anchors.proof_path(sha)
+        if not proof_path.is_file() or proof_path.is_symlink():
             raise web.HTTPNotFound(text="OTS proof not found.")
         return web.FileResponse(
             proof_path,
@@ -348,6 +351,38 @@ def create_app(
     app.router.add_post("/api/anchor/{sha256}/upgrade", anchor_upgrade)
     app.router.add_get("/api/anchor/{sha256}", anchor_status)
     app.router.add_get("/api/proofs/{sha256}.ots", get_proof)
+
+    async def verify_upload(request: web.Request) -> web.Response:
+        reader = await request.multipart()
+        fields: dict[str, Any] = {}
+        async for part in reader:
+            if part.name not in ("file", "proof", "expected_sha256", "sha256"):
+                raise web.HTTPBadRequest(text="Unsupported verification field.")
+            key = "expected_sha256" if part.name == "sha256" else part.name
+            if key in fields:
+                raise web.HTTPBadRequest(text="Duplicate verification field.")
+            limit = MAX_UPLOAD_BYTES if key == "file" else 1024 * 1024 if key == "proof" else 64
+            data = bytearray()
+            while chunk := await part.read_chunk(65536):
+                if len(data) + len(chunk) > limit:
+                    raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=len(data) + len(chunk))
+                data.extend(chunk)
+            fields[key] = bytes(data)
+        if not fields.get("file"):
+            raise web.HTTPBadRequest(text="Missing file to verify.")
+        expected = fields.get("expected_sha256")
+        if expected is not None:
+            try:
+                expected = expected.decode("ascii")
+            except UnicodeError:
+                raise web.HTTPBadRequest(text="Invalid SHA-256.") from None
+            if not SHA256_RE.fullmatch(expected):
+                raise web.HTTPBadRequest(text="Invalid SHA-256.")
+        result = await anchors.verify_bytes(fields["file"], expected_sha256=expected,
+                                             proof_bytes=fields.get("proof"))
+        return web.json_response(result)
+
+    app.router.add_post("/api/verify", verify_upload)
 
     if web_dist.is_dir():
         assets_dir = web_dist / "assets"

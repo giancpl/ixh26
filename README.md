@@ -17,6 +17,10 @@ target `/v1` API; it does not describe the existing web server's `/api` routes.
 The settlement package below continues to accept opaque bytes and does not
 depend on the Nostr SDK.
 
+The legacy image-byte API has an isolated [optional regtest mining demo](docs/REGTEST_SERVER.md):
+`./scripts/server-regtest-demo.sh`. Automatic mining is disabled by default,
+and fresh verification always uses the shared settlement service and local Core.
+
 A standalone Python 3.11+ component that timestamps arbitrary **opaque binary
 files** with OpenTimestamps (OTS). It hashes locally, stores standard portable
 `.ots` proofs, retrieves upgrades, and verifies Bitcoin attestations against a
