@@ -7,6 +7,7 @@ COPY settlement ./settlement
 COPY server ./server
 COPY upp_protocol ./upp_protocol
 COPY social ./social
+COPY fingerprinto ./fingerprinto
 RUN pip install --no-deps . && pip check
 COPY contracts ./contracts
 COPY tests ./tests

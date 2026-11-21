@@ -60,3 +60,14 @@ Unknown or unavailable timestamp results never display a confirmation badge.
 
 Review findings, corrective changes and validation are tracked in
 [`docs/reviews/PIETRO_ANDROID.md`](../docs/reviews/PIETRO_ANDROID.md).
+
+## Experimental cryptographic primitives
+
+The portable receipt, enrollment-possession, hybrid and PRNU numeric classes
+from `leomain@f3bd1ef` build alongside the native Nostr application. They have
+independent JVM/Python vectors and hardware-key storage adapters. They do not
+yet connect capture to v3 issuance or provide sensor-signed photographs.
+`CaptureReport`/`CaptureEvidence` are unsigned diagnostic export utilities;
+the former WebView callback has not replaced the native Compose capture flow.
+See [the integration report](../docs/reviews/LEOMAIN_PR9.md) for executed checks
+and the remaining Pixel/GrapheneOS and real-camera acceptance gates.

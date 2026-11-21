@@ -1,19 +1,33 @@
-"""End-to-end tests for server HTTP API, Android PhotoAnchor bridge, Nostr relay, and OTS anchoring."""
+"""Loopback HTTP compatibility; simulated calendar, real OTS serialization/client."""
 from __future__ import annotations
 
 import hashlib
 import io
 import json
+import socket
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import aiohttp
+import pytest
 from aiohttp.test_utils import AioHTTPTestCase
 from PIL import Image
+from opentimestamps.core.notary import PendingAttestation
+from opentimestamps.core.serialize import BytesSerializationContext, BytesDeserializationContext
+from opentimestamps.core.timestamp import Timestamp, DetachedTimestampFile
+from settlement import OTSConfig
 
 from server.app import create_app
 from server.nostr_relay import compute_event_id
+
+pytestmark = pytest.mark.local_http
+
+
+def test_local_http_guard_blocks_external_connections():
+    with socket.socket() as connection, pytest.raises(AssertionError, match="Network access forbidden"):
+        connection.connect(("192.0.2.1", 80))
 
 
 def make_jpeg_bytes(color: tuple[int, int, int] = (0, 28, 224)) -> bytes:
@@ -25,7 +39,16 @@ def make_jpeg_bytes(color: tuple[int, int, int] = (0, 28, 224)) -> bytes:
 class WebServerTestCase(AioHTTPTestCase):
     async def get_application(self) -> aiohttp.web.Application:
         self._tmp = tempfile.TemporaryDirectory()
-        dist = Path(__file__).resolve().parent.parent / "web" / "dist"
+        self.addCleanup(self._tmp.cleanup)
+        # LAN discovery's UDP route probe is unrelated to HTTP compatibility.
+        lan_probe = patch("server.app._lan_ips", return_value=["127.0.0.1"])
+        lan_probe.start()
+        self.addCleanup(lan_probe.stop)
+        # Test serving the configured SPA independently of frontend compilation.
+        # Production TypeScript/build checks run separately in the web CI job.
+        dist = Path(self._tmp.name) / "dist"
+        dist.mkdir()
+        (dist / "index.html").write_text("<!doctype html><title>BitPin fixture</title>")
         return create_app(data_dir=Path(self._tmp.name) / "data", dist_dir=dist)
 
     async def tearDownAsync(self) -> None:
@@ -135,12 +158,17 @@ class WebServerTestCase(AioHTTPTestCase):
     async def test_ots_calendar_stamp_and_proof_download(self) -> None:
         # Spin up a local test OTS calendar HTTP server simulating /digest
         fake_cal = aiohttp.web.Application()
-        fake_commitment = b"\x00\x83\xdf\xe3\x0d\x2e\xf9\x0c\x8e\x2c" + b"https://example.ots"
+        submitted = []
 
         async def digest_handler(request: aiohttp.web.Request) -> aiohttp.web.Response:
             body = await request.read()
             self.assertEqual(len(body), 32)
-            return aiohttp.web.Response(body=fake_commitment)
+            submitted.append(body)
+            timestamp = Timestamp(body)
+            timestamp.attestations.add(PendingAttestation("https://example.ots"))
+            context = BytesSerializationContext()
+            timestamp.serialize(context)
+            return aiohttp.web.Response(body=context.getbytes())
 
         fake_cal.router.add_post("/digest", digest_handler)
         runner = aiohttp.web.AppRunner(fake_cal)
@@ -149,7 +177,9 @@ class WebServerTestCase(AioHTTPTestCase):
         await site.start()
         try:
             port = site._server.sockets[0].getsockname()[1]  # type: ignore[union-attr]
-            self.app[self.app_anchors_key()].calendars = (f"http://127.0.0.1:{port}",)
+            anchors = self.app[self.app_anchors_key()]
+            anchors.config = OTSConfig(network="regtest", calendars=(f"http://127.0.0.1:{port}",), timeout=5)
+            anchors.network, anchors.calendars = "regtest", anchors.config.calendars
 
             jpg = make_jpeg_bytes((12, 34, 56))
             sha = hashlib.sha256(jpg).hexdigest()
@@ -162,14 +192,16 @@ class WebServerTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             payload = await resp.json()
             self.assertEqual(payload["anchor"]["status"], "PENDING")
+            self.assertEqual(payload["anchor"]["network"], "regtest")
             self.assertEqual(payload["anchor"]["proof_url"], f"/api/proofs/{sha}.ots")
 
             proof_resp = await self.client.get(payload["anchor"]["proof_url"])
             self.assertEqual(proof_resp.status, 200)
             proof_bytes = await proof_resp.read()
             self.assertTrue(proof_bytes.startswith(b"\x00OpenTimestamps\x00\x00Proof\x00"))
-            self.assertIn(bytes.fromhex(sha), proof_bytes)
-            self.assertTrue(proof_bytes.endswith(fake_commitment))
+            detached = DetachedTimestampFile.deserialize(BytesDeserializationContext(proof_bytes))
+            self.assertEqual(detached.file_digest, bytes.fromhex(sha))
+            self.assertEqual(len(submitted), 1)
         finally:
             await runner.cleanup()
 

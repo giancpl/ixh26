@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+.venv-fingerprinto/
 *.egg-info/
 build/
 dist/
@@ -28,6 +29,7 @@ web/coverage/
 *.tsbuildinfo
 
 # Android / Gradle
+.tools-android/
 .gradle/
 .kotlin/
 local.properties

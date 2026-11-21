@@ -87,6 +87,23 @@ services:
     depends_on:
       api:
         condition: service_healthy
+  crypto-demo:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "/app/scripts/crypto_regtest_demo.py"]
+    depends_on:
+      calendar:
+        condition: service_healthy
+  crypto-tests:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "pytest", "-q", "-m", "regtest", "tests/test_crypto_regtest.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_CRYPTO_TEST: "1"
+    depends_on:
+      calendar:
+        condition: service_healthy
 
 networks:
   social:
