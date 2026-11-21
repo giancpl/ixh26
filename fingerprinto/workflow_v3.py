@@ -14,7 +14,7 @@ from .core import Receipt, commitments, digest, domain
 from .evidence_v3 import Anchor, Outcome, Required, reduce_evidence
 from .prnu import score
 from .prnu_image import decode_green
-from .prnu_records import json_bytes, read_reference
+from .prnu_records import REFERENCE_LIMIT, json_bytes, read_reference
 from .receipt_v3 import Evidence, ReceiptV3, RESULTS, json_object
 
 
@@ -107,7 +107,7 @@ def assess(fields, asset, credential, placement, policy, ref_hash, *, now, store
             raw = reference_loader(ref_hash)
             if raw is None:
                 p = Finding(Outcome.UNAVAILABLE, "reference_unavailable", {})
-            elif type(raw) is not bytes or digest(raw) != ref_hash:
+            elif type(raw) is not bytes or len(raw) > REFERENCE_LIMIT or digest(raw) != ref_hash:
                 p = Finding(Outcome.FAIL, "reference_digest_mismatch", {})
             else:
                 ref = read_reference(raw)

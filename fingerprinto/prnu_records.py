@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import struct
 import tempfile
+from urllib.parse import quote
 
 from .prnu import METHOD, Geometry, Reference
 from .receipt_v3 import json_object
@@ -98,7 +99,7 @@ def evaluate_samples(samples, *, enrollment_ids, development_ids, accept=None, r
             result = "pass"
         elif s is not None and reject is not None and s <= reject:
             result = "fail"
-        key = row["device"] + "/" + row["mode"]
+        key = quote(row["device"], safe="") + "/" + quote(row["mode"], safe="")
         counts = groups.setdefault(key, {"genuine": 0, "impostor": 0, "false_match": 0,
                                          "false_reject": 0, "inconclusive_genuine": 0,
                                          "inconclusive_impostor": 0})

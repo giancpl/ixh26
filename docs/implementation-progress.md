@@ -1,9 +1,12 @@
 # FingerprinTO implementation progress
 
 **Current v3 work:** [CRYPTO-V3-ROADMAP.md](CRYPTO-V3-ROADMAP.md) tracks the
-manufacturer/PRNU direction. Stage 1 now has a pure Python/Java evidence reducer
-and independent PRNU policy/quality guards. Image processing, calibrated
-attribution and the v3 wire format are not implemented by this first stage.
+manufacturer/PRNU direction. Implemented pieces now include the shared reducer,
+v3 receipt/attachment codecs, experimental PRNU numeric core, reference records,
+authority-signed enrollment state, enrollment possession proof and offline
+sign-once issuance/independent verification. The CLI/runbook make the experiment
+executable. Real-device calibration and a real manufacturer validator are still
+open; see [V3-EXPERIMENT-RUNBOOK.md](V3-EXPERIMENT-RUNBOOK.md).
 
 **Save point before redesign:** start with
 [CRYPTO-CHECKPOINT-2026-11-21.md](CRYPTO-CHECKPOINT-2026-11-21.md) for the current

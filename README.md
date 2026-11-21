@@ -308,6 +308,12 @@ and stderr to avoid credential leakage.
 
 ## Tests
 
+The evidence-v3 crypto-module experiment is documented in
+[the v3 runbook](docs/V3-EXPERIMENT-RUNBOOK.md), with its
+[roadmap and remaining acceptance gates](docs/CRYPTO-V3-ROADMAP.md).
+Use `python -m fingerprinto v3 --help` for the explicit profile; v1 and hybrid-v2
+remain separate. Synthetic passing tests do not establish real-camera accuracy.
+
 ```bash
 python -m pytest -q
 # Optional: full local integration against the running Docker services.

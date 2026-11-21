@@ -41,6 +41,11 @@ def _verification_exit(result) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    import sys
+    selected = list(sys.argv[1:] if argv is None else argv)
+    if selected and selected[0] == "v3":
+        from .cli_v3 import main as v3_main
+        return v3_main(selected[1:])
     parser = _Parser(description="FingerprinTO explicit v1/hybrid-v2 evidence tools")
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("pack", "pack-hybrid"):

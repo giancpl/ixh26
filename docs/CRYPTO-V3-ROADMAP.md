@@ -82,13 +82,17 @@ not a reducer input and cannot change verification or C.
   attachments and transport; Java streaming construction. Four shared signed
   golden vectors cover the three levels and pass/pass. Tamper/schema/JSON tests
   pass in 65 Python methods; see `EVIDENCE-V3-FORMATS.md` for the exact boundary.
-  Java import/JSON decoding remains outside this construction adapter.
+  Java now also strictly decodes/verifies v3 CBOR and shares the enrollment
+  possession-proof root. JSON attachment/current trust evaluation remains in
+  the independent Python verifier.
 - Stages 3/4 mechanisms: experimental Haar residual/reference/PCE implemented
   in Python and Java on decoded green arrays. Python additionally has a pinned
   optional JPEG adapter, exact-byte reference records and atomic publication.
   1,028 cross-language numeric comparisons pass; 69 Python methods pass.
   Decoder interoperability on Android and trusted physical provisioning remain
   separate requirements; see `PRNU-EXPERIMENT.md`.
+  Java also emits portable canonical reference records, independently imported
+  and checked by Python; floating-point estimates are compared within tolerance.
 - Stage 5 tooling checks disjoint sets and emits per-device/mode empirical
   counts, without approving thresholds. Real-device calibration remains open.
 - Stage 7 offline orchestration and retained authority records implemented:
@@ -99,6 +103,21 @@ not a reducer input and cannot change verification or C.
 - Stage 6 has an injectable manufacturer adapter and conservative default
   presence inspection only. A qualifying production issuer/credential validator
   is still required before any real manufacturer pass is available.
+- Stage 8 implemented for offline bundle/CLI/OTS: explicit `fingerprinto v3`
+  commands, bounded attachments/archives, separate claims/current findings,
+  SHA256(C) proof verification and existing idempotent stamping. Simulated
+  calendars/RPC test the byte contract, not a real Bitcoin confirmation.
+- Optional personal trust/distrust is stored separately against C, never read
+  by verification and disallowed while failed/pending or before signing.
+- Validation at integration: 150 POSIX tests plus 123 subtests passed; 77
+  Windows unittest methods passed. The subsequently added personal-choice
+  isolation test also passed separately. All new JVM decision/vector/numeric
+  checks pass, including independent import of the emitted Java reference.
+- Current practical endpoint: runnable offline crypto/PRNU experiment, **not**
+  proven physical-camera attribution. `V3-EXPERIMENT-RUNBOOK.md` gives commands
+  and open acceptance gates. Real-device data/calibration, a real manufacturer
+  validator, Android decoder/capture-worker integration and operational
+  provisioning/recovery remain open. No app build/SDK acceptance was performed.
 - Old checkpoint documents describe the pre-v3 implementation, not completion of
   this roadmap. Record each subsequent step and its actual checks here.
 
