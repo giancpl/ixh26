@@ -1,82 +1,80 @@
-<!-- AGENT CONSTRAINT: This file defines the complete pitch deck: five content slides plus one live-demo screen, six PDF pages TOTAL. The three original crypto slides are retained as presentation slides 2-4. The full pitch must finish within 180 seconds INCLUDING 30 seconds for the demo; target 175 seconds plus 5 seconds buffer. The crypto block is scheduled for 70 seconds and must never exceed 90 seconds / 140 spoken words. Spoken text is ONLY in pitch.md; formulas are visual support and MUST NOT be read aloud. The final what's next slide replaces the existing status/closing slot. Do not add content or extra time. Use the user's Lagrange theme. Distinguish implemented features, proposals and validation gaps; no invented camera-API support or physical-origin guarantees. -->
+<!-- AGENT CONSTRAINT: Adapt claude-pitch.md to the user's 180-second TOTAL pitch, including a 29.4-second recorded demo. Six timed screens only; extended technical slides are a separate Q&A edition and MUST NOT be presented during the pitch. Preserve Lagrange, readable mathematics/tables and sparse prose. Spoken text is in pitch.md; SAY comments are Italian presenter notes. Update source claims to the reviewed repository; no invented device results or universal physical-origin guarantee. -->
 
-<!-- BEACON UPDATE: The standalone optical-token experiment is implemented on leomaster, but is not a third origin level or validated physical demonstration. Keep the three crypto slides and the 180-second total unchanged. Any future beacon illustration must label splicing/relay limits and token validity separately from physical presence; no extra spoken material is authorised by this note. -->
+# A valid signature does not identify the sensor
 
-Rendered deck: [PDF](fingerprinto-pitch.pdf), [LaTeX source](presentation/main.tex), [Overleaf archive](fingerprinto-pitch-overleaf.zip).
+FingerprinTO: evidence for photo origin, with explicit assurance levels.
 
-# FingerprinTO
+Sensor A -> photo J -> phone B signs -> receipt + anchor.
 
-**Evidence you can verify.**
+\(\mathrm{Verify}(pk_B,R,\sigma_B)=1\), image hash matches, commitment can be timestamped.
 
-Original + portable receipt + independent verifier.
+**The claim that B captured J is still unsupported.**
 
-Integrity. Origin evidence. A record that lasts.
-
-<!-- PRESENTATION SLIDE 1: 0:00-0:40. Combine problem and intended workflow; no extra title-slide speaking slot. The existing FingerprinTO Stand image can occupy the right-hand side. This visual does not imply a sensor-proof implementation. -->
+<!-- SAY: 0:00-0:40. Controesempio, non una dimostrazione che ogni controllo d'origine passa. Un attaccante puo invocare la chiave senza estrarla dal Keystore. -->
 
 ---
 
-# The problem happens before signing
+# "Authentic" hides five different claims
 
-**No cryptographic proof of physical origin without a trusted capture path.**
-
-**One format. Assurance matched to the evidence.**
-
-| Manufacturer capture attestation | PRNU compatibility | File integrity |
+| Property | Evidence | Boundary |
 |---|---|---|
-| Where available and verified | Statistical sensor evidence | Cryptographic hashes and signatures |
+| Byte integrity | SHA-256 + signature | Cryptographic |
+| Installation identity | Key attestation + possession | Hardware trust chain |
+| Capture credential | Trusted vendor + asset binding | Vendor capture path |
+| Sensor compatibility | PRNU correlation | Statistical; copyable |
+| Commitment inclusion | Bitcoin / OpenTimestamps | Not exposure time |
 
-Visual PRNU reference estimate (not spoken):
+**Software can bind physical evidence. It cannot create it.**
 
-$$
-K[p]=\frac{\sum_i m_i[p]I_i[p]W_i[p]}{\sum_i m_i[p]I_i[p]^2},
-\qquad W_i=I_i-\mathrm{denoise}(I_i).
-$$
+No claim of scene truth, shutter time or AI-content detection. Missing evidence never becomes a pass.
 
-**Physical capture does not establish scene truth.**
-
-<!-- SLIDE 1 - Approximately 35 seconds; first two spoken paragraphs of the crypto block in pitch.md. Visual: three adjacent evidence cards. Evidence can coexist; manufacturer verification does not exclude PRNU checking. Assess assurance per capture, not merely per device. A hostile client can inject frames before signing; key or app attestation alone does not attest the frame. The prototype still lacks a real manufacturer validator. Do not imply verified support on particular vendors or devices. PRNU is statistical compatibility, not cryptographic proof, and can be spoofed. -->
+<!-- SAY: 0:40-1:05. Non leggere le cinque righe; distingui integrita, identita e origine. H e un'ipotesi sul processo fisico, non una proprieta autenticata da un pattern decodificato. -->
 
 ---
 
-# A verifiable receipt
+# The receipt binds installation, photo and evidence
 
-```mermaid
-flowchart LR
-    A["Image, evidence and metadata"] --> B["Hashes and root R"]
-    B --> C["P-256 signature"]
-    C --> D["Commitment C"]
-    D --> E["OpenTimestamps / Bitcoin"]
-```
+Draw the binary tree FI / FP -> Node; Node / FD -> T -> R.
 
-$$
+\[
 \begin{aligned}
-F_P &= D(\texttt{photo/evidence-v3},F_I,\mathrm{SHA256}(J),E)\\
-R &= D(\texttt{fingerprinto/evidence-v3},\mathrm{Node}(\mathrm{Node}(F_I,F_P),F_D))\\
-\sigma &= \mathrm{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R),\qquad
-C = D(\texttt{receipt},R,\sigma)\\
-h_{\mathrm{OTS}} &= \mathrm{SHA256}(C)
+F_P &= D(\texttt{photo/evidence-v3},F_I,H(J),E)\\
+T &= \mathrm{Node}(\mathrm{Node}(F_I,F_P),F_D)\\
+R &= D(\texttt{fingerprinto/evidence-v3},T)\\
+\sigma &= \mathrm{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R)\\
+C &= D(\texttt{receipt},R,\sigma),\qquad h_{\mathrm{OTS}}=H(C).
 \end{aligned}
-$$
+\]
 
-**Anchoring records commitments, not scene truth or capture time.**
+\(D(\ell,x_1,\ldots)=H(\mathrm{CBOR}([\ell,x_1,\ldots]))\), \(\mathrm{Node}(a,b)=D(\texttt{node},a,b)\).
 
-<!-- SLIDE 2 - Approximately 15 seconds; third spoken paragraph of the crypto block in pitch.md. This is a flow summary, not the complete dependency graph: C binds both R and the signature. The installation key is protected by hardware Keystore; this does not make it a sensor signature. D means SHA256 over a deterministic CBOR array with domain separation; OTS receives the 32 raw bytes of C and hashes them. Anchoring is verifiable once the OTS proof is completed and checked. The formula is optional: DO NOT read it. See ../diagrams/crypto-flow.md and its PNGs for technical detail; do not paste the entire vertical diagram onto this slide. -->
+E binds check results and reference/policy/report hashes; FI / FD bind installation/device metadata.
+
+**Preserve the exact DER signature. C is not hiding; receipts are linkable.**
+
+<!-- SAY: 1:05-1:30. Le formule sono solo supporto visivo. La firma SHA256withECDSA riceve i 32 byte di R; OTS riceve un file con i 32 byte di C. Non chiamare anonimo un commitment senza hiding. -->
 
 ---
 
-# Verification need not disappear with a vendor
+# A signed beacon code is not proof of physical presence
 
-**Proposed contribution:** interoperable evidence and lasting verification.
+**IMPLEMENTED:** standalone software experiment. **PHYSICAL VALIDATION:** not established.
 
-- Preserve certificates, manifests, policies and authenticated status evidence.
-- Preserve the material needed to assess trust at the relevant time.
+\[
+\begin{aligned}
+b &= D(\texttt{beacon-session/1},c,ID_I),\quad c\gets\{0,1\}^{256}\\
+p &= [\texttt{fingerprinto/beacon/1},H(pk_B),\lfloor t/10\rfloor,b]\\
+\mathit{code} &= \mathrm{CBOR}([p,\mathrm{Sign}_{sk_B}(D(\texttt{beacon-code/1},p))]).
+\end{aligned}
+\]
 
-**Implemented:** offline crypto core.
+| Checks | Does not detect |
+|---|---|
+| Pinned key, signature, session, slot | Splicing, relay, within-session replay |
 
-**Unfinished:** real capture integrations, calibration and validation.
+`status=pass` validates the token; `physicalOriginVerified=false`. No v3 level upgrade.
 
-<!-- SLIDE 3 - Approximately 20 seconds; final two spoken paragraphs of the crypto block in pitch.md. Historical verification is a proposed contribution, not an already implemented long-term archive or an unconditional guarantee. Anchoring a certificate establishes the existence of those bytes, not issuer trust or absence of key compromise. Historical verification also requires trust policies, authenticated status evidence and continued cryptographic validity. Missing integrations include the manufacturer validator and Android capture path; the latest module fixes await tests on the dedicated branch. No certification, universal-security or completed real-sensor validation claims. Target 70 seconds for the crypto block; absolute crypto maximum 90 seconds, within the 180-second full pitch. -->
+<!-- SAY: 1:30-1:50. Il beacon e implementato, non una semplice proposta. La verifica e di classe S: i pixel possono essere incollati. Il tempo riguarda contenuto con token sotto ipotesi fidate, non l'esposizione. Non rivendicare ingresso attraverso l'ottica o compatibilita con ogni fotocamera. -->
 
 ---
 
@@ -84,14 +82,14 @@ $$
 
 **29.4 seconds / 1.5x - supplied PhoTO app walkthrough.**
 
-[Clickable preview](assets/demo-poster.png) / [play video](assets/demo-pitch.mp4).
+[Preview](assets/demo-poster.png) / [play video](assets/demo-pitch.mp4).
 
 Capture preparation. Private calibration controls. Device enrollment status.
 
 Missing authority trust stays unavailable. Recorded local demo / Bitcoin regtest.
 Sensor origin is not established.
 
-<!-- PRESENTATION SLIDE 5: 1:50-2:20. Replace the earlier synthetic byte-tampering demo with the supplied app recording; do not narrate results that this video does not show. The original is preserved, the pitch copy is silent at 1.5x, and both the thumbnail and button launch the external MP4. Pre-open the player because PDF viewers may block launch actions. Return to slide 6 after playback. No second demo or extra time. -->
+<!-- SAY: 1:50-2:20. Video fornito invariato rispetto alla versione precedente, non una nuova prova del beacon o di tampering. L'originale e conservato; la copia da pitch e muta a 1.5x. Preaprire il player: il lettore PDF puo bloccare il link. -->
 
 ---
 
@@ -100,11 +98,34 @@ Sensor origin is not established.
 | Optimistic verification | Capture-bound camera challenges |
 |---|---|
 | Richer claims. Independent challenges. | Challenge + image, attested together. |
-| claim -> evidence -> verdict | Fresh challenge: c <- {0,1}^256 |
-| Not implemented: dispute rules and incentives. | No attested API validated on our capture route; metadata alone is insufficient. |
+| claim -> evidence -> verdict | Fresh c <- {0,1}^256 |
+| Dispute rules and incentives not implemented. | No attested API validated on our capture route. Metadata alone is insufficient. |
 
 Next validation: manufacturer adapters and physical PRNU/beacon trials.
 
+Team AI-use disclosure / human review: **[TBD]**.
+
 **Verify what the evidence supports.**
 
-<!-- PRESENTATION SLIDE 6: 2:20-2:55, replacing the old status/closing screen. Do not turn optimistic verification into a claim about arbitrary real-world truth. No fabricated reason for deferral: a challenge must be bound to image bytes by a trusted capture path, and vendor API availability/policy has not been validated. See the primary-source rationale in pitch.md. The code implements an external beacon experiment, not this camera API or an optimistic-dispute protocol. This slide is future work, not an implemented feature list. -->
+<!-- SAY: 2:20-2:55; 5 secondi di margine. Non inventare ragioni storiche per le API: manca la validazione di un binding attestato sul percorso scelto. Completare la disclosure del team prima della presentazione; non attribuire revisione umana mai confermata. -->
+
+## Technical backup - outside the timed pitch
+
+Build `presentation/extended.tex`; `main.tex` remains exactly six timed pages.
+
+1. Identical capture transcripts: model-level boundary, not universal impossibility.
+2. S/H classification and residual trust, including the optical-token correction.
+3. Full FI/E/FD byte contract.
+4. Reducer priorities, pending checks and calibration gates.
+5. PRNU estimator and signed PCE; real error rates [TBD].
+6. Attack matrix, including successful splicing/relay counterexamples.
+7. Publication versus trust, proposed historical verification and conditional time windows.
+8. Parser limits and profile isolation.
+9. ML-DSA-65 AND Ed25519: software secrets in RAM, classical trust dependencies.
+10. Four v1 and four v3 synthetic fixtures; scoped beacon/v3 results at the recorded SHA.
+11. Known AI assistance and incomplete team/human-review disclosure.
+
+The supplied [Claude source](claude-pitch.md) remains unchanged. Its outdated
+v3/beacon status and overstrong origin/time claims are corrected in the rendered
+slides, not retroactively attributed to the source. See [adaptation and build
+record](presentation/README.md) for the source-to-deck mapping.

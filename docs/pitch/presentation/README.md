@@ -2,7 +2,7 @@
 
 # FingerprinTO pitch slides
 
-The presentation is in [main.tex](main.tex), with an exported
+The timed presentation is in [main.tex](main.tex), with an exported
 [six-page PDF](../fingerprinto-pitch.pdf) and an
 [Overleaf source archive](../fingerprinto-pitch-overleaf.zip).
 Spoken text and operator direction live in [pitch.md](../pitch.md);
@@ -20,22 +20,22 @@ Cabin/sansmathfonts/Bera Mono follow the user's existing Lagrange setup.
 Only the footline is overridden locally in `main.tex` to remove the upstream
 extreme negative vertical skips; the theme file remains unchanged.
 
-The opening uses the corrected [FingerprinTO Stand artwork](../assets/fingerprinto-stand.png).
+The opening now follows Claude's counterexample. The [FingerprinTO Stand artwork](../assets/fingerprinto-stand.png) remains available but is not used in this technical revision.
 The supplied `to.png` remains untouched and is not required by the build.
 
 ## Timing and delivery
 
 | Page | Content | Clock |
 |---|---|---|
-| 1 | Product/problem, no separate title slot | 0:00-0:40 |
-| 2 | Capture attestation, statistical PRNU, byte integrity | 0:40-1:15 |
-| 3 | Exact v3 root/signature/commitment and OTS start digest | 1:15-1:30 |
-| 4 | Interoperability and proposed lasting verification | 1:30-1:50 |
+| 1 | Phone A / signing phone B counterexample | 0:00-0:40 |
+| 2 | Five distinct evidence properties, S/H boundary | 0:40-1:05 |
+| 3 | Binary tree, exact v3 root/signature/commitment | 1:05-1:30 |
+| 4 | Implemented beacon token and undetected attacks | 1:30-1:50 |
 | 5 | Supplied PhoTO recording, 1.5x / 29.4 seconds | 1:50-2:20 |
 | 6 | What's next, including the close | 2:20-2:55 |
 
-Five seconds remain as buffer. The revised spoken script has **270 words**,
-including the 30-second demo narration; the crypto block retains 119 words.
+Five seconds remain as buffer. The revised spoken script has **242 words**,
+including the 30-second demo narration; the crypto block contains 104 words.
 Formulas are visual material, not additional spoken text. The sequence has
 not been rehearsed: count and planned timings do not establish delivery time.
 No overlay pages or automatic section interstitials are added.
@@ -110,3 +110,41 @@ not a new crypto test run, camera API integration or timed rehearsal.
 
 The supplied project artwork was already generated with AI assistance; this
 deck and the aligned pitch/visual brief were prepared with OpenAI Codex.
+
+## Adaptation of the supplied Claude draft
+
+[claude-pitch.md](../claude-pitch.md) is preserved unchanged. It proposes an
+8-10-minute presentation, so it is not copied page-for-page into the three-minute
+slot. The main deck maps source 1-2 to the opening, 3/5 to the property table,
+6 to the construction and 9-10 to the beacon/limits slide. It retains the supplied
+recording and the requested future-work close.
+
+Source 4/5/7/8/10/11/12/13 and B1-B3 also feed **11 Q&A backup pages**, available
+in [fingerprinto-pitch-technical.pdf](../fingerprinto-pitch-technical.pdf). Build
+`extended.tex` for the six main pages plus those eleven backups (17 pages total).
+The timed PDF never includes them. Detailed tree fields, reducer, PRNU/SPCE,
+attacks, authorities, parser limits, hybrid signatures, vectors and AI disclosure
+are therefore available without rushing the live pitch. Italian SAY notes remain
+in the Markdown sources, not on projected slides.
+
+Corrections to source claims: v3 golden fixtures already exist; beacon software
+is implemented but physical trials remain unverified; signature validity does
+not mean every independent origin check passes; the client may invoke a
+hardware key without extracting it. Optical decoding cannot prove entry through
+the lens. Unknown/missing codes are unavailable evidence, not detection of every
+pre-generated file. Conditional content windows require honest release/clock
+and independently justified anchor bounds, not precise Bitcoin wall-clock time.
+C2PA/provenance signatures require accepted capture semantics.
+
+No new crypto execution tests or independent v1 recomputation were performed for
+this adaptation. The source's reported v1 check is not relabelled as our result.
+Human-review/team-wide AI disclosure remains explicitly [TBD] and must be
+completed by the team; the slides do not assert compliance is already complete.
+
+For this adaptation, both the six-page and seventeen-page editions were
+compiled locally and from a fresh isolated extraction of the source archive.
+Final logs contain no overfull/underfull boxes. All seventeen rendered pages
+were reviewed; the reducer/PRNU spacing fixes were re-rendered and inspected.
+Both PDFs retain the two launch links to the unchanged 29.41-second recording.
+All 140 local documentation links resolve. No timed rehearsal, GUI playback or
+new device/cryptographic execution result is implied by these document checks.

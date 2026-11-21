@@ -6,8 +6,7 @@
 
 The external-beacon token experiment is now implemented separately on
 `leomaster`; see [profile](../prnu/BEACON-EXPERIMENT.md) and
-[validation record](../prnu/BEACON-VALIDATION.md). It is not the recorded app demonstration below:
-no real display/camera trial or complete beacon-to-v3 workflow has been validated.
+[validation record](../prnu/BEACON-VALIDATION.md). It is discussed on slide 4, but is not what the recorded app demonstration shows: no real display/camera trial or complete beacon-to-v3 workflow has been validated.
 Do not add a second demo or extend the 180-second plan. If replacing the demo
 later, retain the 30-second slot and explicitly show synthetic/token-only status;
 never call successful token decoding sensor origin or physical presence.
@@ -19,7 +18,7 @@ The supplied app recording illustrates a later interface; this branch's old inte
 |---|---|---|---|
 | 0:00-0:20 | 20 s | Problem: what can we actually trust about a photo? | Proposed slide 1: problem and intended workflow; product speaker |
 | 0:20-0:40 | 20 s | Product: evidence travels with the original | Same slide; product speaker hands over to crypto speaker |
-| 0:40-1:50 | 70 s | Crypto boundary, receipt and lasting verification | Existing three crypto slides become presentation slides 2-4 |
+| 0:40-1:50 | 70 s | Crypto boundary, receipt and lasting verification | Five properties (25 s), receipt (25 s), beacon boundaries (20 s): slides 2-4 |
 | 1:50-2:20 | 30 s | Demo: recorded PhoTO app walkthrough | Supplied recording at 1.5x, 29.4 seconds; demo operator |
 | 2:20-2:45 | 25 s | What exists and what the next experiment must establish | Presentation slide 6: what's next / validation gates |
 | 2:45-2:55 | 10 s | Close with the contribution | Same final slide; product speaker |
@@ -29,31 +28,27 @@ Use five content slides plus the dedicated demo view (six PDF pages total). With
 handoffs; with several, include them inside these budgets. Do not add a separate
 team introduction or an extra closing slide unless equivalent time is cut.
 
-## 0:00-0:20 - Problem
+## 0:00-0:20 - Counterexample
 
-> A photo can tell a convincing story. But who captured it, has it changed, and what evidence survives when the platform disappears? These are different questions. Too often, these become one label: authentic.
+> Imagine one phone captures a photo and another signs it. The hash matches, the signature verifies, and the receipt can be timestamped. None of this proves that the signing phone captured the image.
 
-## 0:20-0:40 - Product and intended experience
+## 0:20-0:40 - Contribution
 
-> FingerprinTO is our evidence layer for that problem. The intended workflow is simple: keep the original, attach a portable receipt, and let another verifier inspect it. The result explains the evidence behind each claim.
+> FingerprinTO separates those claims. We report what the evidence establishes, under which assumptions, rather than compressing everything into an authenticity badge.
 
 ## 0:40-1:50 - Crypto
 
-<!-- CRYPTO SLIDE 1 (presentation slide 2): boundary and available evidence; approximately 35 seconds. -->
+<!-- SAY / SLIDE 2: 0:40-1:05. Le cinque righe separano proprieta diverse. Non leggere la tabella. -->
 
-> Without a trusted capture path, no signature or blockchain can prove that an image came from a physical sensor. The problem happens before signing.
+> We distinguish file integrity, installation identity, capture credentials, statistical sensor compatibility, and timestamped publication. Software can bind physical evidence; it cannot create it.
 
-> Our answer is a single, verifiable format that accepts different sources of evidence and gives each capture the assurance it can support: manufacturer capture attestation where available, statistical compatibility through PRNU, or simply file integrity.
+<!-- SAY / SLIDE 3: 1:05-1:30. Tre sottoalberi, una root, firma e commitment. Le formule restano visive. -->
 
-<!-- CRYPTO SLIDE 2 (presentation slide 3): receipt and anchoring; approximately 15 seconds. Do not read formulas. -->
+> Our receipt commits to the image, installation metadata, evidence report and policy. We sign that root, preserve the exact signature bytes, and anchor a commitment through OpenTimestamps on Bitcoin.
 
-> Our prototype binds the image, evidence and policy into a signed receipt, anchored through OpenTimestamps on Bitcoin. This records commitments, not the truth of the scene.
+<!-- SAY / SLIDE 4: 1:30-1:50. Il beacon e implementato come esperimento S, non prova H. Non rivendicare ingresso attraverso l'ottica. -->
 
-<!-- CRYPTO SLIDE 3 (presentation slide 4): proposed contribution and current status; approximately 20 seconds. Crypto block target: 70 seconds; absolute crypto maximum: 90 seconds. The full presentation must still finish within 180 seconds. -->
-
-> Our proposed contribution is interoperability and lasting verification: preserving certificates, manifests and trust evidence, so verification need not disappear with a vendor.
-
-> The crypto core is implemented. Real capture integrations and calibration remain unfinished.
+> We also implemented an external beacon experiment. A separate device displays a signed code bound to a fresh session challenge and time slot. The verifier checks the token, but splicing and relay remain possible. A valid code is not proof of physical presence, and it does not upgrade the photo's origin level.
 
 ## 1:50-2:20 - Demo
 
@@ -95,7 +90,7 @@ is not part of the present 30-second slot.
 
 - Count only the blockquotes as speech, including the demo narration. The crypto segment must remain within 140 words and 90 seconds; the full script must remain within 280 words and 180 seconds including the demo.
 - Run the whole sequence, with actual clicks and handoffs, at least once with a stopwatch. Plan to finish by 2:55; do not infer compliance from word count alone.
-- If running late, omit the second product sentence and shorten the status block to its first sentence. Retain the crypto limitations and the recorded app walkthrough. Do not add explanations while waiting for a command.
+- If running late, omit the contribution paragraph and shorten the status block to its first sentence. Retain the crypto limitations and the recorded app walkthrough. Do not add explanations while waiting for a command.
 - Keep the demo to 30 seconds. Pre-open the supplied recording; if its launch fails, switch to the player. If playback is unavailable, skip it without claiming it was shown.
 - Do not add formulas or extend the 70-second crypto block during questions or transitions; questions follow the timed pitch if the event allows them.
 
@@ -122,3 +117,20 @@ For current experimental slots, the separately implemented external beacon is
 not a substitute: its signed code can still be pasted or relayed. Its token
 validity never proves physical presence. See the beacon profile and validation
 record linked above.
+
+## Claude source adaptation - editorial only
+
+The source is [claude-pitch.md](claude-pitch.md), preserved as supplied. Its
+8-10-minute outline is adapted to the existing three-minute budget: six timed
+screens, including the unchanged supplied video, with technical detail in a
+separate Q&A PDF. Do not present the backup during the timed pitch.
+
+Corrections: four synthetic v3 fixtures already exist; beacon software is
+implemented rather than merely proposed; decoded tokens do not prove optical
+entry or proximity. The indistinguishability argument does not imply forging
+vendor signatures or passing every independent check. Missing codes are
+unavailable evidence, not proof that a pre-generated scene was detected.
+Beacon windows require honest release/clock and independently justified anchor
+time bounds; no precise exposure or Bitcoin wall-clock claim is made. The
+draft's reported independent v1 recomputation is not newly verified here.
+Team AI-use disclosure and human review remain [TBD] pending team completion.

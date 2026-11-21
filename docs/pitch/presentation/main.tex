@@ -9,7 +9,7 @@
 \usepackage{sansmathfonts}
 \usepackage[scaled=0.85]{beramono}
 \usepackage[english]{babel}
-\usepackage{amsmath,amssymb,mathtools}
+\usepackage{amsmath,amssymb,mathtools,array}
 \usetheme[lagrange]{Lagrange}
 \usetikzlibrary{positioning,arrows.meta,calc}
 \setbeamersize{text margin left=0.65cm,text margin right=0.65cm}
@@ -30,113 +30,113 @@
 \newcommand{\D}{\mathsf D}
 \newcommand{\HH}{\mathsf H}
 \newcommand{\Node}{\mathsf{Node}}
-\newcommand{\labelsmall}[1]{{\scriptsize\color{kn-muted}#1}}
+\newcommand{\labelsmall}[1]{{\scriptsize\color{kn-muted}#1}\par}
 
 \begin{document}
 
-% 0:00--0:40: introduction and proposed workflow, not a separate title slot.
-\begin{frame}{FingerprinTO}
-\vspace{0.12cm}
-\begin{columns}[c,onlytextwidth]
-\begin{column}{0.37\textwidth}
-{\LARGE\bfseries Evidence you\par can verify.\par}
-\vspace{0.5cm}
-{\large Original\par $+$ portable receipt\par $+$ independent verifier\par}
-\vspace{0.45cm}
-\muted{Integrity. Origin evidence.\par A record that lasts.}\par
-\end{column}
-\begin{column}{0.60\textwidth}
-\includegraphics[width=\linewidth]{../assets/fingerprinto-stand.png}
-\end{column}
-\end{columns}
-\vfill
-\labelsmall{A cryptographic evidence prototype, not a universal authenticity badge.}
-\end{frame}
-
-% 0:40--1:15: crypto slide 1. PRNU formula is visible, not spoken.
-\begin{frame}{The problem happens before signing}
+% 0:00--0:40: Claude source 1--2, combined without an extra title slot.
+\begin{frame}{A valid signature does not identify the sensor}
 \vspace{0.15cm}
-{\large No cryptographic proof of physical origin\par without a trusted capture path.}
-\vspace{0.5cm}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.315\textwidth}
-\begin{pitchcard}[height=3.0cm]
-\textbf{Capture attestation}\par\vspace{0.35cm}
-Trusted issuer\par + hard asset binding\par\vspace{0.2cm}
-\labelsmall{Where available and verified}
-\end{pitchcard}
-\end{column}
-\begin{column}{0.35\textwidth}
-\begin{pitchcard}[height=3.0cm]
-\textbf{PRNU compatibility}\par\vspace{0.15cm}
-{\small\(K[p]=\dfrac{\sum_i m_i[p]I_i[p]W_i[p]}{\sum_i m_i[p]I_i[p]^2}\)}\par
-\vspace{0.15cm}\labelsmall{$W_i=I_i-\mathrm{denoise}(I_i)$\par Statistical; copyable}
-\end{pitchcard}
-\end{column}
-\begin{column}{0.295\textwidth}
-\begin{pitchcard}[height=3.0cm]
-\textbf{File integrity}\par\vspace{0.4cm}
-\(\HH(J),\ \sigma_I\)\par\vspace{0.3cm}
-\labelsmall{Hashes and signatures}
-\end{pitchcard}
-\end{column}
-\end{columns}
-\vspace{0.28cm}
-\muted{Physical capture $\ne$ truth of the scene.}
-\end{frame}
-
-% 1:15--1:30: crypto slide 2. Exact v3 domains, not a new wire proposal.
-\begin{frame}{A verifiable receipt}
-\vspace{0.08cm}
+{\LARGE\bfseries FingerprinTO}\par
+\muted{Evidence for photo origin, with explicit assurance levels.}\par
+\vspace{0.55cm}
 \begin{center}
-\begin{tikzpicture}[node distance=0.38cm,box/.style={draw=kn-rule,fill=kn-block,
-rounded corners=2pt,minimum height=0.55cm,inner sep=5pt,font=\small},
-arr/.style={-{Latex[length=1.5mm]},kn-acc,thick}]
-\node[box](a){Image + evidence};
-\node[box,right=of a](b){Root $R$};
-\node[box,right=of b](c){P-256 $\sigma$};
-\node[box,right=of c](d){Commitment $C$};
-\node[box,right=of d](e){OTS / Bitcoin};
-\draw[arr](a)--(b);\draw[arr](b)--(c);\draw[arr](c)--(d);\draw[arr](d)--(e);
+\begin{tikzpicture}[node distance=0.45cm,box/.style={draw=kn-rule,fill=kn-block,
+rounded corners=2mm,minimum height=0.85cm,inner sep=8pt,align=center},arr/.style={-{Latex[length=2mm]},thick,kn-acc}]
+\node[box](a){Sensor A};
+\node[box,right=of a](j){Photo $J$};
+\node[box,right=of j](b){Phone B signs};
+\node[box,right=of b](r){Receipt + anchor};
+\draw[arr](a)--(j);\draw[arr](j)--(b);\draw[arr](b)--(r);
 \end{tikzpicture}
 \end{center}
-\vspace{-0.1cm}
-{\small
-\begin{align*}
- F_P &= \D(\texttt{photo/evidence-v3}, F_I,\HH(J),E)\\
- R &= \D(\texttt{fingerprinto/evidence-v3},\Node(\Node(F_I,F_P),F_D))\\
- \sigma &= \mathsf{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R),
- &C &= \D(\texttt{receipt},R,\sigma)\\
- h_{\mathrm{OTS}} &= \mathsf{SHA256}(C)
-\end{align*}}
-\labelsmall{$\D$: domain-separated SHA-256 of deterministic CBOR.
-$E$: signed evidence; $F_I,F_D$: installation/device metadata.}
+\vspace{0.3cm}
+\begin{columns}[c,onlytextwidth]
+\begin{column}{0.40\textwidth}\(\mathsf{Verify}(pk_B,R,\sigma_B)=1\)\end{column}
+\begin{column}{0.27\textwidth}\(\HH(J)\text{ matches}\)\end{column}
+\begin{column}{0.30\textwidth}\(C\text{ can be timestamped}\)\end{column}
+\end{columns}
+\vspace{0.5cm}
+{\large\bfseries The claim that B captured $J$ is still unsupported.\par}\par
 \vfill
-\muted{Anchoring records commitments, not scene truth or capture time.}
+\labelsmall{Only byte/signature/anchor checks are illustrated, not a passed independent origin check.}
 \end{frame}
 
-% 1:30--1:50: crypto slide 3, proposed historical-verification contribution.
-\begin{frame}{Verification need not disappear with a vendor}
-\vspace{0.3cm}
-{\Large\bfseries Preserve the evidence.\par Preserve the basis for trust.}
-\vspace{0.55cm}
-\begin{pitchcard}
-Certificates \quad Manifests \quad Policies \quad Signed status history
-\end{pitchcard}
-\vspace{0.35cm}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.47\textwidth}
-\textcolor{kn-acc}{\textbf{Implemented}}\par
-Offline crypto core
+% 0:40--1:05: source 3 and 5. Conditional strengths, no universal authenticity bit.
+\begin{frame}{``Authentic'' hides five different claims}
+\vspace{0.2cm}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.45cm}>{\raggedright\arraybackslash}p{4.9cm}>{\raggedright\arraybackslash}p{4.5cm}@{}}
+\textbf{Property} & \textbf{Evidence} & \textbf{Boundary}\\\hline
+Byte integrity & SHA-256 + signature & Cryptographic\\
+Installation identity & Key attestation + possession & Hardware trust chain\\
+Capture credential & Trusted vendor + asset binding & Vendor capture path\\
+Sensor compatibility & PRNU correlation & Statistical; copyable\\
+Commitment inclusion & Bitcoin / OpenTimestamps & Not exposure time\\
+\end{tabular}\par
+\vspace{0.45cm}
+\textbf{Software can bind physical evidence. It cannot create it.}\par
+\vfill
+\labelsmall{No claim of scene truth, shutter time or AI-content detection.\quad
+Missing evidence never becomes a pass.}
+\end{frame}
+
+% 1:05--1:30: source 6, with exact current v3 transcript and an actual binary tree.
+\begin{frame}{The receipt binds installation, photo and evidence}
+\vspace{0.1cm}
+\begin{columns}[c,onlytextwidth]
+\begin{column}{0.25\textwidth}
+\centering
+\begin{tikzpicture}[n/.style={draw=kn-rule,fill=kn-block,rounded corners=2pt,inner sep=5pt},
+arr/.style={-{Latex[length=1.5mm]},kn-acc}]
+\node[n](fi) at (0,0){$F_I$};\node[n](fp) at (1.2,0){$F_P$};
+\node[n](ip) at (0.6,1){$\Node$};\node[n](fd) at (2,1){$F_D$};
+\node[n](t) at (1.3,2){$T$};\node[n](r) at (1.3,3){$R$};
+\draw[arr](fi)--(ip);\draw[arr](fp)--(ip);\draw[arr](ip)--(t);\draw[arr](fd)--(t);\draw[arr](t)--(r);
+\end{tikzpicture}
 \end{column}
-\begin{column}{0.50\textwidth}
-\textbf{Proposed}\par
-Interoperable, lasting verification
+\begin{column}{0.72\textwidth}
+{\small\begin{align*}
+F_P &= \D(\texttt{photo/evidence-v3},F_I,\HH(J),E)\\
+T &= \Node(\Node(F_I,F_P),F_D)\\
+R &= \D(\texttt{fingerprinto/evidence-v3},T)\\
+\sigma &= \mathsf{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R)\\
+C &= \D(\texttt{receipt},R,\sigma),\qquad h_{\rm OTS}=\HH(C)
+\end{align*}}
+\end{column}
+\end{columns}
+\vspace{0.2cm}
+\labelsmall{$\D(\ell,x_1,\ldots)=\HH(\mathrm{CBOR}([\ell,x_1,\ldots]))$; $\Node(a,b)=\D(\texttt{node},a,b)$.\par
+$E$: check results + reference/policy/report hashes; $F_I,F_D$: installation/device metadata.}
+\vfill
+\muted{Preserve the exact DER signature. $C$ is not hiding; receipts are linkable.}
+\end{frame}
+
+% 1:30--1:50: sources 9--10, corrected to implemented SOFTWARE token semantics.
+\begin{frame}{A signed beacon code is not proof of physical presence}
+\vspace{0.15cm}
+\labelsmall{IMPLEMENTED: standalone software experiment.\quad PHYSICAL VALIDATION: not established.}\par
+\begin{align*}
+b &= \D(\texttt{beacon-session/1},c,ID_I),\qquad c\gets\{0,1\}^{256}\\
+p &= [\texttt{fingerprinto/beacon/1},\HH(pk_B),\lfloor t/10\rfloor,b]\\
+\mathit{code} &= \mathrm{CBOR}([p,\mathsf{Sign}_{sk_B}(\D(\texttt{beacon-code/1},p))])
+\end{align*}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\begin{pitchcard}
+\textbf{Checks}\par
+Pinned key, signature, session, slot
+\end{pitchcard}
+\end{column}
+\begin{column}{0.49\textwidth}
+\begin{pitchcard}
+\textbf{Does not detect}\par
+Splicing, relay, within-session replay
+\end{pitchcard}
 \end{column}
 \end{columns}
 \vfill
-\labelsmall{Remaining: real capture integration, calibration and validation.\quad
-Anchored certificate bytes do not establish issuer trust.}
+\labelsmall{\texttt{status=pass} validates the token; \texttt{physicalOriginVerified=false}. No v3 level upgrade.}
 \end{frame}
 
 % 1:50--2:20: supplied recording; external playback from the exported PDF.
@@ -183,8 +183,11 @@ Richer claims. Independent challenges.\par\vspace{0.25cm}
 \end{column}
 \end{columns}
 \vspace{0.2cm}
-\labelsmall{Next validation: manufacturer adapters and physical PRNU/beacon trials.}
+\labelsmall{Next validation: manufacturer adapters and physical PRNU/beacon trials.\par Team AI-use disclosure / human review: [TBD].}
 \vfill
 \textbf{Verify what the evidence supports.}
 \end{frame}
+\ifdefined\WithBackup
+  \input{backup.tex}
+\fi
 \end{document}

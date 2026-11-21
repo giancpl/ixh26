@@ -1,0 +1,11 @@
+# Local editor/LaTeX build products; published PDFs live one directory above.
+*.aux
+*.fdb_latexmk
+*.fls
+*.nav
+*.out
+*.snm
+*.synctex.gz
+*.toc
+/main.pdf
+/extended.pdf
