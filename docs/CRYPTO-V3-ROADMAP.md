@@ -6,6 +6,12 @@ remains an independent experiment. Preserve its tests/bytes and legacy v1.
 
 ## Objective and feasibility gates
 
+Commercial/legal research is tracked separately in
+[EU-ITALY-LEGAL-POSITIONING.md](EU-ITALY-LEGAL-POSITIONING.md). It identifies
+possible evidential/document-workflow support and a future qualified-timestamp
+option; it does not certify this prototype or change the technical acceptance
+gates below.
+
 The result describes evidence for a file's capture/source, not the truth of a
 scene. Manufacturer credentials and PRNU answer different questions. A real
 camera photograph of a display can satisfy a capture claim. A camera reference
