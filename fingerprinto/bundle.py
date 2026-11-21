@@ -20,7 +20,8 @@ MAX_TOTAL = 160 * MiB
 MAX_ARCHIVE = MAX_TOTAL + MiB
 LIMITS = {"receipt.cbor": 256 * 1024, "asset.bin": 128 * MiB,
           "credential.bin": 16 * MiB, "commitment.bin": 32,
-          "commitment.bin.ots": 16 * MiB, "anchor.json": 4096}
+          "commitment.bin.ots": 16 * MiB, "anchor.json": 4096,
+          "policy.json": MiB, "report.json": MiB}
 
 
 def _locator(value: bytes) -> dict:
@@ -58,10 +59,16 @@ class EvidenceBundle:
     ots_proof: bytes | None = None
     anchor_locator: bytes | None = None
     profile: str = "v1"
+    policy: bytes | None = None
+    report: bytes | None = None
 
     def files(self) -> dict[str, bytes]:
         """Validate transport/schema limits and reconstruct C, without trust checks."""
         files = {"receipt.cbor": self.receipt, "asset.bin": self.asset}
+        if self.profile == "evidence-v3":
+            files.update({"policy.json": self.policy, "report.json": self.report})
+        elif self.policy is not None or self.report is not None:
+            raise ValueError("v3 attachments require explicit evidence-v3 profile")
         for name, value in (("credential.bin", self.credential),
                             ("commitment.bin.ots", self.ots_proof),
                             ("anchor.json", self.anchor_locator)):
@@ -88,6 +95,11 @@ class EvidenceBundle:
             except InvalidSignature as exc:
                 raise ValueError("Invalid hybrid hardware binding") from exc
             files["commitment.bin"] = receipt.commitment(self.asset, self.credential)
+        elif self.profile == "evidence-v3":
+            from .receipt_v3 import ReceiptV3
+            receipt = ReceiptV3.from_bytes(self.receipt)
+            receipt.evidence.attachments(self.policy, self.report)
+            files["commitment.bin"] = receipt.roots(self.asset, self.credential)["C"]
         else:
             raise ValueError("Unsupported bundle profile")
         if sum(map(len, files.values())) > MAX_TOTAL:
@@ -165,7 +177,8 @@ def import_bundle(source: str | Path, *, profile: str = "v1") -> EvidenceBundle:
                     files[info.filename] = bytes(data)
         bundle = EvidenceBundle(files["receipt.cbor"], files["asset.bin"],
                                 files.get("credential.bin"), files.get("commitment.bin.ots"),
-                                files.get("anchor.json"), profile)
+                                files.get("anchor.json"), profile,
+                                files.get("policy.json"), files.get("report.json"))
         if bundle.files()["commitment.bin"] != files["commitment.bin"]:
             raise ValueError("Bundled commitment does not match evidence")
         return bundle

@@ -78,8 +78,12 @@ not a reducer input and cannot change verification or C.
   real reference, enrollment or device evidence is validated by these tests.
 - Keep detailed validator reason codes/reports alongside the reducer output:
   it identifies failed/pending checks but does not replace their diagnostics.
-- v3 codecs, image processing, trusted references and real-data evaluation have
-  not yet been implemented or validated.
+- Stage 2 byte mechanisms implemented: strict Python v3 decode, signed
+  attachments and transport; Java streaming construction. Four shared signed
+  golden vectors cover the three levels and pass/pass. Tamper/schema/JSON tests
+  pass in 65 Python methods; see `EVIDENCE-V3-FORMATS.md` for the exact boundary.
+  Java import/JSON decoding remains outside this construction adapter.
+- Image processing, trusted references and real-data evaluation remain to do.
 - Old checkpoint documents describe the pre-v3 implementation, not completion of
   this roadmap. Record each subsequent step and its actual checks here.
 
