@@ -7,6 +7,11 @@ della verità della scena. Le parti ancora mancanti sono nell'[audit](CRYPTO-MOD
 
 ## 1. Dal sensore al confronto PRNU
 
+![PRNU: reference e confronto](diagrams/prnu-flow.png)
+
+<details>
+<summary>Sorgente Mermaid del diagramma PRNU</summary>
+
 ```mermaid
 flowchart TD
     EN["Immagini di enrollment indipendenti J_i"] --> PRE["Decoder, verde, crop e geometria fissati"]
@@ -20,7 +25,7 @@ flowchart TD
     REC --> PRED
     Q --> CORR["Correlazioni normalizzate fra W e I × K"]
     PRED --> CORR
-    CORR --> SCORE["PCE firmato: confronto allo spostamento zero"]
+    CORR --> SCORE["PCE con segno: confronto allo spostamento zero"]
 
     SCORE --> GUARD["Qualità, geometria, reference fidata e calibrazione"]
     RH --> TRUST["Associazione approvata: refHash, installazione, camera e policy"]
@@ -34,6 +39,8 @@ flowchart TD
     class IW,EST,PRED,CORR,SCORE,RESULT statistical;
     class TRUST,POLICY,GUARD trusted;
 ```
+
+</details>
 
 `K` è stimato da immagini diverse da `J`: la query non entra nella propria
 reference. Dopo residui e stima vengono applicate le soppressioni di artefatti
@@ -53,6 +60,11 @@ calibrazione approvata non si emette il corrispondente pass/fail. Vedi il
 [metodo PRNU](PRNU-EXPERIMENT.md) per maschere, denoiser e parametri esatti.
 
 ## 2. Dagli esiti al commitment firmato
+
+![Profilo v3: hash, firma e timestamp](diagrams/crypto-hash-flow.png)
+
+<details>
+<summary>Sorgente Mermaid del diagramma hash e firma</summary>
 
 ```mermaid
 flowchart TD
@@ -104,6 +116,8 @@ flowchart TD
     class CHECKS,CODES,REPORT finding;
 ```
 
+</details>
+
 Qui `D` non è una concatenazione ambigua di stringhe:
 
 ```text
@@ -146,3 +160,22 @@ Riferimenti al codice: [PRNU](../fingerprinto/prnu.py),
 [costruzione v3](../fingerprinto/receipt_v3.py),
 [orchestrazione e verifica](../fingerprinto/workflow_v3.py),
 [ancoraggio OTS](../fingerprinto/anchoring_v3.py).
+
+## Rigenerare i PNG
+
+Le immagini sono renderizzate dai due blocchi Mermaid di questo documento, a
+scala 2 su sfondo bianco. Dopo una modifica ai diagrammi, rigenerare anche i PNG.
+Lo script è [render_crypto_diagrams.py](../scripts/render_crypto_diagrams.py).
+
+Il rendering usa il bundle standalone `dist/mermaid.min.js` del pacchetto
+`mermaid@12.3.0`, `playwright==1.65.2` e un Chrome/Chromium/Edge già installato:
+
+```sh
+python -m pip install playwright==1.65.2
+python scripts/render_crypto_diagrams.py --mermaid-bundle /percorso/mermaid/dist/mermaid.min.js
+```
+
+Se necessario, specificare il browser con `--browser /percorso/eseguibile`.
+Il bundle è disponibile nella [distribuzione ufficiale Mermaid su npm](https://www.npmjs.com/package/mermaid/v/12.3.0).
+Il renderer blocca le richieste di rete del browser e non scarica un browser,
+non esegue test del modulo e non richiede Android SDK.
