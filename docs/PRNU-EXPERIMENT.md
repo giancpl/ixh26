@@ -41,7 +41,12 @@ before investing in the calibration UI. Never fit the final test set.
 Reference schema `fingerprinto/reference/1` is canonical sorted-key compact
 UTF-8 JSON containing method, geometry, enrollment file digests, base64
 little-endian binary64 pattern and byte mask (0/1). Exact record bytes define
-refHash. Publish without overwriting via `save_reference`; keep its directory
+refHash. Java's `Reference.record` emits the same canonical schema, with preserved
+frame order, binary64 byte representation and mask; its actual emitted record
+is imported/validated by Python in the JVM check. Numeric estimates across
+runtimes are compared within tolerance, not assumed bit-identical: hash the
+actual published record, never a re-estimated replacement.
+Publish without overwriting via `save_reference`; keep its directory
 access controlled and distribute it only to authorised verifiers. A matching
 hash proves byte identity, not trusted sensor provenance. The authority's
 association must bind this hash, installation, physical camera and geometry.

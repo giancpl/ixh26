@@ -32,6 +32,7 @@ public final class PrnuExperimentTest {
                 default:throw new AssertionError("unknown row");
             }
         }
+        Files.write(Path.of(args[1]),ref.record("physical-wide-A","fixed-jpeg-32","numeric-test/1",null,null));
         System.out.println("PRNU: "+checks+" Python/Java numeric comparisons passed (experimental only)");
     }
 }

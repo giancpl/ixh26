@@ -1,7 +1,8 @@
 package com.example.photoanchor;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 /** Binary64 numeric trial on decoded green crops. No decoder or trust claims. */
 public final class PrnuExperiment {
@@ -57,7 +58,7 @@ public final class PrnuExperiment {
         private final int w,h;
         private final double[] numerator,denominator;
         private final int[] counts;
-        private final Set<String> frames=new HashSet<>();
+        private final Set<String> frames=new LinkedHashSet<>();
         public Estimator(int w,int h) {
             dimensions(w,h);this.w=w;this.h=h;
             numerator=new double[w*h];denominator=new double[w*h];counts=new int[w*h];
@@ -91,10 +92,16 @@ public final class PrnuExperiment {
         private final double[] pattern;
         private final boolean[] mask;
         private final Set<String> frames;
+        private final List<String> orderedFrames;
         private Reference(int w,int h,double[] k,boolean[] m,Set<String> frames) {
             this.w=w;this.h=h;pattern=k.clone();mask=m.clone();this.frames=Set.copyOf(frames);
+            orderedFrames=List.copyOf(frames);
         }
         public double[] pattern() {return pattern.clone();}
+        /** Exact-byte record for hashing/private persistence; no physical trust. */
+        public byte[] record(String camera,String mode,String decoder,Integer sourceWidth,Integer sourceHeight) {
+            return PrnuReferenceRecord.encode(w,h,pattern,mask,orderedFrames,camera,mode,decoder,sourceWidth,sourceHeight);
+        }
     }
     public record Score(Double value,String reason,double validFraction,Double r0) {}
     public static Score score(double[] i,Reference ref,String assetSha256) {
