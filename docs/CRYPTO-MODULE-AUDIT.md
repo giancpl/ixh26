@@ -1,5 +1,9 @@
 # Crypto module implementation audit
 
+Review entry point: [CRYPTO-REVIEW-HANDOFF.md](CRYPTO-REVIEW-HANDOFF.md), including
+the required reading order and the distinction between historical results and
+the untested audit corrections.
+
 Date: **21 November 2026**. Reviewed baseline: `107f407` on `leomain`, plus the
 audit corrections described below. This is a source/dependency/control-flow
 review, **not** a new test run, build, device evaluation or security certification.
