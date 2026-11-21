@@ -41,3 +41,22 @@ selected bytes with the signed hash. Neither operation exports a private key.
 Actual two-phone acceptance is deferred at the user's request. Record it in
 `docs/social/CHECKLIST.md`; successful builds and native JVM tests are separate
 evidence.
+
+## Native UI integration
+
+The native BitPin interface includes a masonry feed, local search, saved-post
+bookmarks, profile grids and a persistent light/dark theme. The installed app
+remains PhotoAnchor with the same application ID and encrypted identity paths.
+Saved posts are local bookmarks, not likes or a permanent media archive; search
+and bookmark views operate on the bounded cached/fetched feed.
+
+The camera draft says **Not submitted** until publication. A failed operation
+keeps the draft and caption visible; after a successful submission the capture
+tab becomes the camera again. The status banner exposes operation failures and
+the persistent signed-event queue. A signed-post badge in the feed indicates
+only event-signature validation. The detail screen shows signature, original
+JPEG integrity, local-node regtest timestamp and relay publication separately.
+Unknown or unavailable timestamp results never display a confirmation badge.
+
+Review findings, corrective changes and validation are tracked in
+[`docs/reviews/PIETRO_ANDROID.md`](../docs/reviews/PIETRO_ANDROID.md).
