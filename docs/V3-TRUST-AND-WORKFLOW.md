@@ -63,3 +63,8 @@ The current executable workflow is offline Python. Java exposes matching receipt
 reducer and PRNU numeric primitives; the actual Android capture/calibration UI,
 decoder route, authority provisioning service and upload lifecycle remain separate
 integration work. No app build, SDK licence acceptance or XRPL is required here.
+
+`personal_choice.PersonalChoices` stores optional trust/distrust locally against
+the exact C, only when the reducer allows the choice. Its database is separate
+from exported evidence and is never read by verification. A previously stored
+choice cannot change a later failed finding or raise the evidence level.
