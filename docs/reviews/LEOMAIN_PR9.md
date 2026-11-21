@@ -1,7 +1,8 @@
 # FingerprinTO / PR #9 integration and validation
 
 The integration branch `integration/leomain-pr9` starts from main `814cb8e` and
-merges the source history through `leomain@f3bd1ef`. The original `leomain`,
+merges the source history through `leomain@42b8162`. Runtime review and fixes
+use `f3bd1ef`; the later source commit adds diagrams only. The original `leomain`,
 `feature-mobileApp` and default branch are not rewritten. This reconciles the
 experimental crypto module with the native Nostr MVP; it is not completion of
 the manufacturer/PRNU capture product described in the source roadmap.

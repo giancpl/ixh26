@@ -1,5 +1,8 @@
 # PRNU experimental profile and stop/go evaluation
 
+Visual overview: [PRNU, hashes and signature](crypto-flow.md), with diagrams of
+the reference/PCE path and the v3 signed commitment. The diagram is in Italian.
+
 Method `fingerprinto/prnu-haar-green/1` is an intentionally small numeric
 experiment, not an implementation of a published camera attribution accuracy
 claim. Its simple wavelet may fail on the actual camera pipeline. Measure that
