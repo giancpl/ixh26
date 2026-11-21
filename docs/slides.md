@@ -43,7 +43,8 @@ $$
 - Conservare certificati, manifest, policy e prove di stato.
 - Rendere verificabili le evidenze anche oltre la disponibilità del vendor.
 
-**Oggi:** nucleo crittografico offline implementato.  
+**Oggi:** nucleo crittografico offline implementato.
+
 **Da completare:** integrazioni reali e calibrazione.
 
 <!-- SLIDE 3 — Circa 25 secondi, ultimi due paragrafi di pitch.md. Presentare la conservazione della verificabilità storica come contributo proposto, non come archivio a lungo termine già implementato. Un certificato ancorato prova l'esistenza di quei byte, non che l'issuer fosse fidato o la chiave non compromessa. Le integrazioni mancanti comprendono validatore produttore e percorso Android; gli ultimi fix del modulo attendono test sul branch dedicato. Nessun claim di certificazione, sicurezza universale o verifica su sensori reali già conclusa. Chiudere entro circa 70 secondi complessivi; il tetto assoluto rimane 90. -->
