@@ -34,6 +34,11 @@ binds refHash, complete geometry/decoder, approved policy hash, calibration
 evidence hash, and independently optional acceptance/rejection thresholds. Null
 disables the corresponding decision region. Updating policy/thresholds requires
 another authenticated authority record; a bundled policy cannot approve itself.
+For PRNU decisions the signed policy must have schema
+`fingerprinto/policy-v3/1` and a `prnu` object containing the exact method,
+geometry, accept/reject thresholds and calibrationHash from the approved
+association. Its raw-byte hash must also agree. A later policy update makes an
+old snapshot unapproved, not corrupt; it does not change the old signed claims.
 
 `workflow_v3.issue_v3` evaluates manufacturer and PRNU independently on the same
 bytes, checks current enrollment, builds policy/report/E and R, invokes the

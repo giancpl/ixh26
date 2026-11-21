@@ -72,7 +72,10 @@ def evaluate_samples(samples, *, enrollment_ids, development_ids, accept=None, r
     Input rows: {asset, device, mode, genuine, score}. None is inconclusive.
     Development selection and error-policy approval remain independent acts.
     """
-    if not samples or set(enrollment_ids) & set(development_ids):
+    for ids in (enrollment_ids, development_ids):
+        if type(ids) is not list or len(set(ids)) != len(ids) or any(type(v) is not str or len(v) != 64 or any(c not in "0123456789abcdef" for c in v) for v in ids):
+            raise ValueError("Invalid calibration split identifiers")
+    if type(samples) is not list or not samples or set(enrollment_ids) & set(development_ids):
         raise ValueError("Missing test set or overlapping enrollment/development")
     for threshold in (accept, reject):
         if threshold is not None and (type(threshold) not in (int, float) or not math.isfinite(threshold)):

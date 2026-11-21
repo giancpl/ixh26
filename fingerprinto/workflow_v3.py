@@ -88,7 +88,7 @@ def _enrollment(fields, store, now):
 def assess(fields, asset, credential, placement, policy, ref_hash, *, now, store=None,
            reference_loader=None, manufacturer_validator=None):
     """All configuration/dependencies are owned by the caller, never the bundle."""
-    json_object(policy)
+    policy_object = json_object(policy)
     record, enrollment, enrollment_reason = _enrollment(fields, store, now)
     # Even with unconfigured validators, check visible evidence selection first.
     m = manufacturer_unconfigured(asset, credential, placement)
@@ -130,7 +130,14 @@ def assess(fields, asset, credential, placement, policy, ref_hash, *, now, store
                                    "accept": association["accept"], "reject": association["reject"],
                                    "calibrationHash": association["calibrationHash"]}
                         outcome, reason = Outcome.INCONCLUSIVE, result.reason
-                        if association["policyHash"] != digest(policy).hex():
+                        expected_config = {"method": details["method"], "geometry": asdict(ref.geometry),
+                                           "accept": association["accept"], "reject": association["reject"],
+                                           "calibrationHash": association["calibrationHash"]}
+                        actual_config = policy_object.get("prnu")
+                        if (association["policyHash"] != digest(policy).hex()
+                                or policy_object.get("schema") != "fingerprinto/policy-v3/1"
+                                or actual_config != expected_config
+                                or any(type(actual_config.get(k)) is bool for k in ("accept", "reject"))):
                             reason = "supplied_policy_not_approved_for_reference"
                         elif result.value is not None:
                             if association["accept"] is not None and result.value >= association["accept"]:
@@ -167,7 +174,8 @@ def verify_v3(bundle, *, now: datetime, store=None, reference_loader=None,
                                signature=signature, anchor=anchor)
     return {"profile": "evidence-v3", "evaluatedAt": now.isoformat(),
             "decision": asdict(decision), "manufacturer": m.report(), "prnu": p.report(),
-            "signature": signature.value, "enrollment": {"status": enrollment.value, "reason": reason},
+            "signature": signature.value, "binding": binding.value,
+            "enrollment": {"status": enrollment.value, "reason": reason},
             "anchor": anchor.value, "signedClaims": {"manufacturer": RESULTS[receipt.evidence.manufacturer_result],
             "prnu": RESULTS[receipt.evidence.prnu_result]}, "computed": {k: v.hex() for k, v in roots.items()}}
 

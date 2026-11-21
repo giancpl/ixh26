@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import replace, asdict
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -100,3 +100,55 @@ class WorkflowV3Tests(unittest.TestCase):
         record,reason=self.store.lookup(replace(self.fields,signerDigest=b"x"*32),now=self.now)
         self.assertIsNone(record)
         self.assertEqual(reason,"enrolled_release_mismatch")
+
+    def test_jpeg_reference_requires_separate_calibration_approval(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Optional prnu extra required")
+        from io import BytesIO
+        import random
+        from fingerprinto.prnu import Geometry,Estimator
+        from fingerprinto.prnu_image import DECODER,decode_green
+        from fingerprinto.prnu_records import reference_bytes
+        from fingerprinto.prnu_records import json_bytes
+        rng=random.Random(431)
+        geometry=Geometry("synthetic-sensor","jpeg-trial",32,32,DECODER,32,32)
+        pattern=[rng.gauss(0,2) for _ in range(1024)]
+        def image():
+            pixels=[max(0,min(255,round(120+v+rng.gauss(0,.2)))) for v in pattern]
+            output=BytesIO()
+            Image.frombytes("RGB",(32,32),bytes(c for v in pixels for c in (v,v,v))).save(output,format="JPEG",quality=100,subsampling=0)
+            return output.getvalue()
+        estimator=Estimator(geometry)
+        for _ in range(8):
+            asset=image()
+            estimator.add(decode_green(asset,geometry,source_width=32,source_height=32),asset_digest=digest(asset))
+        raw=reference_bytes(estimator.finish())
+        self.asset=image()
+        config={"method":"fingerprinto/prnu-haar-green/1","geometry":asdict(geometry),
+                "accept":None,"reject":None,"calibrationHash":"c"*64}
+        policy=json_bytes({"schema":"fingerprinto/policy-v3/1","prnu":config})
+        association={"hash":digest(raw).hex(),"geometry":asdict(geometry),
+                     "policyHash":digest(policy).hex(),"calibrationHash":"c"*64,
+                     "accept":None,"reject":None}
+        self.store.retain(sign_record(dict(self.body,sequence=2,references=[association]),self.authority))
+        loader=lambda identity:raw
+        bundle=self.issue(reference_hash=digest(raw),reference_loader=loader,policy=policy)
+        result=verify_v3(bundle,now=self.now,store=self.store,reference_loader=loader)
+        self.assertEqual(result["prnu"]["status"],"inconclusive")
+        self.assertIsNotNone(result["prnu"]["details"]["score"])
+        # Synthetic authority approval tests control flow, not measured accuracy.
+        approved_policy=json_bytes({"schema":"fingerprinto/policy-v3/1","prnu":dict(config,accept=0)})
+        approved=dict(association,accept=0,policyHash=digest(approved_policy).hex())
+        self.store.retain(sign_record(dict(self.body,sequence=3,references=[approved]),self.authority))
+        result=verify_v3(bundle,now=self.now,store=self.store,reference_loader=loader)
+        self.assertEqual(result["prnu"]["status"],"inconclusive")
+        self.assertEqual(result["prnu"]["reason"],"supplied_policy_not_approved_for_reference")
+        bundle=self.issue(reference_hash=digest(raw),reference_loader=loader,policy=approved_policy,operation="b"*32)
+        result=verify_v3(bundle,now=self.now,store=self.store,reference_loader=loader)
+        self.assertEqual(result["prnu"]["status"],"pass")
+        self.assertEqual(result["signedClaims"]["prnu"],"pass")
+        self.assertEqual(result["decision"]["level"],"prnu")
+        # A signed pass still cannot supply an unavailable current reference.
+        self.assertEqual(verify_v3(bundle,now=self.now,store=self.store)["prnu"]["status"],"unavailable")
