@@ -1,4 +1,4 @@
-# Local PhotoAnchor MVP
+# PhoTO local app guide
 
 This demo links a Nostr signing key, an immutable JPEG and Bitcoin timestamp
 evidence. It is designed for two USB-connected Android phones and a local Docker
@@ -26,9 +26,10 @@ it is not a mainnet anchor.** HTTP receipts are untrusted metadata. A standard
 
 ## Start and run the real Docker demonstration
 
-The current main-based integration and its executed checks are tracked in
-[CONSOLIDATION.md](../CONSOLIDATION.md). The older validation report and agent
-checklist in this directory describe the previous MVP branch.
+Start with the [PhoTO overview](../../README.md) and [documentation map](../README.md).
+Current integrated checks are recorded in the [integration review](../reviews/LEOMAIN_PR9.md).
+[CONSOLIDATION.md](../CONSOLIDATION.md) records the staged history; the earlier
+validation report and agent handoffs in this directory are historical.
 
 Requirements: Docker Engine with Compose; internet for the first image/dependency
 build. Android deployment additionally needs `adb`, two Android 10+ phones,
@@ -227,14 +228,15 @@ their internal URI `http://calendar:14788` from this Docker environment.
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -c requirements-social.lock -e '.[social,test]'
-python -m pytest -q --ignore=tests/test_web_server.py -m 'not network and not regtest and not social'
+pip install -c requirements-server.lock -e '.[social,server,test,prnu,hybrid]'
+python -m pytest -q -m 'not network and not regtest and not social'
 ./scripts/social-build-android.sh
 ./scripts/social-compose.sh run --rm social-tests
 docker compose -f compose.regtest.yml run --rm integration
 ```
 
-The ordinary Python suite blocks sockets. Protocol vectors use real SDK
+The ordinary Python suite blocks external sockets; marked local HTTP tests
+allow loopback only. Protocol vectors use real SDK
 signatures and genuine serialized OTS proofs. Infrastructure failures use
 calendar/relay/RPC adapters in unit tests; the Docker integration tests use
 real services and are skipped by default. Kotlin JVM tests use the official
@@ -248,7 +250,7 @@ Compose sets `PHOTOANCHOR_DATA_DIR`, `PHOTOANCHOR_PUBLIC_URL`,
 `PHOTOANCHOR_BITCOIN_CONF` and `PHOTOANCHOR_TIMEOUT`. Defaults and validation
 are documented in the service configuration. Regtest calendars are explicit;
 there is no fallback to public calendars. Core uses its local cookie from the
-read-only Bitcoin volume. See the root README for settlement mainnet/pruned
+read-only Bitcoin volume. See the [settlement guide](../SETTLEMENT.md) for mainnet/pruned
 node configuration; `.ots` does not identify the Bitcoin network.
 
 ```sh

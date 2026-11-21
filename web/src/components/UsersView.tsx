@@ -40,7 +40,7 @@ export default function UsersView({
         <div>
           <h2>Community</h2>
           <p className="field-hint">
-            Scopri e segui gli altri fotografi su BitPin.
+            Scopri e segui gli altri fotografi su PhoTO.
           </p>
         </div>
 

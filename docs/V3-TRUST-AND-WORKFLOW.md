@@ -1,5 +1,10 @@
 # v3 authority records and offline workflow
 
+Integration status: this source-branch document predates the
+[executed integration review](reviews/LEOMAIN_PR9.md). Statements below about
+awaiting execution describe that earlier snapshot. Hardware/camera acceptance
+remains open; see the [PhoTO documentation map](README.md).
+
 `trust_v3.TrustStore` retains P-256 authority-signed enrollment records in a
 verifier-owned SQLite database. Pin the authority SPKI through deployment,
 separately from the phone key, bundle, policy and report. Each lookup checks the

@@ -34,7 +34,7 @@ export default function ShareProfileModal({
         >
           {initials(name || "BP")}
         </div>
-        <h3>{name || "Profilo BitPin"}</h3>
+        <h3>{name || "Profilo PhoTO"}</h3>
         <p className="field-hint">
           Fai scansionare il QR per farti trovare su Nostr o nei messaggi privati.
         </p>

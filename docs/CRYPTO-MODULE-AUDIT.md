@@ -1,5 +1,10 @@
 # Crypto module implementation audit
 
+Integration status: this source-branch document predates the
+[executed integration review](reviews/LEOMAIN_PR9.md). Statements below about
+awaiting execution describe that earlier snapshot. Hardware/camera acceptance
+remains open; see the [PhoTO documentation map](README.md).
+
 Review entry point: [CRYPTO-REVIEW-HANDOFF.md](CRYPTO-REVIEW-HANDOFF.md), including
 the required reading order and the distinction between historical results and
 the untested audit corrections.

@@ -55,8 +55,9 @@ Both PNGs were inspected and successfully regenerated from the Mermaid blocks
 using Mermaid 12.3.0, Playwright 1.65.2 and the existing local Chromium browser.
 Rendering dependencies were installed in a temporary environment, not added to
 application runtime dependencies. Browser/font differences can affect the PNG
-bytes; the regeneration instructions now state this limitation. The runtime
-directories remain identical to the previously validated integration.
+bytes; the regeneration instructions now state this limitation. At diagram
+integration commit `43d7b58`, the runtime directories were identical to the
+previously validated integration.
 
 | Check | Result |
 |---|---|
@@ -85,6 +86,22 @@ The APK SHA-256 from the local retained debug signing identity is
 Hosted builds use a different debug signing key and need not match this hash.
 Logs, XML reports, APK and original real proofs/bundles are retained under the
 ignored `social-artifacts/pr9-integration/` directory in the coordinator workspace.
+
+## PhoTO identity and documentation follow-up
+
+PhoTO is the app/project name. The overview, documentation map, app/contract
+instructions and exported bundle instructions now use that name. The standalone
+settlement reference moved intact to `docs/SETTLEMENT.md`; only its test command
+was scoped to settlement tests. Source audit/checkpoint records are explicitly
+historical. Experimental origin evidence remains separate from native Nostr
+publication. Technical package IDs, keys, settings and wire formats are unchanged.
+
+After the visible-name/documentation changes, local verification passed:
+237 Python tests and 134 subtests on Python 3.11 with Docker networking disabled;
+20 Android JVM tests, debug APK and lint; web production build and 5 tests.
+Local documentation links and code fences were checked. These are new local
+checks, separate from the earlier real-chain lifecycles and APK hash above.
+No new phone, hardware-attestation or real-camera acceptance was performed.
 
 ## Reproduce
 
