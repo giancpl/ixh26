@@ -8,7 +8,7 @@ from .app import create_app
 
 
 def main() -> None:
-    host = os.environ.get("HOST", "0.0.0.0")
+    host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8787"))
     network = os.environ.get("IXH26_NETWORK", "mainnet")
     bitcoin_conf = os.environ.get("IXH26_BITCOIN_CONF")

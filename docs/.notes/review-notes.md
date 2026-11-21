@@ -1,6 +1,32 @@
+> **Historical source-branch context.** This document records the earlier
+> `leomain` baseline and its then-current scope. PR #10 later reconciled and
+> tested the crypto corrections; PR #12 connected and tested the native software
+> path. The original build/merge restrictions and missing-integration statements
+> below describe that earlier assignment, not current execution instructions.
+> See [current setup](../V3-APP-INTEGRATION.md) and
+> [executed software validation](../reviews/V3_APP.md). Physical-origin,
+> manufacturer-validation and real-device/calibration gates remain open.
+
 <!-- AGENT CONTEXT: Analisi dei problemi ancora aperti di FingerprinTO, confrontando la repo con le 42 pagine di "IXH26 Bari - Welcome Slides.pdf". Distingue limiti del modello, codice mancante, verifiche non eseguite e requisiti esterni. Non dichiara il challenge risolto e non autorizza merge, build Android o nuove integrazioni. Per il piano operativo da passare a Claude leggere task.md. -->
 
 # Problemi aperti: rispondiamo davvero al challenge?
+
+## Addendum: cosa cambia con il beacon
+
+Il [beacon implementato](../prnu/BEACON-EXPERIMENT.md) aggiunge validazione
+software di un codice P-256 legato a sessione e slot, non una soluzione al
+limite di origine fisica discusso sotto. Il file con codice fresco incollato
+passa i controlli del token; la presenza fisica rimane non verificata. Relay e
+riuso nella finestra/sessione non sono rilevati. L'eventuale limite temporale
+condizionale riguarda contenuto con il token, non la scena o l'esposizione.
+
+I [test registrati](../prnu/BEACON-VALIDATION.md) sono sintetici (10 beacon e
+9 regressioni v3 mirate). OP su fiducia, acquisizione fisica, falsificazione PRNU
+e verifica storica restano aperti. Nuovi punti: provisioning/revoca del beacon,
+clock/rilascio fidato, sessioni monouso e robustezza ottica reale. La griglia
+corrente non ha correzione d'errore o rettifica prospettica. Non è integrata nel
+report firmato v3 e non crea un nuovo livello di origine. L'analisi storica segue.
+
 
 Data: 21 novembre 2026. Snapshot della repo: `leomain`, commit `686a4ce`.
 Questa è la mia valutazione del progetto, non una certificazione né un nuovo

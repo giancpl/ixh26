@@ -12,6 +12,10 @@ dist/
 proofs/
 regtest-artifacts/
 data/
+.photoanchor/
+social-artifacts/
+.worktrees/
+.local/
 *.db
 *.db-shm
 *.db-wal

@@ -1,0 +1,48 @@
+name: Consolidation protocol gate
+
+on:
+  push:
+    branches: ['integration/**', main]
+  pull_request:
+
+jobs:
+  protocol-and-settlement:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install setuptools wheel -c requirements-server.lock '.[social,server,test,prnu,hybrid]'
+      # Local HTTP tests permit loopback only; public network tests remain opt-in.
+      - run: python -m pytest -q -m 'not network and not regtest and not social'
+      - name: Build and inspect installed distribution outside source checkout
+        shell: bash
+        run: |
+          python -m pip wheel --no-deps --no-build-isolation . --wheel-dir "$RUNNER_TEMP/wheels"
+          python -m pip install --no-deps --target "$RUNNER_TEMP/installed" "$RUNNER_TEMP"/wheels/*.whl
+          cd "$RUNNER_TEMP"
+          export PYTHONPATH="$RUNNER_TEMP/installed"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import settlement, upp_protocol, social, server, fingerprinto
+          root = Path(os.environ['PYTHONPATH']).resolve()
+          for module in (settlement, upp_protocol, social, server, fingerprinto):
+              assert Path(module.__file__).resolve().is_relative_to(root)
+          from upp_protocol import build_payload
+          from server.app import create_app
+          print('Installed settlement and protocol imports passed')
+          PY
+          python -m settlement --help
+          "$RUNNER_TEMP/installed/bin/photoanchor-bundle" --help
+          "$RUNNER_TEMP/installed/bin/fingerprinto" v3 --help
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Shared cryptographic vectors and numerical interoperability
+        run: bash scripts/check-crypto-vectors.sh

@@ -1,5 +1,16 @@
 # PRNU experimental profile and stop/go evaluation
 
+## Relationship to the optical beacon experiment
+
+The [external beacon profile](BEACON-EXPERIMENT.md) has independent signing,
+session and optical-decoding logic. It neither strengthens PRNU calibration
+nor prevents fingerprint copying. Its synthetic tests do not establish camera
+attribution or change this method's error rates. Valid beacon codes can be
+spliced, relayed and reused within the accepted session window; reports keep
+physical origin false. Both experiments still require separate real-device
+acceptance evidence; no combined origin level is implemented.
+
+
 Visual overview: [PRNU, hashes and signature](../diagrams/crypto-flow.md), with diagrams of
 the reference/PCE path and the v3 signed commitment. The diagram is in Italian.
 

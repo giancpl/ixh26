@@ -1,0 +1,165 @@
+# Overlay: docker compose -p photoanchor -f compose.regtest.yml -f compose.social.yml ...
+name: photoanchor
+
+x-social: &social
+  image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-social:local
+  build:
+    context: .
+    dockerfile: docker/social/Dockerfile
+  networks: [regtest, social]
+  volumes:
+    - bitcoin:/bitcoin:ro
+    - social-data:/data
+    - artifacts:/artifacts
+    - evidence-config:/evidence-config:ro
+  environment: &social-env
+    PHOTOANCHOR_DATA_DIR: /data
+    PHOTOANCHOR_PUBLIC_URL: ${PHOTOANCHOR_PUBLIC_URL:-http://127.0.0.1:8080}
+    PHOTOANCHOR_RELAY_URL: ws://relay:8080
+    PHOTOANCHOR_NETWORK: regtest
+    PHOTOANCHOR_CALENDARS: http://calendar:14788
+    PHOTOANCHOR_BITCOIN_CONF: /config/client.conf
+    PHOTOANCHOR_TIMEOUT: "10"
+    PHOTOANCHOR_EVIDENCE_CONFIG: /evidence-config/config.json
+
+services:
+  bitcoin:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-bitcoin:30.2
+  bootstrap:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  calendar:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-calendar:regtest
+  settlement:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  demo:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  integration:
+    image: ${PHOTOANCHOR_IMAGE_PREFIX:-photoanchor}-settlement:regtest
+  relay:
+    image: scsibug/nostr-rs-relay@sha256:48d54c2d2781577cf3ed2951112f0953dc2c5e7c9d2ea20c64e8c0fa37d16e4d
+    command: ["./nostr-rs-relay", "--config", "/etc/nostr.toml", "--db", "/usr/src/app/db"]
+    networks: [social]
+    ports: ["127.0.0.1:${PHOTOANCHOR_RELAY_PORT:-7777}:8080"]
+    volumes:
+      - relay-data:/usr/src/app/db
+      - ./docker/social/relay.toml:/etc/nostr.toml:ro,z
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "echo > /dev/tcp/127.0.0.1/8080"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  evidence-init:
+    <<: *social
+    command: ["python", "-m", "social.provision", "init", "--authority-dir", "/authority", "--config-dir", "/evidence-config"]
+    volumes:
+      - evidence-authority:/authority
+      - evidence-config:/evidence-config
+    networks: [social]
+  provision:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "social.provision", "--help"]
+    volumes:
+      - social-data:/data
+      - evidence-authority:/authority:ro
+      - evidence-config:/evidence-config
+      - ${PHOTOANCHOR_OPERATOR_DIR:-./social-artifacts/operator}:/operator:ro,z
+  v3-app-demo:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "/app/scripts/v3_app_demo.py"]
+    depends_on:
+      calendar:
+        condition: service_healthy
+      relay:
+        condition: service_healthy
+  v3-app-tests:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "pytest", "-q", "-m", "social", "tests/test_v3_app_integration.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_V3_APP_TEST: "1"
+    depends_on:
+      calendar:
+        condition: service_healthy
+      relay:
+        condition: service_healthy
+  api:
+    <<: *social
+    ports: ["127.0.0.1:${PHOTOANCHOR_API_PORT:-8080}:8080"]
+    depends_on:
+      relay:
+        condition: service_healthy
+      evidence-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).close()"]
+      interval: 2s
+      timeout: 4s
+      retries: 30
+    restart: unless-stopped
+  worker:
+    <<: *social
+    command: ["python", "-m", "social.worker"]
+    volumes:
+      - bitcoin:/bitcoin:ro
+      - social-data:/data
+      - artifacts:/artifacts
+      - evidence-config:/evidence-config:ro
+      - evidence-authority:/authority:ro
+      - ${PHOTOANCHOR_OPERATOR_DIR:-./social-artifacts/operator}:/operator:ro,z
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  social-demo:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "/app/scripts/social_demo.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_API_URL: http://api:8080
+    depends_on:
+      api:
+        condition: service_healthy
+  social-tests:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "pytest", "-q", "-m", "social", "tests/test_social_integration.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_API_URL: http://api:8080
+      PHOTOANCHOR_SOCIAL_TEST: "1"
+    depends_on:
+      api:
+        condition: service_healthy
+  crypto-demo:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "/app/scripts/crypto_regtest_demo.py"]
+    depends_on:
+      calendar:
+        condition: service_healthy
+  crypto-tests:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "pytest", "-q", "-m", "regtest", "tests/test_crypto_regtest.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_CRYPTO_TEST: "1"
+    depends_on:
+      calendar:
+        condition: service_healthy
+
+networks:
+  social:
+    # A bridge is needed for Docker's loopback port publishing. Bitcoin and
+    # calendar stay exclusively on the separate internal regtest network.
+    driver: bridge
+volumes:
+  social-data:
+  relay-data:
+  evidence-authority:
+  evidence-config:

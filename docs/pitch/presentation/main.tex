@@ -1,0 +1,194 @@
+% FingerprinTO pitch. Eight sparse screens, 180 seconds INCLUDING the recorded demo.
+% Mathematical notation is visual support, never extra spoken material.
+% Lagrange theme copied unchanged from Leonardo's Goteborg presentation.
+% No automatic overlays or section pages: PDF page count equals screen count.
+\documentclass[aspectratio=169,t,11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[sfdefault]{cabin}
+\usepackage{sansmathfonts}
+\usepackage[scaled=0.85]{beramono}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,mathtools,array}
+\usetheme[lagrange]{Lagrange}
+\usetikzlibrary{positioning,arrows.meta,calc}
+\setbeamersize{text margin left=0.65cm,text margin right=0.65cm}
+\hypersetup{pdftitle={FingerprinTO: evidence you can verify},pdfauthor={FingerprinTO team}}
+\title[Evidence you can verify]{FingerprinTO}
+\author[FingerprinTO]{FingerprinTO team}
+\date{IXH26 Bari}
+% The upstream footline has extreme negative vertical skips. Override locally;
+% keep the upstream file byte-identical and preserve its colours/typography.
+\newcommand{\pitchlogo}[1]{\IfFileExists{../assets/to.png}{\includegraphics[height=#1,keepaspectratio]{../assets/to.png}}{\fbox{\textbf{TO}}}}
+\newcommand{\pitchfooter}[1]{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.58cm,dp=0.12cm,leftskip=0.65cm,rightskip=0.65cm]{footline}
+  \raisebox{-0.08cm}{\pitchlogo{0.44cm}}\hspace{0.2cm}\scriptsize\color{kn-muted}FingerprinTO\hfill IXH26 Bari\hfill #1
+  \end{beamercolorbox}}
+\setbeamertemplate{footline}{\pitchfooter{\insertframenumber/\inserttotalframenumber}}
+\newtcolorbox{pitchcard}[1][]{enhanced,colback=kn-block,colframe=kn-rule,
+  boxrule=0.4pt,arc=2mm,left=3mm,right=3mm,top=3mm,bottom=3mm,before upper=\raggedright,#1}
+\newcommand{\muted}[1]{{\color{kn-muted}#1}}
+\newcommand{\D}{\mathsf D}
+\newcommand{\HH}{\mathsf H}
+\newcommand{\Node}{\mathsf{Node}}
+\newcommand{\labelsmall}[1]{{\scriptsize\color{kn-muted}#1}\par}
+
+\begin{document}
+
+% 0:00--0:10: title, no extra time outside the existing introduction budget.
+\begin{frame}[c]{ }
+\begin{columns}[c,onlytextwidth]
+\begin{column}{0.34\textwidth}\centering\pitchlogo{3.8cm}\end{column}
+\begin{column}{0.62\textwidth}
+{\Huge\bfseries FingerprinTO\par}\vspace{0.35cm}
+{\Large Evidence, not an authenticity badge.\par}\vspace{0.5cm}
+\textcolor{kn-acc}{\large A signature is not a sensor.}\par
+\vspace{0.45cm}\muted{IXH26 Bari}
+\end{column}
+\end{columns}
+\end{frame}
+
+% 0:10--0:40: actual native app flow, not an invented two-device scenario.
+\begin{frame}{Capture. Sign. Share. Check.}
+\vspace{0.65cm}
+\begin{center}
+\begin{tikzpicture}[node distance=0.55cm,box/.style={draw=kn-rule,fill=kn-block,
+rounded corners=2mm,minimum height=1.0cm,inner sep=9pt,align=center},arr/.style={-{Latex[length=2mm]},thick,kn-acc}]
+\node[box](a){Capture};
+\node[box,right=of a](b){Prepare JPEG};
+\node[box,right=of b](c){Sign post};
+\node[box,right=of c](d){Publish};
+\draw[arr](a)--(b);\draw[arr](b)--(c);\draw[arr](c)--(d);
+\end{tikzpicture}
+\end{center}
+\vspace{0.5cm}
+Keep the original. Sign the JPEG selected for publication.\par
+\vspace{0.3cm}
+\muted{Readers check the signature, downloaded bytes and timestamp separately.}\par
+\vfill
+\textcolor{kn-acc}{\Large\textbf{The evidence travels with the photo.}}
+\end{frame}
+
+% 0:40--1:05: implemented Nostr/byte/timestamp checks; two small equations.
+\begin{frame}{Verify the post. Verify the bytes.}
+\vspace{0.35cm}
+\begin{align*}
+h_J &= \mathrm{SHA256}(J_{\rm published})\\
+\sigma_N &= \mathrm{SchnorrSign}_{sk_N}(\mathit{id}(E_N))
+\end{align*}
+\labelsmall{$E_N$: the Nostr photo event containing $h_J$; $sk_N$: the user's Nostr key.}
+\vspace{0.35cm}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.31\textwidth}\begin{pitchcard}\textbf{Signed post}\par Event ID + signature\end{pitchcard}\end{column}
+\begin{column}{0.31\textwidth}\begin{pitchcard}\textbf{Matching JPEG}\par Download + hash\end{pitchcard}\end{column}
+\begin{column}{0.33\textwidth}\begin{pitchcard}\textbf{Timestamp evidence}\par OTS + selected chain\end{pitchcard}\end{column}
+\end{columns}
+\vfill
+\textcolor{kn-acc}{\textbf{Three separate results. No automatic sensor-origin claim.}}
+\end{frame}
+
+% 1:05--1:30: optional evidence-v3, distinct from ordinary Nostr publication.
+\begin{frame}{Add a device receipt when evidence is available}
+\vspace{0.4cm}
+\begin{center}
+Original + report + policy\quad$\longrightarrow$\quad root $R$\quad$\longrightarrow$\quad receipt
+\end{center}
+\vspace{0.2cm}
+\begin{align*}
+\sigma_I &= \mathrm{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R)\\
+C &= D(\texttt{receipt},R,\sigma_I)
+\end{align*}
+\vspace{0.25cm}
+\muted{The device key is separate from the Nostr profile key.}\par
+\vfill
+\textcolor{kn-acc}{\textbf{Optional v3 evidence. Independent origin assessment.}}
+\end{frame}
+
+% 1:30--1:50: OpenTimestamps aggregation and independent Bitcoin verification.
+\begin{frame}{One Merkle root. Many timestamped commitments.}
+\begin{center}
+\begin{tikzpicture}[n/.style={draw=kn-rule,fill=kn-block,rounded corners=2pt,inner sep=6pt},arr/.style={-{Latex[length=1.5mm]},kn-acc,thick}]
+\node[n](a) at (0,0){$H(P)$};\node[n](b) at (2,0){Other digests};
+\node[n](c) at (4.5,0){Other digests};\node[n](d) at (7,0){Other digests};
+\node[n](l) at (1,1){Hash};\node[n](r) at (5.75,1){Hash};
+\node[n](root) at (3.4,2){Merkle root};\node[n](btc) at (8,2){Bitcoin block};
+\draw[arr](a)--(l);\draw[arr](b)--(l);\draw[arr](c)--(r);\draw[arr](d)--(r);
+\draw[arr](l)--(root);\draw[arr](r)--(root);\draw[arr](root)--(btc);
+\end{tikzpicture}
+\end{center}
+\vspace{0.2cm}
+\textbf{Keep the payload + .ots proof. Recompute the path. Verify Bitcoin.}\par
+\vspace{0.3cm}
+\labelsmall{$P$: exact timestamp payload. Nostr: signed-event envelope; optional v3: raw commitment $C$.\par
+Schematic aggregation; the .ots file specifies the actual hash operations and Bitcoin attestation.}
+\vfill
+\textcolor{kn-acc}{\textbf{Calendar promise $\ne$ confirmed anchor. Block time $\ne$ shutter time.}}
+\end{frame}
+
+% 1:50--2:20: supplied recording; external playback from the exported PDF.
+\begin{frame}{See it run}
+\begin{columns}[c,onlytextwidth]
+\begin{column}{0.29\textwidth}
+\centering
+\href{run:assets/demo-latest.mp4}{\includegraphics[height=5.0cm]{../assets/demo-latest-poster.png}}
+\end{column}
+\begin{column}{0.67\textwidth}
+{\Large\bfseries Capture. Prepare. Queue.\par}
+\vspace{0.45cm}
+Capture preparation\par\vspace{0.15cm}
+Calibration controls\par\vspace{0.15cm}
+Submission status\par
+\vspace{0.5cm}
+\href{run:assets/demo-latest.mp4}{\beamergotobutton{Play latest demo}}\par
+\vspace{0.10cm}\href{run:assets/demo-pitch.mp4}{\beamergotobutton{Earlier walkthrough}}\par
+\vspace{0.12cm}\href{run:assets/video_2026-11-21_11-11-30.mp4}{\beamergotobutton{Camera recording}}\par
+\vspace{0.3cm}
+
+\labelsmall{Recorded app demo. Queued $\ne$ verified. No sensor claim.}
+\end{column}
+\end{columns}
+\end{frame}
+
+% 2:20--2:50: replaces the old status/closing slot, never extra time.
+\begin{frame}{What's next}
+\vspace{0.2cm}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\begin{pitchcard}[height=3.3cm]
+\textcolor{kn-acc}{\textbf{Optimistic verification}}\par\vspace{0.25cm}
+Richer claims. Open challenges.\par\vspace{0.25cm}
+\(\text{claim}\ \longrightarrow\ \text{evidence}\ \longrightarrow\ \text{verdict}\)\par
+\vspace{0.3cm}\labelsmall{Dispute rules / incentives: pending.}
+\end{pitchcard}
+\end{column}
+\begin{column}{0.49\textwidth}
+\begin{pitchcard}[height=3.3cm]
+\textcolor{kn-acc}{\textbf{Camera challenges}}\par\vspace{0.25cm}
+\(c\gets\{0,1\}^{256}\)\par
+\vspace{0.15cm}Challenge + image, attested together.\par
+\vspace{0.3cm}\labelsmall{Attested API not validated on our route.}
+\end{pitchcard}
+\end{column}
+\end{columns}
+\vspace{0.2cm}
+\labelsmall{Next: manufacturer adapters + physical PRNU/beacon trials.}
+\vfill
+\textbf{Verify what the evidence supports.}
+\end{frame}
+% 2:50--2:55: disclosure supplied by the author; no inferred human-review claim.
+\begin{frame}{AI-use disclosure}
+\vspace{0.65cm}
+\renewcommand{\arraystretch}{1.9}
+\begin{center}
+\begin{tabular}{@{}>{\bfseries}l@{\hspace{2cm}}l@{}}
+Theory & Human\\
+Code & LLM-generated\\
+Slides & LLM-generated
+\end{tabular}
+\end{center}
+\vspace{0.5cm}\centering\muted{OpenAI Codex, Claude.}
+\end{frame}
+\ifdefined\WithBackup
+  \input{backup.tex}
+\fi
+\end{document}

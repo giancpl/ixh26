@@ -1,10 +1,10 @@
-import { Bitcoin, Hourglass } from "./PixelIcon";
+import { Bitcoin, Heart, Hourglass } from "./PixelIcon";
 import type { AnchorInfo, PhotoPin } from "../services/contracts";
 import { initials } from "../services/identity";
 
 export function AnchorBadge({ anchor }: { anchor?: AnchorInfo }) {
   if (!anchor || anchor.status === "UNANCHORED") {
-    return <span className="badge">Locale</span>;
+    return <span className="badge">Non certificata</span>;
   }
   if (anchor.status === "CONFIRMED") {
     return (
@@ -16,12 +16,12 @@ export function AnchorBadge({ anchor }: { anchor?: AnchorInfo }) {
   if (anchor.status === "PENDING") {
     return (
       <span className="badge pending" title="In attesa di conferma blocco Bitcoin">
-        <Hourglass size={12} /> OTS Pending
+        <Hourglass size={12} /> In certificazione
       </span>
     );
   }
   if (anchor.status === "INVALID") {
-    return <span className="badge err">OTS Non Valido</span>;
+    return <span className="badge err">Prova non valida</span>;
   }
   return <span className="badge">Da verificare</span>;
 }
@@ -32,9 +32,7 @@ export default function PinCard({
   authorName,
   likeCount,
   liked,
-  saved,
   onOpen,
-  onSave,
   onLike,
   onFilterAuthor,
 }: {
@@ -43,9 +41,9 @@ export default function PinCard({
   authorName: string;
   likeCount: number;
   liked: boolean;
-  saved: boolean;
+  saved?: boolean;
   onOpen: () => void;
-  onSave: () => void;
+  onSave?: () => void;
   onLike: () => void;
   onFilterAuthor: () => void;
 }) {
@@ -62,37 +60,8 @@ export default function PinCard({
               : undefined
           }
         />
-        <div className="pin-overlay">
-          <div className="pin-overlay-top">
-            <AnchorBadge anchor={anchor} />
-            <button
-              type="button"
-              className="btn-primary pin-save-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSave();
-              }}
-            >
-              {saved ? "Salvato ✓" : "Salva"}
-            </button>
-          </div>
-          <div className="pin-overlay-bottom">
-            {pin.source === "android-photoanchor" ? (
-              <span className="badge solid">PhotoAnchor App</span>
-            ) : (
-              <span />
-            )}
-            <button
-              type="button"
-              className="pin-save-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
-            >
-              {liked ? "♥" : "♡"} {likeCount}
-            </button>
-          </div>
+        <div className="pin-media-badge">
+          <AnchorBadge anchor={anchor} />
         </div>
       </div>
 
@@ -106,7 +75,7 @@ export default function PinCard({
               e.stopPropagation();
               onFilterAuthor();
             }}
-            title={`Vedi foto di ${authorName}`}
+            title={`Vedi profilo di ${authorName}`}
           >
             <span
               className="avatar-circle"
@@ -116,9 +85,17 @@ export default function PinCard({
             </span>
             <span>{authorName}</span>
           </button>
-          <span className="badge" style={{ fontSize: 10, padding: "2px 7px" }}>
-            {pin.board}
-          </span>
+          <button
+            type="button"
+            className={`pin-like ${liked ? "on" : ""}`}
+            aria-label={liked ? "Ti piace" : "Mi piace"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLike();
+            }}
+          >
+            <Heart size={13} /> {likeCount}
+          </button>
         </div>
       </div>
     </article>

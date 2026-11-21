@@ -114,3 +114,20 @@ Android handset. No real attestation or production revocation feed was used.
 Protocol references: [Android attestation schema](https://source.android.com/docs/security/features/keystore/attestation),
 [Android chain verification rules](https://developer.android.com/privacy-and-security/security-key-attestation),
 [cryptography X.509 API](https://cryptography.io/en/latest/x509/reference/).
+
+## Explicit GrapheneOS boot policy
+
+The default remains `allowed_boot_states=frozenset({0})` (Verified). To accept
+an approved GrapheneOS release on a locked device, configure both
+`allowed_boot_states=frozenset({0, 1})` and a nonempty `allowed_boot_keys`
+containing the independently authenticated binary Verified Boot key fingerprints.
+SelfSigned (1) is never accepted without key pins. Unlocked devices, Unverified
+and Failed states remain rejected. Do not learn a trusted key from the submitted
+attestation. Obtain current keys and authenticate updates following the
+[official GrapheneOS guide](https://grapheneos.org/articles/attestation-compatibility-guide).
+
+Changing the permitted states changes the policy digest and requires a new
+challenge. Existing default Verified-only policy digests are preserved. These
+checks attest boot/key properties at enrollment, not a protected sensor pipeline
+or the absence of every runtime compromise. Actual Pixel 9 Pro attestation
+validation remains a device-acceptance gate.

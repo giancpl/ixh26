@@ -2,6 +2,7 @@ FROM python:3.11-slim-bookworm
 WORKDIR /app
 COPY pyproject.toml ./
 COPY settlement ./settlement
+COPY fingerprinto ./fingerprinto
 RUN pip install --no-cache-dir '.[test]'
 COPY tests ./tests
 COPY examples ./examples

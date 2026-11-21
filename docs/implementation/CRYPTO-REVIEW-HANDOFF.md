@@ -1,4 +1,27 @@
+Integration follow-up: [PR #9 reconciliation and validation](../reviews/LEOMAIN_PR9.md).
+The handoff below records the original source branch and its historical scope.
+
 # Crypto branch review handoff
+
+## Current extension: external beacon on leomaster
+
+The review head is now `leomaster`, stacked on `leomain` in [PR #16](https://github.com/giancpl/ixh26/pull/16).
+The branch/base and earlier review statements below describe the preceding
+crypto checkpoint, not a fresh audit of later integrations on main.
+
+Read the [beacon specification and attack matrix](../prnu/BEACON-EXPERIMENT.md)
+and [execution record](../prnu/BEACON-VALIDATION.md) alongside the audit.
+P-256 session-bound tokens, optical grid rendering/decoding and an independent
+CLI are implemented. Ten synthetic beacon tests and nine targeted v3 regression
+tests passed at code commit `8fb3b3c`; this does not validate all earlier hardening.
+Token validity is software evidence, always `physicalOriginVerified=false`.
+Splicing, relay and within-session replay remain undetected. No receipt-v3 wire,
+origin level or reducer change; no automatic v3 report/issuance integration.
+
+Review still required: external clock/release assumptions, key governance,
+one-use sessions, real optical robustness and physical-device trials. No merge
+or auto-merge is authorised. The historical assessment continues below.
+
 
 Branch: `leomain`, proposed base: `main`. This branch is submitted for independent
 review as an incomplete crypto-module implementation. Keep the pull request in

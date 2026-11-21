@@ -157,6 +157,35 @@ class EnrollmentTests(unittest.TestCase):
         strict = replace(self.policy, security_levels=frozenset({2}))
         self.assertEqual(self.verify(policy=strict).enrollment.status, "rejected")
 
+    def test_selfsigned_requires_explicit_state_and_pinned_key(self):
+        chain = self.chain(self.attestation(bootstate=1))
+        self.assertEqual(self.verify(chain).enrollment.code, "verified_boot_rejected")
+        pinned_only = replace(self.policy, allowed_boot_keys=frozenset({b"bootkey"}))
+        self.assertEqual(self.verify(chain, policy=pinned_only).enrollment.code, "verified_boot_rejected")
+        approved = replace(pinned_only, allowed_boot_states=frozenset({0, 1}))
+        self.assertNotEqual(approved.digest, pinned_only.digest)
+        self.assertEqual(replace(pinned_only, allowed_boot_states=frozenset({0})).digest, pinned_only.digest)
+        self.challenge = self.requests.issue(approved.digest, now=self.now)
+        wrong_key = replace(approved, allowed_boot_keys=frozenset({b"another-key"}))
+        for options, policy, code in (
+            (dict(bootstate=1), wrong_key, "boot_key_untrusted"),
+            (dict(bootstate=1, locked=False), approved, "verified_boot_rejected"),
+            (dict(bootstate=2), approved, "verified_boot_rejected"),
+            (dict(bootstate=3), approved, "verified_boot_rejected"),
+        ):
+            with self.subTest(options=options, code=code):
+                result = self.verify(self.chain(self.attestation(**options)), policy=policy)
+                self.assertEqual(result.enrollment.code, code)
+        self.assertEqual(self.verify(self.chain(self.attestation(bootstate=1)), policy=approved).enrollment.status,
+                         "accepted")
+
+    def test_unsafe_boot_state_policies_rejected(self):
+        for states, keys in ((frozenset({1}), None), (frozenset({0, 1}), frozenset()),
+                             (frozenset({2}), None), (frozenset({True}), frozenset({b"key"})),
+                             (frozenset(), None)):
+            with self.subTest(states=states), self.assertRaises(ValueError):
+                replace(self.policy, allowed_boot_states=states, allowed_boot_keys=keys)
+
     def test_path_signatures_roots_time_and_revocation(self):
         bogus = ec.generate_private_key(ec.SECP256R1())
         self.assertEqual(self.verify(self.chain(issuerkey=bogus)).enrollment.status, "rejected")

@@ -3,6 +3,7 @@
 from dataclasses import asdict
 from datetime import datetime, timezone
 import json
+import sqlite3
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
@@ -133,7 +134,10 @@ def main(argv=None):
     except InvalidSignature:
         output={"status":"error","code":"authority_signature_invalid"}
         code=3
-    except (ValueError,TypeError,KeyError,OSError):
+    except (OSError, sqlite3.Error):
+        output={"status":"error","code":"operation_unavailable","message":"Local storage or I/O is unavailable."}
+        code=1
+    except (ValueError,TypeError,KeyError):
         output={"status":"error","code":"invalid_evidence_or_operation"}
         code=3
     print(json.dumps(output))

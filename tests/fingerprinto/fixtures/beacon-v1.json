@@ -1,0 +1,23 @@
+{
+  "warning": "Synthetic public test key (scalar 1); NEVER deploy this key. No physical capture.",
+  "publicKey": "3059301306072a8648ce3d020106082a8648ce3d030107034200046b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c2964fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5",
+  "challenge": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "installationId": "6969696969696969696969696969696969696969696969696969696969696969",
+  "now": 1005,
+  "payloadCbor": "847566696e6765727072696e746f2f626561636f6e2f3158205cd252fb0ce8932436faf8ccd1040981b89ee4ad6b9fe9e2a2b7e71aacb27cd3186458200adbf178bcecf3f84d030345f97e8fea428aa69eceb054b509a1e0f9de47be03",
+  "root": "ea8209a974ee44e630a0a4c0573d2b0072736a5e586f457f76b328c5041b97e5",
+  "packet": "82847566696e6765727072696e746f2f626561636f6e2f3158205cd252fb0ce8932436faf8ccd1040981b89ee4ad6b9fe9e2a2b7e71aacb27cd3186458200adbf178bcecf3f84d030345f97e8fea428aa69eceb054b509a1e0f9de47be0358483046022100c3afbb3e5810cfa5606d374cbf0685223c15c3d05fb48a4a4507c6cba7a0999a022100b42267b2b64ccedf54636137e2c334c369e0394d02bad17814253095e8e99ad1",
+  "expected": {
+    "original": "pass",
+    "changed_signature": "fail",
+    "changed_slot": "fail",
+    "unknown_beacon": "fail",
+    "wrong_session": "fail",
+    "blank_image": "unavailable",
+    "stale_slot": "fail",
+    "slot_after_anchor": "fail",
+    "spliced_scene": "pass",
+    "same_session_relay": "pass",
+    "physicalOriginVerified": false
+  }
+}

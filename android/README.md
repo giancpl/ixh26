@@ -1,124 +1,86 @@
-# PhotoAnchor Android
+# PhoTO Android debug demo
 
-The app captures a full-resolution JPEG through CameraX, stores it privately,
-and can upload the exact file to the configured photo server. The camera screen
-also exports an unsigned diagnostic ZIP with the original and a capture report.
-See [capture feasibility](../docs/implementation/capture-feasibility.md) for independent checks.
+Build from the repository root with `./scripts/social-build-android.sh`, then
+install and set up USB reverse with `./scripts/social-phones.sh`. See
+[the local app guide](../docs/social/README.md) for the complete Docker and
+two-phone procedure.
 
-## Build
+The supported toolchain is JDK 17, Gradle wrapper 8.11.1, AGP 8.9.1, Kotlin
+2.0.21, Android SDK/build-tools 35 and minSdk 29. The wrapper distribution has a
+pinned SHA-256. `app/gradle.lockfile` records the resolved debug, JVM test and
+lint dependencies. To intentionally refresh it, run the normal build tasks
+with `--write-locks` and review the resulting changes.
 
-Use JDK 17 and an Android SDK with Platform 35, Build Tools 35.0.0 and Platform
-Tools. Install the SDK components and accept the Android SDK license with the
-SDK Manager. Set `JAVA_HOME` and `ANDROID_HOME` for your environment, or set
-`sdk.dir` in an untracked `local.properties`. Do not commit local SDK paths.
+Nostr signatures and event IDs use `org.nostrdevkit:nostr-sdk:0.45.1` and its
+official native libraries. JNA is declared explicitly because the SDK exposes
+its types. Coroutine core is constrained to 1.9.0 to retain compatibility with
+the required Kotlin 2.0.21 compiler; the SDK's default transitive 1.10.1 selects
+newer Kotlin metadata. JVM tests load the official desktop native binding,
+`nostr-sdk-jvm:0.45.1`, and exercise the same vectors as Python. These tests do
+not exercise the camera or Android Keystore on an actual phone.
 
-The repository includes Gradle Wrapper 8.11.1 with its distribution SHA-256
-pinned in `gradle/wrapper/gradle-wrapper.properties`. No system Gradle is needed.
-From this directory:
+The debug variant only connects to `http://127.0.0.1:8080` and
+`ws://127.0.0.1:7777`. Cleartext is allowed only for loopback in its debug
+network policy. The release variant has no configured services and does not
+enable cleartext. No public relay is configured.
 
-```sh
-bash gradlew --no-daemon assembleDebug testDebugUnitTest
-```
+The UI has Profile, Camera and Feed tabs. Profile keys are generated locally
+and encrypted with AES-GCM under Android Keystore in the no-backup directory.
+Names remain author declarations. A signed event is saved in the persistent
+outbox before submission; retries retain that event. The ViewModel retries and
+refreshes every five seconds while alive, and resumes from disk after restart.
+Captured originals remain byte-for-byte unchanged for v3. Ordinary Nostr
+publication creates a separate copy with GPS/identifying EXIF removed before
+hashing. A privacy notice precedes original upload; cleaned copies cannot reuse
+the original's v3 receipt. Previews are resized only
+in memory. Hashing, image processing and network calls run off the UI thread.
 
-On Windows, use `gradlew.bat assembleDebug testDebugUnitTest`. First builds need
-network access to download Gradle, plugins and Android dependencies.
+Verify photo checks ID/signature and downloaded JPEG hash locally, and requests
+a fresh timestamp report from the local API. Confirmation is explicitly
+labelled as local-node verification on regtest. Export proof bundle writes a
+ZIP using Android's document picker; Check a JPEG copy independently compares
+selected bytes with the signed hash. Neither operation exports a private key.
 
-The debug APK is `app/build/outputs/apk/debug/app-debug.apk`. JVM test results
-are in `app/build/reports/tests/testDebugUnitTest/`. The Gradle unit-test task
-includes the original-byte export checks in `tests/CaptureEvidenceTest.java`.
-Build and JVM test success do not establish camera credentials or hardware
-attestation: those require a supported handset and independent trust policy.
+Actual two-phone acceptance is deferred at the user's request. Record it in
+`docs/social/CHECKLIST.md`; successful builds and native JVM tests are separate
+evidence.
 
-To configure the default photo server when building:
+## Native UI integration
 
-```sh
-bash gradlew assembleDebug -PSERVER_URL=http://192.168.1.20:8787
-```
+The native PhoTO interface includes a masonry feed, local search, saved-post
+bookmarks, profile grids and a persistent light/dark theme. The installed app
+is named PhoTO; its existing application ID and encrypted identity paths remain
+stable.
+Saved posts are local bookmarks, not likes or a permanent media archive; search
+and bookmark views operate on the bounded cached/fetched feed.
 
-The server can also be configured in the app. The current app does not generate
-attested installation keys or issue signed FingerprinTO receipts.
+The camera draft says **Not submitted** until publication. A failed operation
+keeps the draft and caption visible; after a successful submission the capture
+tab becomes the camera again. The status banner exposes operation failures and
+the persistent signed-event queue. A signed-post badge in the feed indicates
+only event-signature validation. The detail screen shows signature, original
+JPEG integrity, local-node regtest timestamp and relay publication separately.
+Unknown or unavailable timestamp results never display a confirmation badge.
 
-## Receipt byte construction
+Review findings, corrective changes and validation are tracked in
+[`docs/reviews/PIETRO_ANDROID.md`](../docs/reviews/PIETRO_ANDROID.md).
 
-`ReceiptV1.java` implements deterministic CBOR export and the v1 fingerprint
-tree. It consumes bounded streams for the original and detached credential,
-keeps a private snapshot of metadata bytes, and produces T/R plus exact receipt
-bytes and C from a supplied signature. It neither signs nor validates origin,
-enrollment, SPKI/certificate structure or signature validity. Its size/type
-checks match the Python construction layer, not the full verifier.
+## Connected evidence-v3 workflow
 
-Given immutable original evidence, call `roots(assetStream, credentialStream)`
-to obtain R. The proposed signing stage must use `SHA256withECDSA` on those raw
-32 bytes. Preserve the returned DER signature exactly for `receipt(signature)`
-and `ReceiptV1.commitment(R, signature)`. Timestamp C as a 32-byte file.
-Origin acceptance and attested enrollment must precede production issuance.
+The optional native flow connects device enrollment, private calibration,
+authority-verified preparation, local P-256 signing, Nostr commitment tagging,
+independent v3 verification and standard bundle export. See the
+[v3 setup guide](../docs/V3-APP-INTEGRATION.md) and
+[executed software validation](../docs/reviews/V3_APP.md).
 
-From the repository root, run the cross-language tests with JDK 17+ and Python
-3.11+ (the Android SDK is not required):
+Device enrollment requires a separately pinned operator authority, actual
+trusted attestation policy and current revocations. There is no software-key
+fallback in the normal app. The server computes PRNU using its versioned Pillow
+13 decoder; Android preserves the original bytes and checks signatures/binding.
+Frame capture selects one explicit Camera2 logical/physical route via the pinned
+CameraX 1.4.1 API, with fixed zoom and recorded mode; this observable route is
+not a sensor signature or independently witnessed camera identity.
 
-```sh
-bash android/tests/run-receipt-vectors.sh
-```
-
-These tests compare all intermediates and receipt bytes from the four manual
-fixtures, check their signatures through Java JCA, and add eight signed-integer
-and UTF-8 boundary cases generated independently by the Python constructor.
-The core is not connected to the CameraX capture UI yet.
-
-## Installation key module
-
-`InstallationKeys.kt` provisions one stable P-256 `AndroidKeyStore` alias with
-an externally issued 32-byte enrollment challenge. `provision` refuses existing
-aliases or residual enrollment records and never silently replaces a lost key.
-StrongBox can be required explicitly; failure does not fall back to another
-security level. The verifier still has to establish hardware backing from the
-certificate chain; successful key generation is not an enrollment decision.
-
-`load` returns defensive copies of SPKI, ID_I, the recorded enrollment challenge
-and DER certificate chain. SPKI/challenge are persisted through AtomicFile in
-`noBackupFilesDir`, with process and file locks. An incomplete record, missing
-alias, or mismatch with the live certificate stops signing. Interrupted
-provisioning can leave an alias without a record: the module refuses automatic
-recovery/rotation to avoid changing identity. Explicit recovery and enrollment
-policy are still required for that state.
-
-`signRoot(expectedInstallationId, R)` is the low-level Keystore signing primitive.
-Use it only after independent origin/enrollment acceptance. It verifies ID_I
-against the live key, signs the 32 raw bytes with SHA256withECDSA, validates
-strict DER/scalar bounds and checks the returned signature under the exact
-P-256 public key. Preserve the returned DER bytes; retrying a network operation
-must reuse the saved receipt/signature. This API does not itself accept a
-camera credential or remotely enroll a key and exposes no `verified=true` flag.
-
-```kotlin
-// Run on an IO dispatcher. Challenge comes from the enrollment verifier.
-val keys = InstallationKeys(context)
-val evidence = keys.provision(externalChallenge, requireStrongBox = false)
-// Send evidence.publicKey, enrollmentChallenge and certificateChain to the
-// independent verifier; retain its challenge issuance and enrollment record.
-// After trust checks, reconstruct R through ReceiptV1 using immutable inputs.
-val sigma = keys.signRoot(evidence.installationId, rootR)
-// Persist exact receipt bytes before anchor submission; never re-sign on retry.
-```
-
-`InstallationSignature.java` is independently usable and testable on the JVM.
-It validates the exact v1 SPKI and P-256 point, checks strict DER and scalar
-ranges, and signs/verifies with JCA. Run its standalone tests from repo root:
-
-```sh
-bash android/tests/run-installation-signatures.sh
-```
-
-Real JCA signatures, malformed DER, altered roots, wrong keys, invalid points
-and incorrect root lengths were tested. A fresh Java signature also verified
-through the Python verifier. Keystore provisioning, AtomicFile recovery and
-hardware behavior have not been exercised on Android. No app build was run.
-
-## Application validation status
-
-The Gradle Wrapper was generated successfully using the verified 8.11.1
-distribution. The standalone Java export tests and Java/Python interoperability
-test passed previously. The app build and Android Gradle unit-test task have
-not completed: SDK Platform/Build Tools installation was stopped at the license
-prompt, and the user explicitly chose configuration only. No SDK license was
-accepted. No handset or emulator test has been performed.
+The v1/v2 portable primitives remain available for compatibility/testing; hybrid
+v2 is not a second automatic publication format. Actual Pixel/GrapheneOS
+Keystore, camera/USB UI and empirical calibration acceptance remain deferred.

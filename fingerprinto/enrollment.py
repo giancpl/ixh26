@@ -37,6 +37,7 @@ class EnrollmentPolicy:
     minimum_os_version: int = 0
     minimum_os_patch: int = 0
     allowed_boot_keys: frozenset[bytes] | None = None
+    allowed_boot_states: frozenset[int] = frozenset({0})
 
     def __post_init__(self):
         if (not self.identifier or not self.roots or not self.packages
@@ -46,6 +47,10 @@ class EnrollmentPolicy:
                 or not self.security_levels or not self.security_levels <= {1, 2}
                 or self.minimum_os_version < 0 or self.minimum_os_patch < 0):
             raise ValueError("Invalid enrollment policy")
+        if (type(self.allowed_boot_states) is not frozenset or not self.allowed_boot_states
+                or any(type(state) is not int or state not in (0, 1) for state in self.allowed_boot_states)
+                or (1 in self.allowed_boot_states and not self.allowed_boot_keys)):
+            raise ValueError("SelfSigned boot requires explicit trusted boot keys")
         for root in self.roots:
             _certificate(root)
 
@@ -58,6 +63,10 @@ class EnrollmentPolicy:
                  "levels": sorted(self.security_levels), "os": self.minimum_os_version,
                  "patch": self.minimum_os_patch,
                  "boot_keys": None if self.allowed_boot_keys is None else sorted(k.hex() for k in self.allowed_boot_keys)}
+        # Preserve the digest of existing Verified-only policies and challenges.
+        # Enabling another state is a distinct policy and needs fresh intake.
+        if self.allowed_boot_states != frozenset({0}):
+            value["boot_states"] = sorted(self.allowed_boot_states)
         return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).digest()
 
 
@@ -205,7 +214,7 @@ def verify_enrollment(
         if 704 not in hw:
             raise _Rejected("boot_evidence_missing")
         boot_key, locked, state, boot_hash = der.boot_state(hw[704])
-        if not locked or state != 0 or not boot_key or not boot_hash:
+        if not locked or state not in policy.allowed_boot_states or not boot_key or not boot_hash:
             raise _Rejected("verified_boot_rejected")
         if policy.allowed_boot_keys is not None and boot_key not in policy.allowed_boot_keys:
             raise _Rejected("boot_key_untrusted")

@@ -95,7 +95,7 @@ Programmatic deployment adapters must perform the full capture/issuer validation
 
 CLI codes: 0 operation succeeded or all mandatory verification checks complete;
 2 pending verification or experimental score; 3 invalid evidence/failed check;
-1 missing dependency/operational support. A complete `none` level can exit 0:
+1 missing dependency, unavailable storage/I/O or operational support. A complete `none` level can exit 0:
 read the reported level, never interpret process success as proof of provenance.
 
 ## 4. Optional Bitcoin anchoring
