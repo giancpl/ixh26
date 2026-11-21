@@ -54,3 +54,36 @@ and their receipts remain distinct; the existing event envelope is unchanged.
 Calibration frames/reference records are private. Thresholds are disabled until
 an operator approves a trusted association and calibration report. No public
 endpoint accepts approval, roots, trusted booleans or thresholds from the app.
+
+## Single-Pixel collection plan
+
+The Android guide `photo/prnu-single-pixel/1` collects 30 enrollment, 10
+development and 10 held-out genuine frames, in that order. These are collection
+targets for an experiment, not universal calibration minima or decision thresholds.
+Counts come from the owner-authorized session's `frames` list. A retry of an
+already stored digest retains its original role, including across phase changes.
+Starting a new guide uses a fresh operation ID and preserves the previous session
+and reference. The previous smoke-test frame is not silently reused.
+
+Before accepting a private frame, the server applies the session's exact decoder
+profile and geometry. Unsupported color/ICC/orientation returns HTTP 400
+`unsupported_frame_route`; less than 75% usable green-channel crop pixels or
+zero usable residual energy returns HTTP 422 `frame_quality_insufficient`.
+These quality gates reuse the experimental method's pixel mask; passing them
+does not establish sensor attribution. Rejected frames are not counted or stored.
+Original bytes are never repaired, rotated or recompressed to satisfy the checks.
+Legacy evaluation remains available through the API with its existing minimum;
+the guided Android action waits for its complete 30/10/10 collection.
+
+The optional demo-series label records that automated captures may share a
+scene. Its 30/10/10 groups exercise software separation only; they are not
+independent empirical calibration data and do not authorize an association.
+
+The explicit decoder profile
+`pillow-13.0.0/rgb-green-stored-exif-N-icc-33c34ecfeb998459e0075ba26a0f1ea5042e20e2419c5962e495eba3208576f2/1`
+supports only the exact 596-byte sRGB ICC record in `fixtures/prnu-decoder.json`,
+with N in 1..8. It reads the same stored RGB green samples without applying an
+ICC transform; its identifier binds the color-route metadata and orientation.
+Different, missing, malformed or unapproved ICC profiles cannot satisfy that
+identifier. Existing profiles continue to reject ICC data. References retain
+their original decoder IDs and bytes; there is no implicit migration.

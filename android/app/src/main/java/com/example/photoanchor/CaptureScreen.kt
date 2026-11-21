@@ -143,6 +143,7 @@ internal fun PublishScreen(
                     BitPolitoBadge("Not submitted", icon = DeckIcon.Hourglass)
                 }
 
+                GuidedCalibrationCapture(state, model)
                 state.preview?.let {
                     Box(
                         Modifier
@@ -206,7 +207,7 @@ internal fun PublishScreen(
 
 @Composable
 @androidx.annotation.OptIn(markerClass = [androidx.camera.camera2.interop.ExperimentalCamera2Interop::class])
-internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () -> Unit) {
+internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () -> Unit, calibration: CalibrationGuide? = null) {
     val p = LocalPalette.current
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
@@ -220,10 +221,11 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
     var flash by remember { mutableStateOf(false) }
     var capturing by remember { mutableStateOf(false) }
     var routeReady by remember { mutableStateOf(false) }
+    val collecting = calibration?.guided == true && calibration.state == "COLLECTING"
     var capture by remember { mutableStateOf(ImageCapture.Builder().build()) }
     var routeInfo by remember { mutableStateOf(org.json.JSONObject().put("fixed", false)) }
     val executor = remember { Executors.newSingleThreadExecutor() }
-    val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
+    val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER; keepScreenOn = true } }
     DisposableEffect(Unit) { onDispose { executor.shutdown() } }
     LaunchedEffect(Unit) { if (!permitted) permission.launch(Manifest.permission.CAMERA) }
 
@@ -318,6 +320,9 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(routeMessage, color = p.mu, fontSize = 12.sp)
+        if (collecting) Text("Private PRNU · ${calibration!!.summary}\n" +
+            if (calibration.ready) "Collection ready: open Profile → Evaluate." else "Keep the same orientation. Store each shot privately after capture.",
+            color = p.ink, fontSize = 12.sp)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -354,7 +359,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                     text = "Flip",
                     icon = DeckIcon.Smartphone,
                     onClick = { back = !back },
-                    enabled = !capturing && !busy && routeReady,
+                    enabled = !capturing && !busy && routeReady && !collecting,
                 )
 
                 Box(
@@ -407,7 +412,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                     text = if (flash) "Flash On" else "Flash",
                     icon = DeckIcon.Lightning,
                     onClick = { flash = !flash },
-                    enabled = !capturing && !busy && routeReady,
+                    enabled = !capturing && !busy && routeReady && !collecting,
                 )
             }
         }

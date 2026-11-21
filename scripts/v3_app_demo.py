@@ -39,6 +39,12 @@ from settlement.ots_backend import OTSBackend
 
 def run():
     run_id='v3-app-'+uuid.uuid4().hex;directory=Path('/artifacts')/run_id;directory.mkdir(parents=True)
+    steps=[]
+    def stage(message,**details):
+        steps.append(dict(step=len(steps)+1,message=message,**details))
+        (directory/'demo-flow.json').write_text(json.dumps(dict(simulated_camera=True,network='regtest',steps=steps),indent=2))
+        print(f'[{len(steps):02d}] {message}',file=sys.stderr,flush=True)
+    stage('DEMO: synthetic camera/identity; real relay, OTS calendar and Bitcoin regtest')
     t,synthetic=v3_support.setup(directory/'SYNTHETIC-ONLY')
     base=Config.from_env();url='http://127.0.0.1:18081'
     config=replace(synthetic,public_url=url,relay_url=base.relay_url,bitcoin_conf=base.bitcoin_conf,timeout=base.timeout,retry_seconds=1,lease_seconds=30)
@@ -75,6 +81,7 @@ def run():
         challenge=request('POST','/v1/enrollments/challenge',{'operation_id':uuid.uuid4().hex}).json()
         enrollment=v3_support.enrollment(t,challenge['challenge'])
         request('POST','/v1/enrollments',enrollment);eid=enrollment['operation_id'];poll('/v1/enrollments/'+eid,'ACCEPTED')
+        stage('Isolated synthetic installation enrolled; phone trust unchanged')
         rng=random.Random(63131);pattern=[rng.gauss(0,2) for _ in range(1024)]
         def jpeg(other=False):
             output=BytesIO();values=[max(0,min(255,round(120+(rng.gauss(0,2) if other else p)+rng.gauss(0,.6)))) for p in pattern]
@@ -89,8 +96,10 @@ def run():
         request('POST',f'/v1/calibrations/{cid}/evaluate',{})
         calibration=poll('/v1/calibrations/'+cid,'COMPLETE')
         assert calibration['output']['calibration_approved'] is False
+        stage('Synthetic PRNU reference and separate queries analyzed; calibration NOT approved')
         photo=jpeg();(directory/'photo.jpg').write_bytes(photo)
         media=request('POST','/v1/media',raw=photo,private=False).json();assert media['sha256']==digest(photo).hex()
+        stage('JPEG uploaded without transformation; SHA-256 matches',sha256=media['sha256'])
         operation=uuid.uuid4().hex
         request('POST','/v1/evidence',dict(operation_id=operation,enrollment_id=eid,media_sha256=media['sha256'],time=int(time.time()*1000),reference_hash=calibration['output']['reference_hash']))
         proposal=poll('/v1/evidence/'+operation,'READY')['output']
@@ -102,6 +111,7 @@ def run():
         template=ReceiptV3.from_bytes(un64(proposal['template']));root=template.roots(photo)['R'];assert root.hex()==claim['root']
         signed=template.with_signature(t.leafkey.sign(root,ec.ECDSA(hashes.SHA256()))).to_bytes()
         receipt=request('POST',f'/v1/evidence/{operation}/receipt',raw=signed).json();commitment=receipt['commitment']
+        stage('Authority proposal checked, R reconstructed, P-256 receipt signed',commitment=commitment)
         tags=[['title','PhoTO v3 local demo'],['imeta','url '+media['url'],'m image/jpeg','x '+media['sha256'],'dim 32x32'],['m','image/jpeg'],['x',media['sha256']],['photo-evidence','fingerprinto/evidence-v3',commitment]]
         event=json.loads(EventBuilder(Kind(20),'PhoTO v3 local demo').tags([Tag.parse(v) for v in tags]).finalize(keys).as_json());event_id=event['id']
         request('POST','/v1/posts',{'event':event},private=False)
@@ -113,12 +123,16 @@ def run():
             time.sleep(.2)
         else:raise TimeoutError('Both pending proofs and relay publication')
         (directory/'pending.json').write_text(json.dumps(snapshot,indent=2))
+        stage('Signed Nostr post published; Nostr and v3 proofs both PENDING',event_id=event_id)
+        stage('Explicit bounded mining and proof upgrade on local regtest')
         backend=OTSBackend(config.ots_config());node=backend._bitcoin_proxy(wallet='ots');mined=[]
         try:
             while time.monotonic()<deadline:
                 result=request('POST',f'/v1/posts/{event_id}/verify',{},private=False).json()
                 v3=request('POST',f'/v1/posts/{event_id}/evidence/verify',{},private=False).json()
-                if result['settlement']['status']=='CONFIRMED' and v3['settlement'] and v3['settlement']['status']=='CONFIRMED':break
+                # Assessment and settlement are separate fresh reads. An upgrade
+                # can land between them; wait for the assessment as well.
+                if result['settlement']['status']=='CONFIRMED' and v3['settlement'] and v3['settlement']['status']=='CONFIRMED' and v3['assessment'].get('anchor')=='verified':break
                 if node._call('getrawmempool'):
                     mined.extend(node._call('generatetoaddress',2,node._call('getnewaddress')))
                 time.sleep(.5)
@@ -129,6 +143,7 @@ def run():
         assert result['settlement']['payload_sha256']!=v3['settlement']['payload_sha256']
         for report in (result['settlement'],v3['settlement']):
             assert report['binding_checked'] and isinstance(report['bitcoin']['block_height'],int) and isinstance(report['bitcoin']['block_time'],int)
+        stage('Both independent proofs CONFIRMED on regtest; physical origin remains unverified',nostr=result['settlement']['bitcoin'],evidence=v3['settlement']['bitcoin'])
         social_bundle=directory/'nostr.zip';evidence_bundle=directory/'evidence-v3.zip'
         social_bundle.write_bytes(request('GET',f'/v1/posts/{event_id}/bundle',private=False).content)
         evidence_bundle.write_bytes(request('GET',f'/v1/posts/{event_id}/evidence/bundle',private=False).content)
@@ -142,6 +157,7 @@ def run():
         cli=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=30)
         assert cli.returncode==0,cli.stdout.decode()+cli.stderr.decode()
         (directory/'cli.json').write_bytes(cli.stdout)
+        stage('Both ZIP bundles exported and verified by independent CLI')
         import zipfile
         altered=directory/'altered.zip'
         with zipfile.ZipFile(social_bundle) as source,zipfile.ZipFile(altered,'w') as target:
@@ -149,9 +165,11 @@ def run():
         changed=subprocess.run([*args[:3],str(altered),*args[4:]],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=30)
         assert changed.returncode==3,changed.stdout.decode()
         (directory/'altered-verification.json').write_bytes(changed.stdout)
+        stage('Altered JPEG rejected: INVALID')
         # Restart the app and worker over the same persistent records.
         worker=Worker(config);fresh=create_app(config)
         assert fresh.state.store.get(event_id) and fresh.state.evidence.snapshot(commitment,verify=True)['settlement']['status']=='CONFIRMED'
+        stage('Persisted post and proofs survive application/worker reopening')
         summary=dict(synthetic_identity=True,hardware_origin_verified=False,origin='none',event_id=event_id,commitment=commitment,
             publication='PUBLISHED',network='regtest',nostr=result['settlement'],evidence=v3['settlement'],mined_blocks=mined,
             calibration_approved=False,both_cli_verified=True,modified_photo='INVALID',restart_persistence=True,artifacts=str(directory))

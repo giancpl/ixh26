@@ -689,7 +689,7 @@
     },
     "/v1/calibrations/{id}/frames/{role}/{sha256}": {
       "put": {
-        "description": "Original private JPEG; body digest authenticated; disjoint splits. See EVIDENCE-V3.md for the exact shared contract.",
+        "description": "Original private JPEG; body digest authenticated; disjoint splits. Decoder/geometry and usable-area preflight before persistence. See EVIDENCE-V3.md.",
         "responses": {
           "200": {
             "description": "Operation/result, or binary proof/bundle",
@@ -715,6 +715,9 @@
           },
           "401": {
             "description": "Invalid, expired or replayed NIP-98 authorization"
+          },
+          "422": {
+            "description": "frame_quality_insufficient: crop lacks usable pixels or residual energy; frame not stored"
           }
         },
         "parameters": [

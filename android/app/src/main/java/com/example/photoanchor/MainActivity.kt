@@ -343,7 +343,7 @@ internal fun PhotoAnchorApp(
                         saveProfile = model::saveProfile,
                         onSelectPin = model::select,
                         onOpenCamera = { tab = "Camera" },
-                        evidenceControls = { EvidenceSetupPanel(state, model) },
+                        evidenceControls = { EvidenceSetupPanel(state, model, onOpenCamera = { tab = "Camera" }) },
                     )
                     "Camera" -> if (state.name.isBlank()) {
                         OnboardingNameCard(
@@ -360,7 +360,7 @@ internal fun PhotoAnchorApp(
                             model = model,
                         )
                     } else {
-                        CameraScreen(state.busy, model::captured, model::cameraError)
+                        CameraScreen(state.busy, model::captured, model::cameraError, state.calibrationGuide)
                     }
                     else -> FeedScreen(
                         state = state,

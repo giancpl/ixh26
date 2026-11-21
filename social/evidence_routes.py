@@ -1,6 +1,5 @@
 """Owner-authorized application API for enrollment and evidence preparation."""
 import hashlib
-import re
 import sqlite3
 from cryptography.exceptions import InvalidSignature
 from io import BytesIO
@@ -74,8 +73,8 @@ def install(app,config,api_error,bounded_body,jpeg_dimensions):
         try:
             geometry=Geometry(**obj['geometry'])
             if geometry.source_width is None or geometry.source_height is None:raise ValueError()
-            from fingerprinto.prnu_image import DECODER
-            if geometry.decoder!=DECODER and not re.fullmatch(r'pillow-13\.0\.0/rgb-green-stored-exif-[1-8]/1',geometry.decoder):raise ValueError()
+            from fingerprinto.prnu_image import decoder_profile
+            decoder_profile(geometry.decoder)
         except (ValueError,TypeError):raise api_error(400,'invalid_geometry','Unsupported calibration geometry.') from None
         require(obj['enrollment_id'],owner,'enrollment')
         created=await run_in_threadpool(svc.store.enqueue,obj['operation_id'],owner,'calibration',obj)
@@ -93,6 +92,12 @@ def install(app,config,api_error,bounded_body,jpeg_dimensions):
                 if image.size!=(geometry['source_width'],geometry['source_height']):raise ValueError()
         except (OSError,ValueError):raise api_error(400,'unsupported_frame_geometry','Frame dimensions differ from the fixed route.') from None
         await run_in_threadpool(jpeg_dimensions,raw)
+        from .calibration import check_frame, UnsupportedFrame, UnusableFrame
+        try:
+            await run_in_threadpool(check_frame,raw,Geometry(**geometry))
+        except UnsupportedFrame:raise api_error(400,'unsupported_frame_route','JPEG color, orientation or decoder route is unsupported.') from None
+        except UnusableFrame:raise api_error(422,'frame_quality_insufficient','The crop is too dark, saturated or has no usable residual; retake the frame.') from None
+        except ImportError:raise Unavailable('PRNU decoder is unavailable') from None
         try:await run_in_threadpool(svc.store.add_frame,identity,owner,role,sha256,raw)
         except Conflict:raise
         except ValueError:raise api_error(400,'invalid_frame','Invalid frame role or digest.') from None

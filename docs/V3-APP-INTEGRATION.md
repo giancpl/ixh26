@@ -175,6 +175,8 @@ fully confirmed when required trust or the second proof is unavailable.
 
 ```sh
 ./scripts/v3-app-demo.sh
+# Already built and running: skip rebuild/startup for a live presentation.
+./scripts/v3-app-demo.sh --reuse
 python -m pytest -q -m 'not network and not regtest and not social'
 ./scripts/social-build-android.sh
 bash scripts/check-crypto-vectors.sh
@@ -188,6 +190,12 @@ both pending proofs, explicit mining, both confirmations, combined CLI export,
 altered-photo rejection and persistent record reopening. Origin stays `none`;
 synthetic calibration is not approved. Artifacts are under
 `social-artifacts/v3-app-*/` after the wrapper copies them out.
+The terminal displays each completed stage, from enrollment/calibration to
+pending proofs, bounded mining, confirmation, independent export verification
+and altered-photo rejection. `demo-flow.json` retains those milestones.
+This is a complete software demonstration with synthetic camera samples, not
+a simulated successful physical-camera attribution. It does not operate the
+phone or replace its real private calibration session.
 
 Ordinary shutdown preserves data: `./scripts/social-compose.sh down`.
 Explicit `./scripts/social-compose.sh --profile tools down --volumes` deletes

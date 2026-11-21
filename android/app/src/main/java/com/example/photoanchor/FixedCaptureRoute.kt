@@ -9,7 +9,7 @@ internal data class FixedCaptureRoute(val logical: String, val physical: String?
     val cameraId: String get() = physical ?: logical
     companion object {
         fun requireCompatible(route: org.json.JSONObject, geometry: org.json.JSONObject,
-                              width: Int, height: Int, orientation: Int) {
+                              width: Int, height: Int, orientation: Int, decoderProfile: String? = null) {
             require(route.getBoolean("fixed")) { "PRNU requires a fixed capture route" }
             require(route.getString("camera") == geometry.getString("camera") &&
                 route.getString("mode") == geometry.getString("mode")) { "Calibration camera or settings changed" }
@@ -17,7 +17,7 @@ internal data class FixedCaptureRoute(val logical: String, val physical: String?
                 "Calibration source geometry changed"
             }
             require(orientation in 1..8 && geometry.getString("decoder") ==
-                "pillow-13.0.0/rgb-green-stored-exif-$orientation/1") { "Calibration orientation changed" }
+                (decoderProfile ?: "pillow-13.0.0/rgb-green-stored-exif-$orientation/1")) { "Calibration orientation/color route changed" }
         }
 
         fun select(context: Context, back: Boolean): FixedCaptureRoute {

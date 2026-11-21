@@ -20,6 +20,7 @@ data class PhotoAnchorState(
     val selected: PhotoPost? = null, val verification: Verification? = null,
     val copyResult: String? = null,
     val deviceStatus: String = "Device enrollment not checked", val calibrationStatus: String = "No calibration session",
+    val calibrationGuide: CalibrationGuide? = null,
     val privacy: String = "", val draftCaption: String = "", val originalCapture: File? = null
 )
 
@@ -81,7 +82,8 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
         } finally { refreshing = false }
         val device = runCatching { repository.refreshDevice() }.getOrDefault("UNAVAILABLE — current device enrollment could not be checked")
         val calibration = runCatching { repository.calibrationStatus() }.getOrDefault("UNAVAILABLE — private calibration status")
-        mutable.value = mutable.value.copy(deviceStatus = device, calibrationStatus = calibration)
+        mutable.value = mutable.value.copy(deviceStatus = device, calibrationStatus = calibration,
+            calibrationGuide = repository.currentCalibrationGuide())
     }
 
     fun refresh() { viewModelScope.launch { refreshNow() } }
@@ -126,22 +128,30 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
     fun enrollDevice() = action("Device enrollment updated") { mutable.value = mutable.value.copy(deviceStatus = repository.enrollDevice()) }
     fun refreshDevice() = action("Device status refreshed") { mutable.value = mutable.value.copy(deviceStatus = repository.refreshDevice()) }
     fun resetDevice() = action("Only the installation key was retired; Nostr identity and old receipts retained") { mutable.value = mutable.value.copy(deviceStatus = repository.resetDevice()) }
-    fun startCalibration() = action("Private calibration session created") {
+    fun startCalibration(newSession: Boolean = false, demo: Boolean = false) = action("Private calibration session ready; the current frame has not been stored yet") {
         val file = mutable.value.captured ?: error("Capture a calibration frame first")
-        mutable.value = mutable.value.copy(calibrationStatus = repository.startCalibration(file))
+        mutable.value = mutable.value.copy(calibrationStatus = repository.startCalibration(file, newSession, demo),
+            calibrationGuide = repository.currentCalibrationGuide())
     }
     fun addCalibrationFrame(role: String) = action("Private frame stored; it was not published") {
         val file = mutable.value.captured ?: error("Capture a frame first")
-        mutable.value = mutable.value.copy(calibrationStatus = repository.addCalibrationFrame(file, role), captured = null, preview = null)
+        mutable.value = mutable.value.copy(calibrationStatus = repository.addCalibrationFrame(file, role),
+            calibrationGuide = repository.currentCalibrationGuide(), captured = null, preview = null, originalCapture = null)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+    }
+    fun addGuidedCalibrationFrame() = action("Private calibration frame counted; capture the next independent frame") {
+        val file = mutable.value.captured ?: error("Capture a frame first")
+        mutable.value = mutable.value.copy(calibrationStatus = repository.addGuidedCalibrationFrame(file),
+            calibrationGuide = repository.currentCalibrationGuide(), captured = null, preview = null, originalCapture = null)
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
     }
     fun importCalibrationFrame(uri: Uri) = action("Other-camera test frame stored privately") {
-        mutable.value = mutable.value.copy(calibrationStatus = repository.importCalibrationFrame(uri))
+        mutable.value = mutable.value.copy(calibrationStatus = repository.importCalibrationFrame(uri), calibrationGuide = repository.currentCalibrationGuide())
     }
     fun evaluateCalibration() = action("Calibration queued; no thresholds are approved automatically") {
-        mutable.value = mutable.value.copy(calibrationStatus = repository.evaluateCalibration())
+        mutable.value = mutable.value.copy(calibrationStatus = repository.evaluateCalibration(), calibrationGuide = repository.currentCalibrationGuide())
     }
-    fun refreshCalibration() = action("Calibration refreshed") { mutable.value = mutable.value.copy(calibrationStatus = repository.calibrationStatus()) }
+    fun refreshCalibration() = action("Calibration refreshed") { mutable.value = mutable.value.copy(calibrationStatus = repository.calibrationStatus(), calibrationGuide = repository.currentCalibrationGuide()) }
     fun cleanCopy() = action("Cleaned copy selected; original receipt will not be reused") {
         val original = mutable.value.captured ?: error("No capture")
         val copy = repository.cleanedCopy(original)
@@ -190,7 +200,14 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             mutable.value = mutable.value.copy(busy = true)
             try { block(); mutable.value = mutable.value.copy(message = success) }
-            catch (failure: ApiFailure) { mutable.value = mutable.value.copy(message = "Local service: ${failure.code}. Draft, keys and signed queue preserved; retry or publish without origin evidence.") }
+            catch (failure: ApiFailure) {
+                val message = when (failure.code) {
+                    "frame_quality_insufficient" -> "Frame not counted: crop too dark, saturated or without usable noise. Retake with even light; keep the same camera and orientation."
+                    "unsupported_frame_route", "unsupported_frame_geometry" -> "Frame not counted: JPEG route, dimensions, orientation or color profile differ. Keep the original; return to the session's camera and orientation."
+                    else -> "Local service: ${failure.code}. Draft, keys and signed queue preserved; retry or publish without origin evidence."
+                }
+                mutable.value = mutable.value.copy(message = message)
+            }
             catch (_: Exception) { mutable.value = mutable.value.copy(message = "Operation unavailable. Existing keys, signed queue and files were preserved.") }
             finally { mutable.value = mutable.value.copy(busy = false, queued = repository.pendingCount()) }
         }

@@ -280,9 +280,10 @@ class SocialRepository(private val context: Context) {
     suspend fun refreshDevice(): String = withContext(Dispatchers.IO) { device.refreshEnrollment() }
     suspend fun resetDevice(): String = withContext(Dispatchers.IO) { device.resetEnrollment() }
     suspend fun calibrationStatus(): String = withContext(Dispatchers.IO) { device.calibrationStatus() }
+    fun currentCalibrationGuide(): CalibrationGuide? = device.currentCalibrationGuide()
     suspend fun evaluateCalibration(): String = withContext(Dispatchers.IO) { device.evaluateCalibration() }
 
-    suspend fun startCalibration(file: File): String = withContext(Dispatchers.IO) {
+    suspend fun startCalibration(file: File, newSession: Boolean = false, demo: Boolean = false): String = withContext(Dispatchers.IO) {
         val exif = ExifInterface(file)
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
@@ -290,16 +291,21 @@ class SocialRepository(private val context: Context) {
         require(routeFile.exists()) { "A fixed app camera route is required" }
         val route = JSONObject(routeFile.readText())
         require(route.getBoolean("fixed"))
+        if (newSession) {
+            require(route.getString("camera") == FixedCaptureRoute.select(context, true).cameraId) { "Use the fixed rear camera" }
+            require(route.getString("mode").endsWith("/flash-off")) { "Turn flash off for the guided collection" }
+        }
         val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)
         require(orientation in 1..8)
         val geometry = JSONObject().put("camera", route.getString("camera"))
             .put("mode", route.getString("mode")).put("width", 256).put("height", 256)
-            .put("decoder", "pillow-13.0.0/rgb-green-stored-exif-$orientation/1")
+            .put("decoder", PrnuDecoderProfile.identify(file.readBytes(), orientation))
             .put("source_width", bounds.outWidth).put("source_height", bounds.outHeight)
-        device.startCalibration(geometry)
+        device.startCalibration(geometry, newSession, demo)
     }
 
     suspend fun addCalibrationFrame(file: File, role: String): String = withContext(Dispatchers.IO) { device.addFrame(file, role) }
+    suspend fun addGuidedCalibrationFrame(file: File): String = withContext(Dispatchers.IO) { device.addGuidedFrame(file) }
     suspend fun importCalibrationFrame(uri: Uri): String = withContext(Dispatchers.IO) {
         val file = File(context.cacheDir, "calibration-import.jpg")
         try {

@@ -18,6 +18,8 @@ class DeviceEvidenceRepository(private val context: Context, private val keys: K
     private val stateFile = File(root, "device.json")
     private val installation = InstallationKeys(context)
     private val journal = SignedReceiptJournal(context)
+    @Volatile private var calibrationGuide: CalibrationGuide? = null
+    internal fun currentCalibrationGuide() = calibrationGuide
     private fun state() = if (stateFile.exists()) StrictJson.parseObject(stateFile.readBytes()) else JSONObject()
     private fun save(state: JSONObject) = atomicWrite(stateFile, state.toString())
     private fun id() = UUID.randomUUID().toString().replace("-", "")
@@ -158,22 +160,46 @@ class DeviceEvidenceRepository(private val context: Context, private val keys: K
     }
 
     @Synchronized
-    fun startCalibration(geometry: JSONObject): String {
+    fun startCalibration(geometry: JSONObject, newSession: Boolean = false, demo: Boolean = false): String {
         require(refreshEnrollment().startsWith("ACCEPTED"))
         val saved = state()
-        if (saved.has("calibration_id")) {
+        if (newSession && !saved.optBoolean("calibration_pending")) {
+            val history = saved.optJSONArray("calibration_history") ?: JSONArray()
+            if (saved.has("calibration_id")) history.put(JSONObject()
+                .put("id", saved.getString("calibration_id")).put("geometry", saved.optJSONObject("geometry"))
+                .put("reference_hash", saved.optString("reference_hash")))
+            saved.put("calibration_history", history).put("calibration_id", id())
+                .put("calibration_plan", CalibrationGuide.PLAN).put("calibration_pending", true).put("calibration_demo", demo)
+                .put("geometry", geometry).remove("reference_hash")
+            save(saved)
+        }
+        if (saved.optBoolean("calibration_pending")) {
+            require(saved.getJSONObject("geometry").toString() == geometry.toString()) { "Pending calibration route changed" }
+        }
+        else if (saved.has("calibration_id")) {
             val current = json("GET", "/v1/calibrations/${saved.getString("calibration_id")}")
             if (current.getString("state") == "COLLECTING") {
                 require(saved.getJSONObject("geometry").toString() == geometry.toString()) { "Calibration route changed" }
             } else {
-                saved.remove("calibration_id"); saved.remove("reference_hash")
+                saved.remove("calibration_id"); saved.remove("reference_hash"); saved.remove("calibration_plan"); saved.remove("calibration_demo")
             }
         }
         val identity = saved.optString("calibration_id").ifEmpty { id() }
         saved.put("calibration_id", identity).put("geometry", geometry); save(saved)
         json("POST", "/v1/calibrations", JSONObject().put("operation_id", identity)
             .put("enrollment_id", saved.getString("enrollment_id")).put("geometry", geometry))
-        return "COLLECTING — independent frames required; 30 enrollment frames suggested"
+        saved.remove("calibration_pending"); save(saved)
+        return calibrationStatus()
+    }
+
+    @Synchronized
+    fun addGuidedFrame(file: File): String {
+        calibrationStatus()
+        val guide = requireNotNull(calibrationGuide)
+        val digest = file.inputStream().use { PhotoProtocol.hash(it) }
+        val role = guide.roleFor(digest)
+        if (digest in guide.roles) return calibrationStatus()
+        return addFrame(file, role)
     }
 
     @Synchronized
@@ -181,23 +207,27 @@ class DeviceEvidenceRepository(private val context: Context, private val keys: K
         require(role in setOf("enrollment", "development", "genuine", "impostor"))
         val saved = state(); val identity = saved.getString("calibration_id")
         require(file.length() <= PhotoProtocol.MAX_PHOTO_BYTES)
+        val raw = file.readBytes()
         if (role != "impostor") {
             val route = StrictJson.parseObject(File(file.absolutePath + ".route.json").readBytes())
             val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
             android.graphics.BitmapFactory.decodeFile(file.absolutePath, bounds)
             val orientation = androidx.exifinterface.media.ExifInterface(file)
                 .getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, 1)
-            FixedCaptureRoute.requireCompatible(route, saved.getJSONObject("geometry"), bounds.outWidth, bounds.outHeight, orientation)
+            FixedCaptureRoute.requireCompatible(route, saved.getJSONObject("geometry"), bounds.outWidth, bounds.outHeight, orientation,
+                PrnuDecoderProfile.identify(raw, orientation))
         }
-        val raw = file.readBytes(); val hash = PhotoProtocol.sha256(raw)
+        val hash = PhotoProtocol.sha256(raw)
         api.authorized(keys, "PUT", "/v1/calibrations/$identity/frames/$role/$hash", raw, binary = true)
         return calibrationStatus()
     }
 
     @Synchronized
     fun calibrationStatus(): String {
-        val saved = state(); if (!saved.has("calibration_id")) return "No calibration session"
+        val saved = state(); if (!saved.has("calibration_id")) { calibrationGuide = null; return "No calibration session" }
         val response = json("GET", "/v1/calibrations/${saved.getString("calibration_id")}")
+        calibrationGuide = CalibrationGuide.fromJson(response, saved.optString("calibration_plan") == CalibrationGuide.PLAN)
+            .copy(camera = saved.getJSONObject("geometry").getString("camera"), mode = saved.getJSONObject("geometry").getString("mode"), demo = saved.optBoolean("calibration_demo"))
         if (response.getString("state") == "COMPLETE") {
             saved.put("reference_hash", response.getJSONObject("output").getString("reference_hash"));save(saved)
         }
@@ -213,6 +243,8 @@ class DeviceEvidenceRepository(private val context: Context, private val keys: K
 
     @Synchronized
     fun evaluateCalibration(): String {
+        calibrationStatus()
+        if (calibrationGuide?.guided == true) require(calibrationGuide?.ready == true) { "Complete the 30/10/10 collection first" }
         json("POST", "/v1/calibrations/${state().getString("calibration_id")}/evaluate")
         return calibrationStatus()
     }

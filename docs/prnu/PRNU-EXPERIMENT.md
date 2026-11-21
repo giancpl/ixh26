@@ -6,7 +6,68 @@ the reference/PCE path and the v3 signed commitment. The diagram is in Italian.
 Method `fingerprinto/prnu-haar-green/1` is an intentionally small numeric
 experiment, not an implementation of a published camera attribution accuracy
 claim. Its simple wavelet may fail on the actual camera pipeline. Measure that
-before investing in the calibration UI. Never fit the final test set.
+before interpreting a result as sensor attribution. Never fit the final test set.
+
+## Single-Pixel collection and automatic demo
+
+PhoTO's guide collects **30 reference + 10 development + 10 held-out** original
+JPEGs privately. These are experimental collection targets, not established
+accuracy requirements. Starting a new guide keeps previous sessions and
+references; the earlier one-frame device smoke test is not reused. Counters
+come from server-accepted digests and survive restart. Retrying the last upload
+at a phase boundary preserves its role rather than adding it to another split.
+
+For actual measurements, use the fixed rear route, flash off, unchanged zoom,
+dimensions and orientation. Begin reference collection with evenly lit plain
+surfaces, avoid clipping/dark crops and change subject detail between captures.
+Keep development and final scenes independent. Do not use a screen, re-encode,
+rotate, crop or resize images to make the route fit. The app/server preserve
+original bytes and reject unsupported routes or unusable crop residuals before
+counting the frame. CameraX/phone processing can still suppress the useful
+signal; no claim is made that the current JPEG pipeline is adequate.
+
+The **demo series** choice permits operator automation of real CameraX captures
+without pretending that the scene was changed. Although its file digests and
+software groups are disjoint, same-scene captures are statistically dependent
+and may produce scene-driven correlations. They demonstrate software execution,
+not an independent calibration or a false-match rate. An external original-image
+dataset could later supply negatives without connecting a second handset, but
+its provenance and geometry must be validated; never resize it to satisfy input.
+
+After explicitly starting **New guided calibration → Start demo series** from
+a fresh capture in the installed debug app, leave Create open. Use an authorized
+device serial and only the own Compose API container:
+
+```sh
+# Read-only inspection of the active, explicitly labelled demo session.
+python scripts/pixel-prnu-demo.py --serial "$PIXEL_SERIAL"
+# Actual private camera capture, then queued server analysis. No publication,
+# mining, key export, synthetic image generation or calibration approval.
+python scripts/pixel-prnu-demo.py --serial "$PIXEL_SERIAL" --collect --evaluate \
+  --timeout 900 --output social-artifacts/pixel-prnu-calibration/demo.json
+```
+
+The script reads only the active demo ID from debug app state and its own local
+operator database, and taps only PhoTO's shutter/private-store/evaluation controls.
+It stops on rejected quality/route, unavailable services, changed session or an
+unexpected foreground app. `--limit N` collects at most N additional frames for
+an interrupted run. Originals, private session and accepted counts are retained
+on failure; it never lowers checks to force a result. The guide does not
+automatically approve a reference, physical association or threshold. With only
+positive Pixel samples, false-match performance remains unknown.
+
+## Explicit Pixel sRGB JPEG route
+
+Real Pixel 9 Pro test JPEGs contain a 596-byte `sRGB IEC61966-2.1` ICC record.
+Existing non-ICC decoder profiles continue to reject it. A **separate explicit
+profile** `pillow-13.0.0/rgb-green-stored-exif-N-icc-HASH/1` pins that exact record
+to SHA-256 `33c34ecfeb998459e0075ba26a0f1ea5042e20e2419c5962e495eba3208576f2`
+and one stored EXIF orientation N. The non-identifying ICC metadata is shared
+in `contracts/fixtures/prnu-decoder.json`; Python/Kotlin check identical vectors.
+Other/missing ICC records are rejected. The numeric input remains the stored
+RGB green channel: **no ICC transform, EXIF transpose or JPEG rewrite** occurs.
+This is an explicit experimental decoder route, not a manufacturer credential.
+Older references and decoder meanings are never migrated or re-estimated.
 
 ## Frozen method 1
 
@@ -75,8 +136,10 @@ scoring, masking, constant/nonfinite inputs, duplicate/query reuse, record
 round trips and data-set separation. Python and Java compare reference values
 and scores numerically at relative/absolute tolerance 1e-10. This is numerical
 interoperability, not a real-device attribution experiment. JPEG decoding is
-tested separately and optionally requires the `prnu` extra. No physical camera
-samples have been supplied; the empirical stop/go gate is still open.
+tested separately and optionally requires the `prnu` extra. Actual Pixel capture,
+private upload and a labelled automatic demo are exercised separately from
+these synthetic vectors. Same-scene demo samples do not close the independent
+empirical stop/go gate.
 
 Decoder API: [Pillow Image documentation](https://pillow.readthedocs.io/en/stable/reference/Image.html).
 The general estimator/detection motivation is documented in

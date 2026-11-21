@@ -161,6 +161,70 @@ def test_private_calibration_splits_and_unapproved_scores(case):
     assert len(result['output']['scores'])==3
     with pytest.raises(ValueError):approve(app.state.evidence,identity,1,None,False)
 
+@pytest.mark.parametrize('variant,code', [
+    ('dark','frame_quality_insufficient'), ('saturated','frame_quality_insufficient'),
+    ('flat','frame_quality_insufficient'), ('orientation','unsupported_frame_route'),
+    ('icc','unsupported_frame_route'), ('grayscale','unsupported_frame_route'),
+])
+def test_private_frame_preflight_rejects_without_counting_or_rewriting(case,variant,code):
+    eid,_=enroll(case);_,cfg,app,client=case;identity=uuid.uuid4().hex
+    geometry=dict(camera='synthetic',mode='fixed-route',width=32,height=32,decoder=DECODER,source_width=32,source_height=32)
+    assert client.request('POST','/v1/calibrations',dict(operation_id=identity,enrollment_id=eid,geometry=geometry)).status_code==202
+    output=BytesIO();options={}
+    value={'dark':0,'saturated':255}.get(variant,120)
+    image=Image.new('RGB',(32,32),(value,value,value))
+    if variant=='grayscale':image=image.convert('L')
+    if variant=='orientation':
+        exif=Image.Exif();exif[274]=6;options['exif']=exif
+    if variant=='icc':options['icc_profile']=b'unsupported-ICC-test'
+    image.save(output,format='JPEG',**options);raw=output.getvalue();h=digest(raw).hex()
+    response=client.request('PUT',f'/v1/calibrations/{identity}/frames/enrollment/{h}',raw=raw)
+    assert response.status_code==(422 if code=='frame_quality_insufficient' else 400),response.text
+    assert response.json()['error']['code']==code
+    assert client.request('GET','/v1/calibrations/'+identity).json()['frames']==[]
+    assert not (app.state.evidence.store.frames/(h+'.jpg')).exists()
+    assert not (cfg.data_dir/'media'/(h+'.jpg')).exists()
+    assert raw==output.getvalue()
+
+
+def test_new_calibration_retains_old_private_session_and_enrollment(case):
+    eid,_=enroll(case);_,cfg,app,client=case
+    geometry=dict(camera='synthetic',mode='fixed-route',width=32,height=32,decoder=DECODER,source_width=32,source_height=32)
+    identities=[uuid.uuid4().hex for _ in range(2)]
+    for identity in identities:
+        body=dict(operation_id=identity,enrollment_id=eid,geometry=geometry)
+        assert client.request('POST','/v1/calibrations',body).status_code==202
+        assert client.request('POST','/v1/calibrations',body).status_code==200
+    for identity in identities:
+        assert client.request('GET','/v1/calibrations/'+identity).json()['state']=='COLLECTING'
+    assert app.state.evidence.store.get(eid)['state']=='ACCEPTED'
+
+
+def test_shared_single_pixel_guide_fixture_has_disjoint_splits():
+    view=json.loads((Path(__file__).parents[2]/'contracts/fixtures/prnu-session.json').read_text())
+    assert len(view['frames'])==len({f['digest'] for f in view['frames']})==50
+    assert {role:sum(f['role']==role for f in view['frames']) for role in ('enrollment','development','genuine')}==dict(enrollment=30,development=10,genuine=10)
+    assert not any(f['role']=='impostor' for f in view['frames'])
+
+
+def test_explicit_pixel_srgb_decoder_preserves_samples_and_legacy_rejection():
+    vector=json.loads((Path(__file__).parents[2]/'contracts/fixtures/prnu-decoder.json').read_text())
+    icc=base64.b64decode(vector['icc_base64']);assert digest(icc).hex()==vector['icc_sha256']
+    rng=random.Random(912);pixels=bytes(rng.randint(90,150) for _ in range(32*32*3))
+    image=Image.frombytes('RGB',(32,32),pixels);exif=Image.Exif();exif[274]=6
+    def jpeg(profile):
+        output=BytesIO();image.save(output,format='JPEG',quality=100,subsampling=0,exif=exif,icc_profile=profile)
+        return output.getvalue()
+    raw=jpeg(icc);geom=Geometry('synthetic','fixed-route',32,32,vector['decoder'],32,32)
+    values=decode_green(raw,geom,source_width=32,source_height=32)
+    with Image.open(BytesIO(raw)) as decoded:assert values==tuple(float(v) for v in decoded.getchannel('G').get_flattened_data())
+    for other in [replace(geom,decoder='pillow-13.0.0/rgb-green-stored-exif-6/1'),replace(geom,decoder=vector['decoder'].replace('exif-6','exif-1'))]:
+        with pytest.raises(ValueError):decode_green(raw,other,source_width=32,source_height=32)
+    for bad in (b'',icc[:-1]+bytes([icc[-1]^1])):
+        with pytest.raises(ValueError):decode_green(jpeg(bad),geom,source_width=32,source_height=32)
+    assert raw==jpeg(icc)
+
+
 def test_expired_challenge_never_enrolls(case):
     t,cfg,app,client=case
     challenge=client.request('POST','/v1/enrollments/challenge',{'operation_id':uuid.uuid4().hex}).json()
