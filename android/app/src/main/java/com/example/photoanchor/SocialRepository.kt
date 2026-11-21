@@ -26,8 +26,10 @@ data class FeedEntry(val post: PhotoPost, val name: String, val preview: Bitmap?
 data class Verification(
     val event: String = "Not checked", val integrity: String = "Not checked",
     val timestamp: String = "Not checked", val publication: String = "Unknown",
-    val receipt: String = "No v3 receipt", val origin: String = "Origin not verified",
-    val device: String = "Not checked", val evidenceTimestamp: String = "No v3 timestamp"
+    val receipt: String = "NOT CHECKED — v3 receipt verification has not completed",
+    val origin: String = "NOT CHECKED — origin assessment has not completed",
+    val device: String = "NOT CHECKED — enrollment has not been checked",
+    val evidenceTimestamp: String = "NOT CHECKED — v3 timestamp has not been checked"
 )
 
 class SocialRepository(private val context: Context) {
@@ -191,13 +193,30 @@ class SocialRepository(private val context: Context) {
                 val assessment = v3.optJSONObject("assessment")
                 val v3Settlement = v3.optJSONObject("settlement")
                 if (assessment != null && assessment.has("decision")) {
-                    result = result.copy(origin = "Local server analysis — " + assessment.getJSONObject("decision").getString("label") +
+                    val decision = assessment.getJSONObject("decision")
+                    val originStatus = when (decision.getString("state")) {
+                        "failed" -> "INVALID"
+                        "pending" -> "PENDING"
+                        "complete" -> when (decision.optString("level")) {
+                            "none" -> "UNVERIFIED"
+                            "manufacturer", "prnu" -> "VALID"
+                            else -> "UNAVAILABLE"
+                        }
+                        else -> "UNAVAILABLE"
+                    }
+                    val enrollment = assessment.getJSONObject("enrollment")
+                    val enrollmentStatus = when (enrollment.getString("status")) {
+                        "valid" -> "VALID"
+                        "invalid" -> "INVALID"
+                        "pending" -> "PENDING"
+                        else -> "UNAVAILABLE"
+                    }
+                    result = result.copy(origin = originStatus + " — local server analysis: " + decision.getString("label") +
                         "\nManufacturer: " + assessment.getJSONObject("manufacturer").getString("status") +
                         " · " + assessment.getJSONObject("manufacturer").getString("reason") +
                         "\nPRNU: " + assessment.getJSONObject("prnu").getString("status") +
                         " · " + assessment.getJSONObject("prnu").getString("reason"),
-                        device = "Local authority — " + assessment.getJSONObject("enrollment").getString("status") +
-                            " · " + assessment.getJSONObject("enrollment").getString("reason"))
+                        device = enrollmentStatus + " — local authority · " + enrollment.getString("reason"))
                 }
                 if (v3Settlement != null) {
                     require(v3Settlement.getString("network") == "regtest")
@@ -222,13 +241,15 @@ class SocialRepository(private val context: Context) {
                     } else ""
                     val source = if (v3Status == "CONFIRMED") " — verified by local node — regtest" else " — regtest"
                     result = result.copy(evidenceTimestamp = v3Status + " — v3 timestamp" + source + blockDetails)
+                } else {
+                    result = result.copy(evidenceTimestamp = "NOT SUBMITTED — no v3 timestamp result yet")
                 }
 
             } catch (_: Exception) {
                 result = result.copy(origin = "UNAVAILABLE — no current local server assessment", device = "UNAVAILABLE — current enrollment not checked",
                     evidenceTimestamp = "UNAVAILABLE — no consistent fresh v3 timestamp report")
             }
-            if (result.receipt.startsWith("INVALID")) result = result.copy(origin = "Not accepted — local receipt verification failed")
+            if (result.receipt.startsWith("INVALID")) result = result.copy(origin = "INVALID — origin evidence rejected: local receipt verification failed")
         }
         try {
             val snapshot = api.post(checked.id)

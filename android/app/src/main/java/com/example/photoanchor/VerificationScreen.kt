@@ -334,23 +334,41 @@ internal fun PinDetailDialog(
                             )
                             VerificationCard(
                                 icon = DeckIcon.Bitcoin,
-                                title = "Bitcoin Timestamp",
+                                title = "Nostr Timestamp · local regtest node",
                                 value = state.verification?.timestamp ?: "Checking node…",
                             )
-                            VerificationCard(
-                                icon = DeckIcon.Shield,
-                                title = "v3 Receipt & Device",
-                                value = "${state.verification?.receipt ?: "Not checked"} · ${state.verification?.device ?: ""}",
-                            )
-                            VerificationCard(
-                                icon = DeckIcon.Bitcoin,
-                                title = "v3 Timestamp · local regtest node",
-                                value = state.verification?.evidenceTimestamp ?: "No v3 timestamp",
-                            )
-                            VerificationCard(
-                                icon = DeckIcon.Camera,
-                                title = "Sensor Origin Analysis",
-                                value = state.verification?.origin ?: "Origin not verified",
+                            if (selected.evidenceCommitment != null) {
+                                VerificationCard(
+                                    icon = DeckIcon.Shield,
+                                    title = "v3 Receipt · signature and attachments",
+                                    value = state.verification?.receipt ?: "Checking v3 receipt…",
+                                )
+                                VerificationCard(
+                                    icon = DeckIcon.Shield,
+                                    title = "Device enrollment · local authority",
+                                    value = state.verification?.device ?: "Checking enrollment…",
+                                )
+                                VerificationCard(
+                                    icon = DeckIcon.Bitcoin,
+                                    title = "v3 Timestamp · local regtest node",
+                                    value = state.verification?.evidenceTimestamp ?: "Checking v3 timestamp…",
+                                )
+                                VerificationCard(
+                                    icon = DeckIcon.Camera,
+                                    title = "Origin assessment · separate from timestamp",
+                                    value = state.verification?.origin ?: "Checking origin assessment…",
+                                )
+                            } else {
+                                VerificationCard(
+                                    icon = DeckIcon.Camera,
+                                    title = "Origin evidence · not included",
+                                    value = "N/A — standard Nostr post. No v3 receipt, device enrollment or v3 timestamp is attached. These checks are not pending and do not indicate a verification failure.",
+                                )
+                            }
+                            Text(
+                                text = "A valid signature identifies the signer. A confirmed timestamp proves existence of the signed bytes; it does not verify the scene or camera origin.",
+                                color = p.mu,
+                                fontSize = 11.sp,
                             )
                             VerificationCard(
                                 icon = DeckIcon.Globe,
