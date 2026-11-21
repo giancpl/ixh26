@@ -1,8 +1,9 @@
-# PhotoAnchor contracts v1
+# PhoTO contracts v1
 
-`openapi.json` is the target shared HTTP contract for the PhotoAnchor MVP.
-It is not the API currently served by the existing `server/` web application;
-see [the staged migration checklist](../docs/CONSOLIDATION.md).
+`openapi.json` is the shared HTTP contract implemented by PhoTO's `social/` backend
+and consumed by the native Android app. The separate legacy `server/` web
+application serves `/api` routes with a different image-byte timestamp payload;
+see the [component and proof-format map](../docs/README.md).
 
 Install the protocol adapter and its official SDK with:
 

@@ -1,4 +1,8 @@
-# Project consolidation
+# Project consolidation — historical integration log
+
+For current setup and project identity, use the [PhoTO overview](../README.md)
+and [documentation map](README.md). Branch names, status tables and instructions
+below record their individual stages; later sections supersede earlier scope.
 
 Work happens on `integration/project-consolidation`, in an isolated worktree,
 starting from `main` commit `4f5f28ad9689e217653a50322bc939390b4ded7b`.

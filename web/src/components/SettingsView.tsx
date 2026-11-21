@@ -137,8 +137,8 @@ export default function SettingsView({
             style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--bd)" }}
           >
             <Field
-              label="Server Backend BitPin (LAN / VPN)"
-              hint="Indirizzo del server BitPin (es. http://192.168.1.x:8787 o http://10.0.2.2:8787). Lascia vuoto per usare il relay locale integrato nell'app."
+              label="Server Backend PhoTO (LAN / VPN)"
+              hint="Indirizzo del server PhoTO (es. http://192.168.1.x:8787 o http://10.0.2.2:8787). Lascia vuoto per usare il relay locale integrato nell'app."
             >
               <input
                 className="mono"

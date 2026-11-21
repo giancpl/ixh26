@@ -64,7 +64,7 @@ export default function CameraModulePanel({
   const [staged, setStaged] = useState<StagedPhoto>();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [board, setBoard] = useState(boards[0]?.title || "PhotoAnchor");
+  const [board, setBoard] = useState(boards[0]?.title || "PhoTO");
   const [tagsInput, setTagsInput] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -215,9 +215,9 @@ export default function CameraModulePanel({
         mime: staged.mime,
         width: staged.width,
         height: staged.height,
-        title: title.trim() || "Scatto PhotoAnchor",
+        title: title.trim() || "Scatto PhoTO",
         description,
-        board: board.trim() || "PhotoAnchor",
+        board: board.trim() || "PhoTO",
         tags: parsedTags,
         source: staged.source,
         otsUrl: staged.anchor.proof_url ?? undefined,
@@ -298,14 +298,14 @@ export default function CameraModulePanel({
                     value={board}
                     onChange={(e) => setBoard(e.target.value)}
                     list="publish-boards"
-                    placeholder="PhotoAnchor"
+                    placeholder="PhoTO"
                     maxLength={50}
                   />
                   <datalist id="publish-boards">
                     {boards.map((b) => (
                       <option key={b.id} value={b.title} />
                     ))}
-                    <option value="PhotoAnchor" />
+                    <option value="PhoTO" />
                     <option value="Street" />
                     <option value="Bitcoin" />
                   </datalist>

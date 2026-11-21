@@ -55,7 +55,7 @@ export function parsePhotoPin(event: Event): PhotoPin | undefined {
 
   const dim = tagValue(event.tags, "dim");
   const mDim = /^(\d+)x(\d+)$/.exec(dim);
-  const title = tagValue(event.tags, "title") || "Scatto PhotoAnchor";
+  const title = tagValue(event.tags, "title") || "Scatto PhoTO";
   const board = tagValue(event.tags, "board") || "Generale";
   const mime = tagValue(event.tags, "m") || "image/jpeg";
   const otsUrl = tagValue(event.tags, "ots") || undefined;
@@ -520,7 +520,7 @@ export class SocialService {
     source: PhotoSource;
     otsUrl?: string;
   }): Promise<PhotoPin> {
-    const title = input.title.trim() || "Scatto PhotoAnchor";
+    const title = input.title.trim() || "Scatto PhoTO";
     const board = input.board.trim() || "Generale";
     const cleanTags = [
       ...new Set(

@@ -1,5 +1,10 @@
 # FingerprinTO implementation progress
 
+Integration status: this source-branch document predates the
+[executed integration review](reviews/LEOMAIN_PR9.md). Statements below about
+awaiting execution describe that earlier snapshot. Hardware/camera acceptance
+remains open; see the [PhoTO documentation map](README.md).
+
 **Latest audit:** [CRYPTO-MODULE-AUDIT.md](CRYPTO-MODULE-AUDIT.md) distinguishes
 implemented primitives, source corrections awaiting the test branch, missing
 manufacturer/Android integration, and empirical acceptance gates. The module

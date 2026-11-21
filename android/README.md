@@ -1,8 +1,9 @@
-# PhotoAnchor Android debug demo
+# PhoTO Android debug demo
 
 Build from the repository root with `./scripts/social-build-android.sh`, then
 install and set up USB reverse with `./scripts/social-phones.sh`. See
-`docs/social/README.md` for the complete Docker and two-phone procedure.
+[the local app guide](../docs/social/README.md) for the complete Docker and
+two-phone procedure.
 
 The supported toolchain is JDK 17, Gradle wrapper 8.11.1, AGP 8.9.1, Kotlin
 2.0.21, Android SDK/build-tools 35 and minSdk 29. The wrapper distribution has a
@@ -44,9 +45,10 @@ evidence.
 
 ## Native UI integration
 
-The native BitPin interface includes a masonry feed, local search, saved-post
+The native PhoTO interface includes a masonry feed, local search, saved-post
 bookmarks, profile grids and a persistent light/dark theme. The installed app
-remains PhotoAnchor with the same application ID and encrypted identity paths.
+is named PhoTO; its existing application ID and encrypted identity paths remain
+stable.
 Saved posts are local bookmarks, not likes or a permanent media archive; search
 and bookmark views operate on the bounded cached/fetched feed.
 

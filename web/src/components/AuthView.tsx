@@ -124,7 +124,7 @@ export default function AuthView({
           <img className="lt" src="/lab-assets/cow-icon-blue.svg" alt="" />
           <img className="dk" src="/lab-assets/cow-icon-white.svg" alt="" />
           <span>
-            BitPin · PhotoAnchor
+            PhoTO
             <span className="brand-sub">by BitPolito · Nostr &amp; Bitcoin</span>
           </span>
         </a>
@@ -210,7 +210,7 @@ export default function AuthView({
 
           <h2>
             {mode === "unlock"
-              ? "Bentornato su BitPin"
+              ? "Bentornato su PhoTO"
               : mode === "nsec"
                 ? "Accedi con chiave Nostr"
                 : mode === "backup"
