@@ -234,7 +234,7 @@ export default function ProfileView({
               <h3>Nessuna foto pubblicata ancora</h3>
               <p className="field-hint" style={{ margin: "8px 0 16px" }}>
                 {isOwn
-                  ? "Scatta una foto con l'app Android PhotoAnchor o dalla Fotocamera per pubblicare il tuo primo Pin ancorato su Bitcoin."
+                  ? "Scatta una foto con l'app Android PhoTO o dalla Fotocamera per pubblicare il tuo primo Pin ancorato su Bitcoin."
                   : "Questo utente non ha ancora pubblicato foto su questi relay Nostr."}
               </p>
               {isOwn && (
@@ -410,7 +410,7 @@ export default function ProfileView({
           </div>
           {inbox.length === 0 ? (
             <p className="field-hint">
-              Nessuna foto in coda. Collega la tua app Android PhotoAnchor dalla sezione Fotocamera!
+              Nessuna foto in coda. Collega la tua app Android PhoTO dalla sezione Fotocamera!
             </p>
           ) : (
             <div className="inbox-list">

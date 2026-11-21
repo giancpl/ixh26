@@ -150,7 +150,7 @@ internal fun PhotoAnchorApp(
                             PixelIcon(DeckIcon.CowHead, size = 19.dp, tint = p.primaryFg)
                         }
                         Text(
-                            text = "BitPin",
+                            text = "PhoTO",
                             color = p.fg,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 18.sp,

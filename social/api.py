@@ -67,7 +67,7 @@ def create_app(config=None, *, service=None):
     config = config or Config.from_env()
     store = Store(config)
     service = service or SettlementService(config.ots_config())
-    app = FastAPI(title="PhotoAnchor local MVP", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="PhoTO local MVP", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.service, app.state.config = store, service, config
 
     @app.exception_handler(APIError)
@@ -197,8 +197,9 @@ def create_app(config=None, *, service=None):
             bundle.writestr("event.json", canonical(event).encode("utf-8"))
             bundle.writestr("payload.bin", payload.read_bytes())
             bundle.writestr("proof.ots", proof.read_bytes())
-            bundle.writestr("README.txt", "PhotoAnchor verification bundle. Receipts are untrusted metadata.\n"
-                            "Install PhotoAnchor, then run:\n"
+            bundle.writestr("README.txt", "PhoTO verification bundle. Receipts are untrusted metadata.\n"
+                            "From a PhoTO checkout, install the adapter: python -m pip install '.[protocol]'\n"
+                            "Then verify the exported bundle:\n"
                             "python -m upp_protocol.verify_bundle bundle.zip --network " + config.network +
                             " --bitcoin-conf /path/to/bitcoin.conf\n"
                             "A regtest confirmation refers only to the local development chain.\n"

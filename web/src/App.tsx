@@ -301,8 +301,8 @@ export default function App() {
             <img className="lt" src="/lab-assets/cow-icon-blue.svg" alt="" />
             <img className="dk" src="/lab-assets/cow-icon-white.svg" alt="" />
             <span>
-              BitPin
-              <span className="brand-sub">PhotoAnchor · IXH26</span>
+              PhoTO
+              <span className="brand-sub">Nostr · IXH26</span>
             </span>
           </a>
 
@@ -397,7 +397,7 @@ export default function App() {
             >
               <img className="lt" src="/lab-assets/cow-icon-blue.svg" alt="" />
               <img className="dk" src="/lab-assets/cow-icon-white.svg" alt="" />
-              <span>BitPin</span>
+              <span>PhoTO</span>
             </a>
 
             <div className="search-wrap">
@@ -679,7 +679,7 @@ export default function App() {
             <img className="dk" src="/lab-assets/cow-bull-white.svg" alt="" />
             <span>Fatto con</span>
             <i className="ic i-heart" />
-            <span>da BitPolito · PhotoAnchor &amp; Nostr · IXH26</span>
+            <span>da BitPolito · PhoTO &amp; Nostr · IXH26</span>
           </footer>
         </div>
       </div>

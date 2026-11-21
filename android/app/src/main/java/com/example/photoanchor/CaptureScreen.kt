@@ -76,7 +76,7 @@ internal fun OnboardingNameCard(
                     PixelIcon(DeckIcon.CowHead, size = 28.dp, tint = p.fg)
                 }
                 Text(
-                    "Welcome to BitPin",
+                    "Welcome to PhoTO",
                     color = p.ink,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 20.sp,

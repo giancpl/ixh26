@@ -72,7 +72,7 @@ export default function PinModal({
             <span className="badge">
               <Camera size={12} />
               {pin.source === "android-photoanchor"
-                ? "Scattata con PhotoAnchor"
+                ? "Scattata con PhoTO"
                 : pin.source === "web-camera"
                   ? "Scattata da fotocamera web"
                   : "Origine non verificata"}
@@ -193,7 +193,7 @@ export default function PinModal({
                 <option key={b.id} value={b.title} />
               ))}
               <option value="Preferiti" />
-              <option value="PhotoAnchor" />
+              <option value="PhoTO" />
             </datalist>
             <button
               className="btn-primary"
