@@ -227,6 +227,7 @@ rerun those tests, recompute the fixtures independently or build the Android app
 | Hardware key lifecycle and Java primitives | [Android module guide](android/README.md) |
 | Trust records and enrollment | [Trust/workflow](docs/crypto/V3-TRUST-AND-WORKFLOW.md), [restricted attestation intake](docs/crypto/enrollment-verifier.md) |
 | PRNU method and evaluation gate | [Experimental profile](docs/prnu/PRNU-EXPERIMENT.md) |
+| External optical token experiment | [Beacon profile and limitations](docs/prnu/BEACON-EXPERIMENT.md): signed session token, not proof of physical presence; no v3 level upgrade |
 | Hash/signature and PRNU diagrams | [Flow diagrams and PNGs](docs/diagrams/crypto-flow.md) |
 | Implementation coverage and validation tasks | [Audit](docs/implementation/CRYPTO-MODULE-AUDIT.md), [roadmap](docs/implementation/CRYPTO-V3-ROADMAP.md), [experiment runbook](docs/implementation/V3-EXPERIMENT-RUNBOOK.md) |
 | Bitcoin/OTS subsystem | [Installation, CLI, regtest and RPC guide](docs/implementation/BITCOIN-SETTLEMENT.md) |
