@@ -7,6 +7,12 @@ test branch. This handoff does not authorise merge or automatic merge.
 
 ## Read before assessing completeness
 
+The slide-informed [open problems](<../open problems.md>) and
+[Claude task handoff](../task.md) relate the implementation to the actual IXH26
+physical-origin/decentralisation challenge, including the gap between a protected
+installation key and authenticated sensor capture. They add analysis and a plan,
+not completed implementation or new test results.
+
 1. [Implementation audit](CRYPTO-MODULE-AUDIT.md): requirement-to-source map,
    missing code and the scenarios to validate for the latest corrections.
 2. [Current specification](crypto.md): v3 P-256 target, manufacturer/PRNU
