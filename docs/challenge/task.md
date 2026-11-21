@@ -2,6 +2,24 @@
 
 # Task per Claude: verificare e completare la risposta al challenge IXH26
 
+## Aggiornamento operativo: beacon su leomaster
+
+L'esperimento separato richiesto in `watermark.md` è implementato in
+[`fingerprinto/beacon.py`](../../fingerprinto/beacon.py). Leggere la
+[specifica e matrice degli attacchi](../prnu/BEACON-EXPERIMENT.md) e il
+[registro di validazione](../prnu/BEACON-VALIDATION.md) prima del backlog storico.
+Il codice `8fb3b3c` ha superato 10 test beacon e 9 regressioni v3 mirate;
+non è una nuova validazione completa del ramo o del percorso Android.
+
+Non reimplementare il token come watermark aggiunto dal telefono. Non
+interpretare `status=pass` come presenza fisica: classe S e
+`physicalOriginVerified=false` sono deliberati. Splicing, relay e riuso nella
+stessa sessione non sono rilevati. Restano da definire servizi di sessione e
+revoca, provisioning/clock del beacon, decoder robusto e prove su schermi reali.
+Nessun cambio al wire/reducer v3; integrazione automatica nel report non presente.
+La PR #16 è in bozza da `leomaster` a `leomain`; non fare merge.
+
+
 Questo handoff è stato preparato con assistenza di OpenAI Codex, sulla base
 dei sorgenti e delle slide lette. L'eventuale successivo lavoro di Claude e
 la sua verifica devono essere registrati separatamente, senza attribuirli

@@ -2,6 +2,23 @@
 
 # Problemi aperti: rispondiamo davvero al challenge?
 
+## Addendum: cosa cambia con il beacon
+
+Il [beacon implementato](../prnu/BEACON-EXPERIMENT.md) aggiunge validazione
+software di un codice P-256 legato a sessione e slot, non una soluzione al
+limite di origine fisica discusso sotto. Il file con codice fresco incollato
+passa i controlli del token; la presenza fisica rimane non verificata. Relay e
+riuso nella finestra/sessione non sono rilevati. L'eventuale limite temporale
+condizionale riguarda contenuto con il token, non la scena o l'esposizione.
+
+I [test registrati](../prnu/BEACON-VALIDATION.md) sono sintetici (10 beacon e
+9 regressioni v3 mirate). OP su fiducia, acquisizione fisica, falsificazione PRNU
+e verifica storica restano aperti. Nuovi punti: provisioning/revoca del beacon,
+clock/rilascio fidato, sessioni monouso e robustezza ottica reale. La griglia
+corrente non ha correzione d'errore o rettifica prospettica. Non è integrata nel
+report firmato v3 e non crea un nuovo livello di origine. L'analisi storica segue.
+
+
 Data: 21 novembre 2026. Snapshot della repo: `leomain`, commit `686a4ce`.
 Questa è la mia valutazione del progetto, non una certificazione né un nuovo
 risultato sperimentale. Il documento complementare è [../challenge/task.md](../challenge/task.md).

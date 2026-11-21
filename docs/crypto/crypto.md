@@ -1,5 +1,22 @@
 # FingerprinTO | Android capture and source evidence
 
+## Supplementary experiment: external beacon tokens
+
+The [beacon profile](../prnu/BEACON-EXPERIMENT.md) implements a separate
+P-256-signed, session-bound optical token with its own domains and report.
+It is **not** a change to this receipt specification: E still has seven fields,
+manufacturer/PRNU remain the only origin checks and the reducer is unchanged.
+Token validation has class S and cannot establish physical presence, sensor
+identity or capture time. Fresh code splicing, relay and within-session reuse
+are explicitly undetected; see the attack matrix and
+[execution record](../prnu/BEACON-VALIDATION.md).
+
+The standalone module does not automatically add its output to `report.json`.
+If a future caller attaches it before report freezing, `reportHash` can bind
+those diagnostic bytes without authenticating the claimed physical route or
+upgrading an origin level. No third-check wire proposal is adopted here.
+
+
 **Visual overview:** [PRNU, hashes and signature](../diagrams/crypto-flow.md) illustrates the
 v3 cryptographic flow (Italian), including the difference between statistical
 attribution and the signed byte binding.

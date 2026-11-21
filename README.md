@@ -189,6 +189,19 @@ A separate wire version (v2) combines **ML-DSA-65 AND Ed25519** (both must verif
 
 **Specified and implemented in the module (per project documentation):** deterministic CBOR codecs and commitments for v1/v3; P-256 signing; attestation-intake restricted to EC issuers with proof of possession; authority records; receipt journal; bundle/CLI; Bitcoin/OTS adapters; shared reducer; local trust preferences; Python/Java PRNU experiment; hybrid v2 experiment.
 
+**External optical-token extension (`leomaster`):** P-256 beacon tokens bound to
+verifier-owned session challenges and time slots, a visible grid codec and an
+independent CLI are implemented. Ten beacon tests and nine targeted v3
+regressions passed at code commit `8fb3b3c`; see the
+[execution record](docs/prnu/BEACON-VALIDATION.md). The result validates a software
+token, not physical presence: splicing, relay and same-session reuse remain
+undetected, and reports always keep `physicalOriginVerified=false`. No v3 wire,
+origin level or automatic report/issuance integration was added. The optical
+baseline lacks localisation, error correction and perspective correction;
+real display/camera tests, trusted clock/release, key governance and one-use
+session services remain external or unfinished. See the
+[profile and attack matrix](docs/prnu/BEACON-EXPERIMENT.md).
+
 **Not complete:**
 
 - a real manufacturer-credential validator (currently a callback; the default only recognises candidates and placement conflicts, it does not authenticate them);

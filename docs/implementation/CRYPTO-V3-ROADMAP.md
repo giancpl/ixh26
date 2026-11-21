@@ -1,5 +1,30 @@
 # v3 roadmap: test whether the exercise is reasonably solvable
 
+## Separate beacon track: implemented baseline, open physical gate
+
+On `leomaster`, [external optical tokens](../prnu/BEACON-EXPERIMENT.md) are
+implemented outside receipt v3: independent P-256 signature/session/slot check,
+visible fixed-grid renderer, bounded image decoder and offline CLI. The
+[validation record](../prnu/BEACON-VALIDATION.md) identifies the code SHA and
+10 beacon + 9 targeted v3 regression tests. No v3 format or reducer work is
+needed for this software-only result; no third origin level is proposed.
+
+Next steps, in order:
+
+1. Independently review token semantics and the splicing/relay counterexamples.
+2. Specify and deploy trusted beacon provisioning/revocation, an honest release
+   clock and verifier-issued session lifecycle; these are not supplied by the CLI.
+3. Evaluate an error-correcting format and pinned decoder against real screens,
+   JPEG, blur, perspective, reflections and moire. The current grid is only a baseline.
+4. Decide whether a standalone result is useful enough to attach to the signed
+   diagnostic report. Automatic attachment/issuance wiring is not implemented.
+5. Reassess usefulness against adaptive composition/relay. Successful decoding
+   must never be promoted to sensor origin or physical presence.
+
+The stages below remain the manufacturer/PRNU roadmap; beacon tests do not
+satisfy their empirical or implementation completion gates.
+
+
 Baseline: `db5a857` saves v1/v2 code; `c3ca43c` clarifies the checkpoint.
 Specification: the current `../crypto/crypto.md`, targeting P-256 evidence-v3. Hybrid v2
 remains an independent experiment. Preserve its tests/bytes and legacy v1.

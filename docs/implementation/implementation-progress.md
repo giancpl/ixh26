@@ -1,5 +1,22 @@
 # FingerprinTO implementation progress
 
+## External beacon save point - leomaster
+
+Code commit `8fb3b3c` implements the independent beacon transcript, image
+renderer/decoder and CLI. Documentation commit `aa15704` records the supplied
+proposal, corrected security interpretation and synthetic execution results.
+See the [profile](../prnu/BEACON-EXPERIMENT.md) and
+[validation record](../prnu/BEACON-VALIDATION.md): 10 beacon tests and 9 targeted
+v3 regressions passed on Windows Python 3.11.9, cryptography 46.0.7 and Pillow 13.0.0.
+
+This is evidence of software token verification, not optical presence. The
+splicing/reuse counterexamples pass token verification, with physical origin
+explicitly false. No v3 wire, reducer or origin label changed. Actual beacon
+hardware/display capture, trusted release clock, key/session services,
+error-correcting optics and attachment to v3 reports remain unimplemented or
+unvalidated. The earlier progress entries below are historical snapshots.
+
+
 **Latest audit:** [CRYPTO-MODULE-AUDIT.md](CRYPTO-MODULE-AUDIT.md) distinguishes
 implemented primitives, source corrections awaiting the test branch, missing
 manufacturer/Android integration, and empirical acceptance gates. The module

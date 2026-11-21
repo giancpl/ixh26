@@ -1,5 +1,7 @@
 <!-- AGENT CONSTRAINT: This file contains content and visual guidance for ONLY THREE crypto slides, coordinated with the complete pitch in docs/pitch/pitch.md. The full presentation must fit 180 seconds TOTAL, including the approximately 30-second demo, pauses and handoffs. These crypto slides occupy 0:40-1:50 (70 seconds); their separate absolute ceiling remains 90 seconds, but extending them requires cutting another block. They become presentation slides 2-4, between the proposed introductory and closing slides described in pitch.md. All spoken text, including demo narration, is in pitch.md; do not add oral explanations. Formulas are optional visual support and MUST NOT be spoken. Keep elements few and readable; distinguish implemented features, proposals and outstanding validation. Comments are editorial instructions, not projected text. -->
 
+<!-- BEACON UPDATE: The standalone optical-token experiment is implemented on leomaster, but is not a third origin level or validated physical demonstration. Keep these three slides and the 180-second total unchanged. Any future beacon illustration must label splicing/relay limits and token validity separately from physical presence; no extra spoken material is authorised by this note. -->
+
 # The problem happens before signing
 
 **No cryptographic proof of physical origin without a trusted capture path.**

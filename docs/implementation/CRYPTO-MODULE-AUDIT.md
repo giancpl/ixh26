@@ -1,5 +1,27 @@
 # Crypto module implementation audit
 
+## Scoped addendum: external optical token
+
+The earlier audit below remains a dated source review. On `leomaster`,
+`fingerprinto/beacon.py` adds an isolated token experiment; see the
+[specification](../prnu/BEACON-EXPERIMENT.md) and
+[tested SHA/results](../prnu/BEACON-VALIDATION.md). This addendum is not a
+new end-to-end audit or physical-camera validation.
+
+| Added capability | Boundary |
+|---|---|
+| P-256 code signed by an external beacon, bound to verifier challenge and installation | Verifies token authenticity/session, not emission through optics |
+| Fixed optical grid and bounded PNG/JPEG ROI decoder | Pinned Pillow baseline; no localisation, perspective correction or error correction |
+| Verifier-owned pinned SPKI and slot/age checks | No deployment registry/revocation or atomic one-use session service |
+| Standalone JSON report / CLI | Class S, no physical-origin pass; v3 wire/reducer unchanged |
+
+Ten beacon tests and nine targeted v3 regressions passed at `8fb3b3c`.
+Splicing and same-session reuse intentionally pass token checks while preserving
+`physicalOriginVerified=false`. These are documented counterexamples to a
+physical-origin claim. No real device, Android build or OTS verification ran.
+This does not close the implementation/calibration gaps listed below.
+
+
 Review entry point: [CRYPTO-REVIEW-HANDOFF.md](CRYPTO-REVIEW-HANDOFF.md), including
 the required reading order and the distinction between historical results and
 the untested audit corrections.

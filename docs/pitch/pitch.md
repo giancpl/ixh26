@@ -2,6 +2,19 @@
 
 # Complete pitch proposal - three minutes including demo
 
+## Beacon status - editorial only, not spoken
+
+The external-beacon token experiment is now implemented separately on
+`leomaster`; see [profile](../prnu/BEACON-EXPERIMENT.md) and
+[validation record](../prnu/BEACON-VALIDATION.md). It is not the live demo below:
+no real display/camera trial or complete beacon-to-v3 workflow has been validated.
+Do not add a second demo or extend the 180-second plan. If replacing the demo
+later, retain the 30-second slot and explicitly show synthetic/token-only status;
+never call successful token decoding sensor origin or physical presence.
+The native integration on later main also needs a separate status review before
+presenting this script; this branch's old integration statements are not an audit
+of those subsequent changes.
+
 ## Running order
 
 | Clock | Budget | Purpose | Visual / speaker cue |

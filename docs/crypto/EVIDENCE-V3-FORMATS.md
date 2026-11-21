@@ -1,5 +1,15 @@
 # Evidence-v3 implementation formats
 
+## Beacon compatibility note
+
+The [beacon experiment](../prnu/BEACON-EXPERIMENT.md) is a standalone token
+report, not a v3 attachment or a third member of E. Existing receipt bytes,
+member lists and result codes are unchanged. The verifier never upgrades a
+manufacturer/PRNU result from token validity. Adding diagnostic fields before
+freezing `report.json` is a future integration option, not implemented issuance
+wiring; editing a frozen report invalidates its signed hash.
+
+
 The normative tree and wire codes are in `crypto.md`. Version 3 is dispatched
 explicitly as `evidence-v3`; no v1/v2 fallback is attempted. A parsed receipt or
 a valid installation signature does not authenticate its origin findings.
