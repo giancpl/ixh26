@@ -234,3 +234,8 @@ proofs only. Real regtest confirmations still require explicit operator mining;
 no continuous miner or simulated-success fallback is installed in the backend.
 Disable the switch for the ordinary capture/preview/publication flow. The
 installation/Nostr keys and previously signed posts are unchanged.
+
+The presentation card also offers **Verifica demo**. It opens a **Verifica demo
+riuscita** popup identifying the result as simulated, independently of the
+actual service/check status. The popup changes local UI state only and does
+not update real verification results or exports.
