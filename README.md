@@ -1,356 +1,258 @@
-# UPP Bitcoin settlement
+# FingerprinTO
 
-The proposed FingerprinTO receipt implementation is in `fingerprinto/`.
-Current manufacturer/PRNU v3 work follows the
-[v3 roadmap](docs/implementation/CRYPTO-V3-ROADMAP.md), with explicit empirical feasibility gates.
-For the saved state before the crypto redesign, start with the
-[crypto checkpoint](docs/implementation/CRYPTO-CHECKPOINT-2026-11-21.md).
-Its independent bundle CLI, current checks and remaining Android/origin work
-are described in [implementation progress](docs/implementation/implementation-progress.md).
-The proposed protocol is in [the cryptographic manual](docs/crypto/crypto.md).
+**A signed, verifiable evidence format for photo origin, with explicit levels of assurance.**
 
-A standalone Python 3.11+ component that timestamps arbitrary **opaque binary
-files** with OpenTimestamps (OTS). It hashes locally, stores standard portable
-`.ots` proofs, retrieves upgrades, and verifies Bitcoin attestations against a
-locally configured, synchronized Bitcoin Core node. Mainnet is the default;
-regtest must be selected explicitly.
+FingerprinTO defines a signed receipt binding a photo's exact bytes to an installation identity, the recorded outcomes of two independent origin checks (manufacturer capture credential and PRNU sensor compatibility), and a timestamp commitment. Installation enrollment and origin findings are independently verified; anchoring has its own pending/verified status. It is designed to say precisely *what is and is not established* for a given photo, rather than to output a single "authentic" bit.
 
-It does not parse manifests, process photos, verify signatures, generate keys,
-or implement camera, device, C2PA, wallet, or authentication functionality.
-No Bitcoin balance, wallet, seed, API key, or paid transaction is needed.
-The optional local regtest calendar has its own development wallet with mined
-test coins; the settlement API does not manage wallets.
+> **Scope statement.** This project does **not** provide a cryptographic proof that a photo was acquired by a given physical sensor on an arbitrary device. We argue in [§2](#2-the-impossibility-boundary) that no scheme can, without a trusted observation point inside the capture path. The implemented core provides a byte-level hash/signature construction, a reducer that keeps distinct evidence classes distinct, and an explicitly statistical PRNU experiment. This is a prototype, not a proved end-to-end camera-origin system. See [§9](#9-status-what-exists-and-what-does-not) for what is implemented and what is not.
 
-## Local regtest: complete Docker environment
+*Challenge context:* IXH26 Bari, crypto track (photo-origin validation, generalisable across devices, with decentralised anchoring).
 
-Docker Engine and Docker Compose are the only host dependencies. From the repo:
+---
 
-```bash
-./scripts/regtest-demo.sh
+## Contents
+
+1. [Problem and claims](#1-problem-and-claims)
+2. [The impossibility boundary](#2-the-impossibility-boundary)
+3. [Threat model](#3-threat-model)
+4. [Construction](#4-construction)
+5. [Evidence levels and the shared reducer](#5-evidence-levels-and-the-shared-reducer)
+6. [The PRNU layer](#6-the-prnu-layer)
+7. [Trust, enrollment and anchoring](#7-trust-enrollment-and-anchoring)
+8. [Hybrid post-quantum experiment](#8-hybrid-post-quantum-experiment-v2)
+9. [Status](#9-status-what-exists-and-what-does-not)
+10. [Test vectors and validation scope](#10-test-vectors-and-validation-scope)
+11. [Repository and usage](#11-repository-and-usage)
+12. [Disclosure](#12-disclosure)
+
+---
+
+## 1. Problem and claims
+
+We separate five properties that are routinely conflated:
+
+| # | Property | Established by | Strength |
+|---|---|---|---|
+| P1 | **Byte integrity**: this file is the one that was signed | SHA-256 binding in `F_P`, signature over `R` | Cryptographic, conditional on signature unforgeability, hash collision resistance and correct key handling |
+| P2 | **Key possession / installation identity** | Android Keystore attestation + proof of possession | Cryptographic, *conditional on* the hardware-attestation trust chain |
+| P3 | **Capture credential** (vendor says "I captured this") | Trusted capture credential with signature, accepted capture semantics and hard asset binding; a generic provenance signature is insufficient | Cryptographic, *conditional on* the vendor's capture path and issuer policy |
+| P4 | **Sensor compatibility** (noise residual matches an enrolled reference) | PRNU correlation | **Statistical**, copyable, not a proof |
+| P5 | **Commitment inclusion in a timestamped history** | Verified Bitcoin/OpenTimestamps proof | Conditional on Bitcoin consensus and timestamp interpretation; not a precise wall-clock or shutter-time guarantee |
+
+Not claimed: truth of the depicted scene (a photograph of a screen is an authentic capture of synthetic content), shutter time, or detection of AI-generated content.
+
+## 2. The impossibility boundary
+
+**Claim (model-level, not a universal impossibility theorem).** Let the client (OS + app) be adversarial and let the verifier observe only `(J, receipt, bundle)`. Suppose the client can invoke the enrolled signing key `sk_I`, without needing to extract it from hardware. If no independently authenticated capture observation binds `J` to the sensor, two histories can present the same transcript: a physical capture of `J`, and injection of those same bytes before signing. A verifier observing only that transcript cannot distinguish the histories. The installation signature authenticates a statement about chosen bytes, not the process that produced them. This does **not** let an attacker forge a manufacturer credential or pass every independent origin check.
+
+Consequently, any strong origin guarantee needs an observation point the adversary does not control, located **before** the bytes become attacker-chosen:
+
+- a vendor-attested capture path with an authenticated binding from capture to asset; or
+- another trusted measurement that binds the physical acquisition to the verified bytes.
+
+Fresh light/flash or multi-sensor challenges may raise the cost of forgery, but
+without trusted observation they remain experimental evidence, not a substitute
+cryptographic guarantee.
+
+Neither a blockchain anchor nor additional software signatures can substitute: an anchor commits to whatever was submitted, including a false initial statement. A quorum of registrars does not make a false enrollment true.
+
+**Design consequence.** The format is device-agnostic, the *assurance level* is not. A capture with a supported, independently validated credential may reach the manufacturer level; other captures may support statistical PRNU evidence or no origin finding. Capabilities depend on the particular lens, mode and capture route, not just the device model. The receipt records evidence; the verifier derives its own level.
+
+## 3. Threat model
+
+| Adversary | Can do | What stops it | What does not |
+|---|---|---|---|
+| Post-signature editor | Modify `J`, report, policy, `E`, or committed metadata | Digest/Merkle/signature reconstruction fails | – |
+| Compromised app/OS, legitimate enrolled key | Sign any file; claim any PRNU outcome | Verifier re-evaluates both checks with its own trusted policy and reference; vendor credential binds to bytes | **Pre-signature injection of a file that passes the checks** (see §2) |
+| Phone A captures, phone B registers | B signs A's genuine photo | A trusted capture-to-device association, or PRNU against B's trusted reference; neither is supplied by B's signature | Signature alone is valid |
+| PRNU forger | Estimate a fingerprint from public images, transfer it to another image | No demonstrated defence here; spoofing countermeasures and adversarial evaluation remain research work | An adaptive attacker may defeat PRNU entirely |
+| Compromised authority (enrollment, trust store, issuer list) | Enroll false devices, accept bad issuers | No protection against an authority already trusted for that assertion; independent provisioning and governance are required | Quorum/ledger does not correct a false attestation |
+| Replay | Reuse a challenge or old receipt | One-use challenges at enrollment; capture-session freshness requires verifier-side challenge tracking | A challenge embedded *after* capture does not prove capture freshness |
+| Server outage / vendor disappears | Remove trust data | Retained signed authority history exists; a portable long-term trust archive remains proposed | Missing evidence yields *indeterminate*, never *pass* |
+
+## 4. Construction
+
+### 4.1 Notation
+
+`D(label, x₁, …, xₙ) = SHA-256(CBOR([label, x₁, …, xₙ]))` with RFC 8949 §4.2.1 deterministic encoding (definite lengths, shortest integers; no tags, floats, or indefinite items; trailing bytes rejected). `Node(a,b) = D("node", a, b)`. Labels serve as domain separation between leaves, nodes, photo fingerprints and the root.
+
+### 4.2 Installation identity
+
+```
+ID_I = SHA256(pk_I)                                   pk_I: DER SPKI, P-256 (91 bytes)
+F_I  = D("install", ID_I, packageName, versionCode, signerDigest)
 ```
 
-The first build downloads dependencies. The script starts Bitcoin Core 30.2,
-initializes the dedicated `ots` wallet and official OTS calendar, then runs a
-real local lifecycle. It checks `PENDING` before mining, mines two blocks,
-upgrades the standard `.ots` proof, verifies `CONFIRMED` against the regtest
-node, and rejects a modified payload as `INVALID`. The final JSON includes the
-artifact directory and independently checked block height/time. The lifecycle
-has a 120-second deadline after startup; there is no continuous mining process.
+The Android key-management implementation requires a non-exportable, hardware-backed Keystore key (TEE/StrongBox per policy); execution on a real phone is not yet validated. `F_I` is an app-declared identity at receipt time; neither `versionCode` nor `signerDigest` is a hash of the APK contents.
 
-Core binaries are checked against pinned official SHA-256 values for amd64 and
-arm64. The calendar source is pinned to commit
-`1e955ea3b036453bf795505d923f2643f773810c` and uses a separate Python environment
-because its OTS dependency version differs from the settlement client's.
+### 4.3 Device and session subtree
 
-Everything runs on an internal Docker network, without published host ports.
-Blockchain/wallet, calendar database/HMAC key, and demo artifacts have separate
-persistent volumes. The bootstrap reuses existing state on subsequent starts.
-The wallet is dedicated to the calendar; leave other wallet operations out of
-this development environment. Each demo creates a distinct artifact directory
-and serializes demo runs with a lock.
+Device manufacturer/model are signed client declarations, not authenticated sensor identity.
+Five leaves `Lᵢ = D("field", name, value)`: `ID_I`, `manufacturer`, `model`, `localTime` (ms, device clock, untrusted), `sessionChallenge` (32 bytes or CBOR `null`, leaf kept when absent).
 
-Every result has `network: "mainnet"` or `network: "regtest"`. **A regtest
-`CONFIRMED` is evidence against your local development chain, not a mainnet
-settlement.** A successful regtest verification also includes diagnostic code
-`regtest_only`. The `.ots` format itself has no network identifier: select the
-expected network explicitly and do not infer it from an untrusted JSON receipt.
-
-To start services without running the demo:
-
-```bash
-docker compose -f compose.regtest.yml build
-docker compose -f compose.regtest.yml up -d --wait --wait-timeout 120 bitcoin bootstrap calendar
+```
+F_D = Node(Node(Node(L0, L1), Node(L2, L3)), L4)       # unpaired node promoted unchanged
 ```
 
-Run individual commands in the settlement container:
+### 4.4 Photo fingerprint and root (profile v3)
 
-```bash
-docker compose -f compose.regtest.yml run --rm settlement stamp \
-  /app/examples/example_payload.bin --out /artifacts/manual \
-  --network regtest --calendar http://calendar:14788
-
-# Pending before mining: exit code 2 is expected.
-docker compose -f compose.regtest.yml run --rm settlement verify \
-  /app/examples/example_payload.bin /artifacts/manual/example_payload.bin.ots \
-  --network regtest --bitcoin-conf /config/client.conf
-
-# Wait for an OTS transaction in the mempool before mining.
-docker compose -f compose.regtest.yml exec bitcoin bitcoin-cli \
-  -conf=/etc/bitcoin.conf -datadir=/bitcoin getrawmempool
-docker compose -f compose.regtest.yml exec bitcoin bitcoin-cli \
-  -conf=/etc/bitcoin.conf -datadir=/bitcoin -rpcwallet=ots -generate 2
-
-docker compose -f compose.regtest.yml run --rm settlement upgrade \
-  /artifacts/manual/example_payload.bin.ots \
-  --network regtest --calendar http://calendar:14788
-docker compose -f compose.regtest.yml run --rm settlement verify \
-  /app/examples/example_payload.bin /artifacts/manual/example_payload.bin.ots \
-  --network regtest --bitcoin-conf /config/client.conf
+```
+E   = [placement, detachedHash, manufacturerResult, prnuResult,
+       refHash, policyHash, reportHash]
+F_P = D("photo/evidence-v3", F_I, SHA256(J), E)
+T   = Node(Node(F_I, F_P), F_D)
+R   = D("fingerprinto/evidence-v3", T)
+σ   = ECDSA-P256-SHA256(sk_I, R)                       # DER, persisted verbatim
+C   = D("receipt", R, σ)                               # 32-byte public commitment
 ```
 
-The calendar polls Core asynchronously: repeat upgrade after a short wait if it
-has not processed both blocks yet. Already-stamped files are reused; use a new
-payload/output path to demonstrate a fresh pending state. Demo mining assumes
-exclusive use of this development calendar; avoid concurrent manual submissions
-while the automated lifecycle runs.
+- `placement`: 0 embedded / 1 detached / 2 absent credential. `detachedHash = SHA256(A)` only for 1.
+- Result codes (both checks): 0 unavailable, 1 inconclusive, 2 pass, 3 fail. A failed attempt yields a diagnostic record, never an acceptable receipt.
+- `policyHash`, `reportHash`: SHA-256 of the exact bytes of two bundled UTF-8 JSON files (≤ 1 MiB each, no duplicate keys). Bytes are persisted once and reused on every export/retry.
+- `refHash`: digest of the serialized PRNU reference record when one was used.
+- The displayed assurance level is **derived by the verifier**, never read from a signed label.
 
-Run real local integration tests, inspect services, or export artifacts:
+The wire representation is a fixed 12-item CBOR array:
 
-```bash
-docker compose -f compose.regtest.yml run --rm integration
-docker compose -f compose.regtest.yml logs --tail 100 bitcoin bootstrap calendar
-docker compose -f compose.regtest.yml ps
-docker compose -f compose.regtest.yml run --rm --entrypoint python settlement \
-  -c 'from pathlib import Path; print("\n".join(str(p) for p in Path("/artifacts").glob("run-*/summary.json")))'
+```text
+receipt.cbor = [3, pk_I, chain, packageName, versionCode, signerDigest,
+                manufacturer, model, localTime, sessionChallenge, E, sigma]
 ```
 
-To copy demo artifacts out, create a stopped tools container, copy, then remove
-only that container:
+The certificate chain is validation material, not a substitute for a trusted
+root: enrollment must bind its attested public key to `pk_I`. The tree commits
+to the installation identity and declarations, not the chain bytes themselves.
+See the [wire/attachment specification](docs/crypto/EVIDENCE-V3-FORMATS.md).
 
-```bash
-docker compose -f compose.regtest.yml create settlement
-docker compose -f compose.regtest.yml cp settlement:/artifacts ./regtest-artifacts
-docker compose -f compose.regtest.yml rm -f settlement
+Profile **v1** (legacy, mandatory manufacturer gate) uses `F_P = D("photo", F_I, SHA256(J)[, SHA256(A)])` and `R = D("fingerprinto/v1", T)`. v1 and v3 are separated by wire version and by label; there is no cross-profile fallback, and signatures over bare `T` are rejected.
+
+### 4.5 Engineering notes that affect security
+
+- **Signature malleability and `C`.** ECDSA signatures are not unique. `C` commits to the *specific* DER bytes returned by the signer; re-encoding, low-`s` normalisation or re-signing changes `C`. A durably stored receipt is reused byte-for-byte on retry. A crash before journal commit can cause another signing invocation, but transport must occur only after durable commit; this is not an exactly-once guarantee for hardware signing.
+- **`C` is a commitment, not a hiding one.** It is a hash of public-ish structured data. Do not assume unlinkability or anonymity: receipts under one key are linkable by `ID_I`.
+- **Strict parsing** is part of the spec: exact arity and types, canonical DER for `σ` (8–72 bytes, minimal positive INTEGERs in range), on-curve validation of `pk_I`, size limits enforced before allocation (receipt ≤ 256 KiB, `J` ≤ 128 MiB, bundle ≤ 160 MiB). Size failures are *profile rejections*, reported separately from cryptographic mismatches.
+
+## 5. Evidence levels and the shared reducer
+
+Both origin checks assess the same immutable `J`, even when the first passes; an unavailable validator or reference yields an explicit unavailable/inconclusive finding. Python orchestration and Java primitives implement the same reducer; wiring it into the Android capture flow remains unfinished. After mandatory checks are resolved, the completed outcomes reduce as follows:
+
+| Condition | Level |
+|---|---|
+| Definitive origin failure, conflicting evidence, or invalid signature/binding/enrollment | **Failed** (blocks issuance; blocks acceptance on import) |
+| Manufacturer credential passes trust and hard binding to `J` | **Manufacturer-verified** |
+| Manufacturer absent/indeterminate **and** PRNU passes against a trusted reference | **PRNU-verified** |
+| Neither passes, neither definitively fails | **No verification** |
+
+Pending mandatory checks block issuance/acceptance; a pending OTS calendar promise is a separate anchor state and does not by itself invalidate origin findings. An unresolved claimed anchor keeps assessment pending. Even the no-origin-verification level requires valid enrollment, byte binding and installation signature.
+
+Properties of the reducer: missing evidence never becomes a pass; an invalid recognised credential is never retried in "absent" mode; a PRNU *mismatch* blocks even when a manufacturer credential passes; a personal "trust / don't trust" choice is stored locally against `C` and can neither upgrade a level nor change the receipt. An origin failure concerns the claim, not the scene. These checks bind and evaluate evidence; they do not supply a formal reduction for sensor-origin soundness.
+
+## 6. The PRNU layer
+
+PRNU gives **statistical compatibility with an enrolled reference**; it is not a signature of the sensor and not a cryptographic guarantee.
+
+**Reference estimation (per physical lens and mode).** From frames with aligned intensity `Iᵢ`, residual `Wᵢ = Iᵢ − denoise(Iᵢ)` and validity mask `mᵢ`:
+
+```
+K[p] = Σᵢ mᵢ[p]·Iᵢ[p]·Wᵢ[p]  /  Σᵢ mᵢ[p]·Iᵢ[p]²
 ```
 
-Calendar receipts contain `http://calendar:14788`, resolved inside Compose.
-Upgrade them from the container environment. Verification needs no calendar,
-but requires the matching local blockchain. Keep volumes together if you want
-to retain and independently recheck old regtest proofs.
+Poorly supported or zero-denominator pixels are masked. Row/column artefacts are suppressed by a pinned preprocessing configuration. The reference record (K, mask, geometry/mode/decoder identifiers, method version and enrollment-image digests) is serialised once and hashed as `refHash`. Physical-camera provenance and approved calibration regions are carried by the separately authenticated reference association and verifier policy. Decoder, colour conversion, denoiser and its parameters, normalisation, numeric precision and mask rules are all versioned; changing any of them requires recalibration.
 
-```bash
-# Stop services and keep all data.
-docker compose -f compose.regtest.yml down
-# Explicit reset: deletes this environment's blockchain, calendar, and artifacts.
-docker compose -f compose.regtest.yml --profile tools down --volumes
+**Detection statistic.** For a query, compare `W` with the predicted component `I·K` over valid overlapping pixels. With the expected shift fixed at zero, let `r₀` be the normalised correlation at that shift:
+
+```
+SPCE = sign(r₀) · r₀²  /  mean( r(s)² : s outside the exclusion window )
 ```
 
-## Install
+Zero off-peak energy or insufficient valid area gives *inconclusive*.
 
-On Linux or another POSIX platform with Python 3.11+:
+**Decision regions.** Match (≥ calibrated acceptance threshold), Mismatch (inside a *separately validated* rejection region), Inconclusive otherwise. Match and mismatch are enabled independently, only where measured error rates meet an explicit deployment policy; until then experimental scores are displayed as inconclusive. No universal threshold is shipped, and scores are never converted into a probability of truth. The implemented experimental method uses a fixed native-scale green-channel crop, a one-level Haar denoiser and versioned masking/geometry rules. Python has a pinned JPEG decoder route; Java currently consumes decoded arrays, not an equivalent Android JPEG pipeline. See the [PRNU experimental profile](docs/prnu/PRNU-EXPERIMENT.md).
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[test]'
-```
+**Known limits.** PRNU can be estimated from public images and transferred; recompression degrades it; it does not date a capture; thresholds measured on innocent images say nothing about an adaptive adversary. Triangle-test style countermeasures have their own assumptions and are not treated as a complete answer.
 
-This installs the official `opentimestamps-client==0.8.0` and
-`opentimestamps==0.5.0`. POSIX file locks protect cooperating writers. Use a
-local filesystem supporting advisory locks, hard links, and atomic renames.
+## 7. Trust, enrollment and anchoring
 
-## Stamp, upgrade, verify
+**Enrollment.** The key is generated in the Keystore with a fresh verifier-issued 32-byte attestation challenge. The verifier validates the chain to configured Android attestation roots (with revocation), binds the attested leaf's SPKI to the receipt key, checks security level, key purpose/digest, boot state and the attested application id (package, signer digests). Attestation describes the app **at key generation**; later receipts carry app declarations that remain unattested. Key loss requires a new key and `ID_I`; a replacement key is never used under an old id.
 
-```bash
-python -m settlement stamp examples/example_payload.bin --out ./proofs
-python -m settlement upgrade ./proofs/example_payload.bin.ots
-python -m settlement verify examples/example_payload.bin ./proofs/example_payload.bin.ots
-```
+**Residual authorities (honest accounting).** Bitcoin/OTS decentralises *publication evidence*. It does **not** decentralise: the attestation roots, the configured issuer allow-list and capture-semantics policy, the enrollment decision, the association camera ↔ reference, or PRNU thresholds. These sit in a configured authority (`TrustStore`) outside the bundle. The code supplies signed authority records and sequence/status checks; deployment governance for enrollment, rotation, revocation, disputed provisioning and unavailable authorities remains an open item (§9).
 
-The installed `upp-settlement` command accepts the same arguments. Each command
-prints one JSON result. `--help` prints ordinary command help.
+**Anchoring.** For the Bitcoin/OTS backend we timestamp a file `commitment.bin` containing exactly the 32 raw bytes of `C`; the OTS start digest must equal `SHA256(C)` (not hex, not a newline, not `C` itself as a precomputed digest). A calendar promise alone is *pending*; only a confirmed Bitcoin attestation on the expected network is *verified*. Anchor status is reported separately from origin evidence: an absent/pending anchor leaves origin findings interpretable, a *false* claimed anchor fails the bundle. An XRPL memo convention is specified in the docs but XRPL is **out of scope** for the current branch.
 
-Stamp creates `proofs/example_payload.bin.ots` and a metadata snapshot
-`proofs/example_payload.bin.ots.json`. The original file is never modified.
-Only a randomized OTS commitment is sent to calendars, through the official
-client; the payload is read locally through the client's stdin. SHA-256 is also
-computed independently with `hashlib` and checked against the resulting proof.
-Calendars learn the network address and request timing, but receive no original
-file, filename, metadata receipt, or unrandomized payload digest.
+**Verification and time.** The verifier recomputes every digest, reconstructs `R`, verifies `σ`, and independently evaluates both origin checks against *its own* trusted policy and enrollment association. A supplied policy is evidence of what the signer used, never a trust anchor, and an app report alone never yields a PRNU pass. Current lookup and retained signed authority history are distinct. Full historical verification is a proposed extension: archive the relevant issuer chains, manifests, trust policies and authenticated status evidence, then anchor their byte identities. Past trust cannot be reconstructed from device time or a ledger timestamp alone; missing historical evidence must not be treated as a historical pass. Anchoring a certificate does not establish issuer trust or absence of key compromise. `localTime` is a device-clock claim; the anchor dates the commitment, not the exposure; a challenge embedded after capture proves a response to the challenge, not freshness of the capture.
 
-Initial receipts are `PENDING`: calendars aggregate commitments before anchoring
-them in Bitcoin, which can take hours. Run `upgrade` later; it never waits for a
-Bitcoin confirmation. A calendar failure retains the exact original proof and
-returns `PENDING` with diagnostics. A retrieved block reference still does not
-prove Bitcoin inclusion: only `verify` may return `CONFIRMED`.
+## 8. Hybrid post-quantum experiment (v2)
 
-`verify` never contacts calendars, upgrades proofs, writes metadata, or trusts
-the JSON snapshot. Run `upgrade` explicitly to obtain new attestations. Unknown
-attestation types are retained but cannot establish Bitcoin confirmation.
+A separate wire version (v2) combines **ML-DSA-65 AND Ed25519** (both must verify). Key protection boundary: AES-GCM hardware-protected wrapping of the software keys at rest, with binding to the installation's P-256 identity; the hybrid keys are in RAM during signing and are **not** hardware-native. RSA is deliberately excluded. A hybrid signature does not make the whole trust chain post-quantum: enrollment attestation, authorities and the surrounding protocols remain classical dependencies. v1/v2/v3 are never interchangeable.
 
-Repeating stamp for the same filename and matching bytes reuses the existing
-proof without resubmission. A conflicting proof or orphan metadata file is an
-error and is not overwritten. Existing JSON is never trusted. The JSON file is
-the initial submission snapshot; it is not refreshed by upgrade or verification.
-Use the current command/API result for current status and proof digest.
+## 9. Status: what exists and what does not
 
-Proof publication refuses overwrites. Upgrades are validated in memory and
-written through a temporary file and atomic replacement. `.ots.lock` files are
-intentional persistent lock files, not proofs; their presence does not mean an
-operation is running. Concurrent cooperating writers fail with `proof_busy`.
-If receipt writing fails after proof publication, the proof is retained; retry
-stamp to recover the missing metadata. No automatic retries or background work
-are scheduled. Keep immutable inputs and avoid external concurrent edits.
+**Specified and implemented in the module (per project documentation):** deterministic CBOR codecs and commitments for v1/v3; P-256 signing; attestation-intake restricted to EC issuers with proof of possession; authority records; receipt journal; bundle/CLI; Bitcoin/OTS adapters; shared reducer; local trust preferences; Python/Java PRNU experiment; hybrid v2 experiment.
 
-## Results and exit codes
+**Not complete:**
 
-Results contain `version`, `backend`, `network`, `payload_sha256`, `proof_file`,
-`proof_sha256`, `binding_checked`, `status`, `bitcoin`, and a list of
-`diagnostics` with stable `code` and human-readable `message` fields. Errors may
-have null digest/path fields. `payload_sha256` from upgrade is extracted from the
-proof and is **not** a digest checked against original bytes.
+- a real manufacturer-credential validator (currently a callback; the default only recognises candidates and placement conflicts, it does not authenticate them);
+- the Android decode/calibration path and the capture → both checks → v3 signature wiring (the current Android export is an unsigned diagnostic);
+- any measured results on a real sensor, on native capture, or against forged PRNU.
 
-| Status | Meaning | CLI exit code |
+**Unverified / pending:** the latest hardening commit (`84f3fae`: pre-signature preflight, ordered PRNU sums, atomic decision retention, recovery, idempotent publication, signed history) post-dates the historical test runs and has not been executed on the validation branch; earlier green counts must not be attributed to it. Python 3.11/3.12 and JVM PRNU-sum ordering equivalence is likewise unverified.
+
+**Explicit non-claims:** no demonstrated sensor-level attestation on the target Android capture route; the Keystore key is not a sensor key; no result on adaptive PRNU forgery; no Android build/device test; no certified or qualified-service status.
+
+## 10. Test vectors and validation scope
+
+The repository contains both legacy and current synthetic fixtures:
+
+| Profile | Fixtures | What they exercise |
 |---|---|---|
-| `PENDING` | Receipt exists; independent Bitcoin verification has not completed | 0 for stamp/upgrade; 2 for verify |
-| `CONFIRMED` | Original bytes match and an active-chain Bitcoin attestation was verified | 0 |
-| `INVALID` | Digest mismatch, malformed proof, or disproven Bitcoin attestation | 3 |
-| `UNVERIFIABLE` | Required node/source unavailable, unsynchronized, or unsupported | 4 |
-| `ERROR` | Invalid input path, conflicting output, submission failure, or local operational error | 1 |
+| v1 | [Four legacy vectors](tests/fingerprinto/fixtures/v1.json) and the [specification appendix](docs/crypto/crypto.md#historical-appendix--p-256-v1-specification-and-fixtures) | Embedded/detached credentials and absent/present session challenge; intermediate digests, DER signature, commitment and OTS start digest |
+| v3 | [Four signed vectors](tests/fingerprinto/fixtures/v3.json), [Python checks](tests/fingerprinto/test_receipt_v3.py) and [JVM interoperability checks](android/tests/check_receipt_v3.py) | v3 byte encoding, roots, attachment hashes, claimed result combinations, signatures and transport |
 
-Stamp/upgrade always return `PENDING` on success, even for a proof already
-containing Bitcoin attestations. Calendar upgrade failures remain pending with
-diagnostics; a failed initial submission produces no usable receipt and is
-`ERROR` (or `UNVERIFIABLE` for a subprocess deadline). Successful process exit is
-never used as evidence of cryptographic validity.
+These fixtures are synthetic: their certificates, credentials and claimed pass
+codes do not establish trusted enrollment, sensor attribution or a real anchor.
+The inherited `sigma` signs the 32 bytes of `R` through ECDSA with SHA-256;
+it is not a signature over bare `T` or a prehashed-ECDSA API invocation.
 
-Verified `bitcoin.block_height` and `bitcoin.block_time` (Unix seconds, UTC) are
-populated only by successful verification. Receipt metadata is not itself a
-cryptographic proof. Keep the portable `.ots` file and original exact bytes.
+Historical test results and the later, unexecuted hardening changes are recorded
+in the [review handoff](docs/implementation/CRYPTO-REVIEW-HANDOFF.md#validation-provenance-and-reviewer-priorities).
+This README update involved source and documentation checks only; it did not
+rerun those tests, recompute the fixtures independently or build the Android app.
 
-## Bitcoin Core
+## 11. Repository and usage
 
-Run your own fully synchronized Bitcoin Core **mainnet** node with local RPC:
+| Area | Entry point |
+|---|---|
+| Protocol and byte contracts | [Cryptographic specification](docs/crypto/crypto.md), [v3 formats](docs/crypto/EVIDENCE-V3-FORMATS.md) |
+| Receipt and independent verifier | [`fingerprinto/`](fingerprinto/), especially [`receipt_v3.py`](fingerprinto/receipt_v3.py) and [`workflow_v3.py`](fingerprinto/workflow_v3.py) |
+| Hardware key lifecycle and Java primitives | [Android module guide](android/README.md) |
+| Trust records and enrollment | [Trust/workflow](docs/crypto/V3-TRUST-AND-WORKFLOW.md), [restricted attestation intake](docs/crypto/enrollment-verifier.md) |
+| PRNU method and evaluation gate | [Experimental profile](docs/prnu/PRNU-EXPERIMENT.md) |
+| Hash/signature and PRNU diagrams | [Flow diagrams and PNGs](docs/diagrams/crypto-flow.md) |
+| Implementation coverage and validation tasks | [Audit](docs/implementation/CRYPTO-MODULE-AUDIT.md), [roadmap](docs/implementation/CRYPTO-V3-ROADMAP.md), [experiment runbook](docs/implementation/V3-EXPERIMENT-RUNBOOK.md) |
+| Bitcoin/OTS subsystem | [Installation, CLI, regtest and RPC guide](docs/implementation/BITCOIN-SETTLEMENT.md) |
+| Pitch material | [Spoken pitch](docs/pitch/pitch.md), [slide content](docs/pitch/slides.md) |
 
-```ini
-# ~/.bitcoin/bitcoin.conf
-server=1
-# Optional; historical block headers remain available on a pruned node.
-prune=1000
-```
-
-Keep RPC bound locally. Default configuration discovery and cookie authentication
-come from `python-bitcoinlib`, the official OTS client's Bitcoin dependency.
-It reads `~/.bitcoin/bitcoin.conf` on Linux (platform defaults on macOS), uses
-`datadir/.cookie`, and supports configured `rpcuser`/`rpcpassword` as a fallback.
-No credentials are placed in result JSON. For a nondefault configuration:
-
-```bash
-python -m settlement verify examples/example_payload.bin \
-  ./proofs/example_payload.bin.ots --bitcoin-conf /path/to/bitcoin.conf --timeout 10
-```
-
-Use ordinary mainnet settings and an absolute `datadir` when needed. The
-underlying config reader supports simple key/value settings; do not rely on
-`includeconf`, section-specific settings, or a custom `rpccookiefile`. Use a
-dedicated simple config with the correct datadir/RPC settings instead.
-
-The verifier checks `getblockchaininfo` against the explicitly selected network, requests the active-chain block hash
-at the attested height, fetches its header, calls the official OTS
-`verify_against_blockheader`, and checks the active-chain hash again. A missing
-node, wrong network, initial synchronization, unavailable block, RPC failure, or
-observed reorganization cannot produce `CONFIRMED`. No third-party explorer is
-used. Confirmation uses the node's current active chain without an additional
-minimum-depth policy; future reorganizations can change verification results.
-
-## Python integration
-
-```python
-from pathlib import Path
-from settlement import stamp_file, upgrade_proof, verify_file, Status
-
-# Another component has already generated and saved its signed manifest.
-# This package does not create, parse, or authenticate that manifest.
-manifest_path = Path("output/signed-manifest.bin")
-receipt = stamp_file(manifest_path, Path("proofs"))
-print(receipt.to_dict())
-
-if receipt.proof_file and receipt.status == Status.PENDING:
-    upgrade = upgrade_proof(receipt.proof_file)  # Call again later if needed.
-    verification = verify_file(manifest_path, receipt.proof_file)
-    if verification.status == Status.CONFIRMED:
-        print(verification.bitcoin.block_height)
-```
-
-For explicit configuration:
-
-```python
-from settlement import OTSConfig, SettlementService
-
-service = SettlementService(OTSConfig(
-    timeout=10,
-    bitcoin_conf="/absolute/path/bitcoin.conf",
-    # calendars=("https://your-explicitly-trusted-calendar.example",),
-))
-result = service.verify_file("manifest.bin", "manifest.bin.ots")
-```
-
-For regtest inside the Docker environment:
-
-```python
-service = SettlementService(OTSConfig(
-    network="regtest",
-    bitcoin_conf="/config/client.conf",
-    calendars=("http://calendar:14788",),
-))
-```
-
-Regtest RPC defaults to port 18443 and reads `datadir/regtest/.cookie` without
-changing global Bitcoin parameters. Its simple config reader supports global
-and `[regtest]` settings, `rpcconnect`, `rpcport`, `datadir`, `rpccookiefile`,
-and a username/password fallback. Prefer cookie authentication; credentials
-that cannot be safely represented by the upstream URL API are rejected. Use
-absolute filesystem paths and a standalone configuration without `includeconf`.
-The selected network must match the actual node before confirmation is possible.
-
-Calendar configuration controls stamp endpoints and explicitly authorizes
-additional upgrade endpoints; the official default OTS calendar whitelist
-remains allowed on mainnet only. On regtest there are no default calendars:
-stamp/upgrade require explicit endpoints, and only those exact URIs may be
-contacted. HTTP is accepted only for explicitly configured regtest endpoints.
-Arbitrary proof-supplied URLs are skipped and diagnosed.
-Timeouts must be 1–300 seconds. Stamp has an outer subprocess deadline of
-`timeout + 10` seconds. Upgrade uses the official client's bounded calendar
-request helper; its deadline applies to each request, so multiple calendars can
-take longer overall. RPC timeouts apply per request. Explicitly authorize only
-calendars you intend to contact. Diagnostics suppress raw upstream exceptions
-and stderr to avoid credential leakage.
-
-## Tests
-
-The evidence-v3 crypto-module experiment is documented in
-[the v3 runbook](docs/implementation/V3-EXPERIMENT-RUNBOOK.md), with its
-[roadmap and remaining acceptance gates](docs/implementation/CRYPTO-V3-ROADMAP.md).
-The [source audit](docs/implementation/CRYPTO-MODULE-AUDIT.md) lists still-missing implementation
-and recent corrections awaiting the dedicated test branch. Relevant legal
-frameworks and limits of commercial claims are in [regulations](docs/crypto/regulations.md).
-Use `python -m fingerprinto v3 --help` for the explicit profile; v1 and hybrid-v2
-remain separate. Synthetic passing tests do not establish real-camera accuracy.
+The crypto module and the timestamping service are separate components: the
+latter timestamps opaque bytes and does not authenticate photo provenance.
+The receipt module prepares `C`; settlement handles the OTS proof lifecycle.
+After installation following the linked guides, CLI entry points are:
 
 ```bash
-python -m pytest -q
-# Optional: full local integration against the running Docker services.
-docker compose -f compose.regtest.yml run --rm integration
-# Optional: creates a real timestamp and contacts public calendars.
-UPP_NETWORK_TEST=1 python -m pytest -q -m network
+python -m fingerprinto v3 --help
+python -m settlement --help
 ```
 
-The default suite blocks network connections. It uses real OTS serialization,
-executes the official stamping CLI with simulated calendar submissions, and
-mocks Bitcoin RPC while exercising the official attestation verifier. It covers
-digest binding, malformed proofs, pending and confirmed states, unavailable
-infrastructure, retries, timeouts, output conflicts, and atomic-write failures.
-No real Bitcoin confirmation is required. A mocked node test is not evidence
-that a proof has been independently verified on the real blockchain.
-The `regtest` integration marker is skipped unless `UPP_REGTEST_TEST=1`; Compose
-sets it only for the dedicated integration service. This test uses real RPC and
-the official local calendar, with no fake attestations or mocked infrastructure.
+Use the runbook for offline verification inputs and the settlement guide for
+networked operations. No Android build is needed to inspect the Python byte
+construction. Regulatory relevance is discussed in
+[regulations](docs/crypto/regulations.md); this is not a claim of certification
+or a qualified timestamp service.
 
-## Guarantees and limitations
+## 12. Disclosure
 
-Successful verification provides Bitcoin-backed evidence that these exact bytes
-existed by the attesting block's blockchain time, subject to SHA-256 security
-and the validity of the chain checked by your trusted local node. Block time is
-blockchain evidence, not a precise wall-clock measurement or photograph capture
-time. This proves neither authorship nor content truth, signature validity,
-device provenance, camera authenticity, or photo authenticity.
-
-The payload must be finalized before timestamping. Never embed the resulting
-proof into the same payload: that changes its digest and creates a circular
-dependency. Payload changes require a separate timestamp. No image contents,
-private keys, GPS coordinates, or device identifiers are added to receipts.
-
-Official references: [OpenTimestamps](https://opentimestamps.org/),
-[client](https://github.com/opentimestamps/opentimestamps-client),
-[Python library](https://github.com/opentimestamps/python-opentimestamps),
-[calendar server](https://github.com/opentimestamps/opentimestamps-server/tree/1e955ea3b036453bf795505d923f2643f773810c).
+This README adapts the draft supplied by the team, written with Claude
+(Anthropic), and was revised with OpenAI Codex against repository sources and
+documentation. The specification, handoff and analysis documents also used OpenAI Codex
+assistance. Team-wide disclosure of tools, assisted components and
+human review actually performed remains to be completed against the event's
+requirements.
