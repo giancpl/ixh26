@@ -3,9 +3,11 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from dataclasses import replace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from fingerprinto.receipt_v3 import ReceiptV3
+from fingerprinto.enrollment_v3 import possession_root
 
 lines = []
 for c in json.loads(Path("tests/fingerprinto/fixtures/v3.json").read_text())["cases"]:
@@ -17,6 +19,7 @@ for c in json.loads(Path("tests/fingerprinto/fixtures/v3.json").read_text())["ca
               f.sigma, bytes.fromhex(c["receipt"])]
     line = ["-" if v is None else v.hex() if type(v) is bytes else str(v) for v in values]
     line += [k + "=" + v for k, v in c["roots"].items() if k not in ("sigma", "C", "OTS_SHA256_C")]
+    line += ["enrollmentRoot=" + possession_root(replace(f,sessionChallenge=b"e"*32)).hex()]
     lines.append("\t".join(line))
 with tempfile.TemporaryDirectory() as tmp:
     path = Path(tmp) / "vectors.tsv"

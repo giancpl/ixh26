@@ -30,6 +30,8 @@ silently trusted or exposed by the bundle. Legacy profiles reject v3 attachments
 Python performs strict receipt decode, tree reconstruction, signature checking,
 attachment validation and bounded ZIP round trips. Java constructs identical
 v3 receipts/roots with streaming file hashes and defensive input copies. Java
-does not yet implement untrusted receipt/JSON decoding; use the independent
-Python verifier for imports. The four v3 golden vectors are synthetic, including
+also strictly decodes the CBOR receipt and verifies its installation signature.
+Signed JSON attachment validation/current origin and enrollment evaluation use
+the independent Python verifier; Java CBOR import alone is not acceptance.
+The four v3 golden vectors are synthetic, including
 their claimed pass codes; they establish byte interoperability, not attribution.

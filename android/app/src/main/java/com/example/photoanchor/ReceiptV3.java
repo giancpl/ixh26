@@ -7,6 +7,42 @@ import java.util.Map;
 
 /** v3 byte construction only. Findings/JSON digests are not authenticated policy. */
 public final class ReceiptV3 {
+    public static final class Decoded {
+        public final ReceiptV3 profile;
+        private final byte[] signature;
+        private Decoded(ReceiptV3 profile,byte[] signature) {this.profile=profile;this.signature=signature.clone();}
+        public byte[] signature() {return signature.clone();}
+        public Map<String,byte[]> verify(InputStream asset,InputStream credential)
+                throws IOException, java.security.GeneralSecurityException {
+            Map<String,byte[]> r=profile.roots(asset,credential);
+            InstallationSignature.verify(profile.key,r.get("R"),signature);
+            return r;
+        }
+    }
+
+    public static Decoded fromBytes(byte[] raw) {
+        try {
+            Object[] a=(Object[])ProtocolCbor.decode(raw);
+            if(a.length!=12 || !Long.valueOf(3).equals(a[0]))fail();
+            Object[] certs=(Object[])a[2], e=(Object[])a[10];
+            if(e.length!=7)fail();
+            byte[][] chain=new byte[certs.length][];
+            for(int i=0;i<chain.length;i++)chain[i]=(byte[])certs[i];
+            ReceiptV3 profile=new ReceiptV3((byte[])a[1],chain,(String)a[3],(Long)a[4],
+                (byte[])a[5],(String)a[6],(String)a[7],(Long)a[8],(byte[])a[9],
+                small(e[0]),(byte[])e[1],small(e[2]),small(e[3]),(byte[])e[4],(byte[])e[5],(byte[])e[6]);
+            byte[] sigma=(byte[])a[11];
+            if(!Arrays.equals(profile.receipt(sigma),raw))fail();
+            return new Decoded(profile,sigma);
+        } catch(ClassCastException|NullPointerException|ArrayIndexOutOfBoundsException e) {
+            throw new IllegalArgumentException("Invalid v3 field types/arity",e);
+        }
+    }
+    private static int small(Object value) {
+        long n=(Long)value;
+        if(n<0||n>3)fail();
+        return (int)n;
+    }
     private final ReceiptV1 metadata;
     private final byte[] key, signer, challenge;
     private final byte[][] chain;

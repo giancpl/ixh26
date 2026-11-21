@@ -16,6 +16,17 @@ checks or turn synthetic test chains into Android attestations. Reference
 associations additionally require independent physical-camera provisioning and
 separate calibration approval. Never let the phone hold this authority key.
 
+`enrollment_v3.intake` accepts a separate P-256 possession proof, so enrollment
+does not require issuing a photo receipt first. Python/Java share the root
+`D("enrollment-possession/evidence-v3", ID_I, package, version, signerDigest,
+challenge)`. The challenge must match the attestation and the declarations
+must match its application identity before the registry is consumed. After
+acceptance, `retain_accepted` signs/retains an installation-only authority record.
+The provisioner must durably retain/recover the accepted intake result across
+challenge consumption and authority publication: these calls are not a single
+distributed transaction. Physical-camera/reference associations remain empty
+until separately approved; installation attestation alone does not prove them.
+
 Record schema `fingerprinto/enrollment-v3/1` binds installation SHA-256, package,
 APK signer digest, minimum version, sequence, validity, active/revoked status,
 attestation-policy digest, and optional reference associations. Each association
