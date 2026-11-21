@@ -10,6 +10,7 @@ jobs:
       - run: scripts/social-demo.sh
       - run: scripts/social-compose.sh run --rm social-tests
       - run: scripts/social-compose.sh run --rm crypto-tests
+      - run: scripts/v3-app-demo.sh
       - run: scripts/server-regtest-demo.sh
       - uses: actions/upload-artifact@v4
         if: always()

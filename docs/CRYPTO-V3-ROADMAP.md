@@ -1,5 +1,9 @@
 # v3 roadmap: test whether the exercise is reasonably solvable
 
+Native app follow-up: [connected v3 workflow](V3-APP-INTEGRATION.md).
+The source-branch status statements below predate this application integration;
+real hardware/manufacturer/empirical calibration gates remain open.
+
 Baseline: `db5a857` saves v1/v2 code; `c3ca43c` clarifies the checkpoint.
 Specification: the current `crypto.md`, targeting P-256 evidence-v3. Hybrid v2
 remains an independent experiment. Preserve its tests/bytes and legacy v1.

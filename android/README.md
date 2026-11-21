@@ -29,8 +29,10 @@ and encrypted with AES-GCM under Android Keystore in the no-backup directory.
 Names remain author declarations. A signed event is saved in the persistent
 outbox before submission; retries retain that event. The ViewModel retries and
 refreshes every five seconds while alive, and resumes from disk after restart.
-Captured JPEGs have GPS and identifying EXIF fields removed before hashing;
-their bytes are preserved after that finalization. Previews are resized only
+Captured originals remain byte-for-byte unchanged for v3. Ordinary Nostr
+publication creates a separate copy with GPS/identifying EXIF removed before
+hashing. A privacy notice precedes original upload; cleaned copies cannot reuse
+the original's v3 receipt. Previews are resized only
 in memory. Hashing, image processing and network calls run off the UI thread.
 
 Verify photo checks ID/signature and downloaded JPEG hash locally, and requests
@@ -63,13 +65,22 @@ Unknown or unavailable timestamp results never display a confirmation badge.
 Review findings, corrective changes and validation are tracked in
 [`docs/reviews/PIETRO_ANDROID.md`](../docs/reviews/PIETRO_ANDROID.md).
 
-## Experimental cryptographic primitives
+## Connected evidence-v3 workflow
 
-The portable receipt, enrollment-possession, hybrid and PRNU numeric classes
-from `leomain@f3bd1ef` build alongside the native Nostr application. They have
-independent JVM/Python vectors and hardware-key storage adapters. They do not
-yet connect capture to v3 issuance or provide sensor-signed photographs.
-`CaptureReport`/`CaptureEvidence` are unsigned diagnostic export utilities;
-the former WebView callback has not replaced the native Compose capture flow.
-See [the integration report](../docs/reviews/LEOMAIN_PR9.md) for executed checks
-and the remaining Pixel/GrapheneOS and real-camera acceptance gates.
+The optional native flow connects device enrollment, private calibration,
+authority-verified preparation, local P-256 signing, Nostr commitment tagging,
+independent v3 verification and standard bundle export. See the
+[v3 setup guide](../docs/V3-APP-INTEGRATION.md) and
+[executed software validation](../docs/reviews/V3_APP.md).
+
+Device enrollment requires a separately pinned operator authority, actual
+trusted attestation policy and current revocations. There is no software-key
+fallback in the normal app. The server computes PRNU using its versioned Pillow
+13 decoder; Android preserves the original bytes and checks signatures/binding.
+Frame capture selects one explicit Camera2 logical/physical route via the pinned
+CameraX 1.4.1 API, with fixed zoom and recorded mode; this observable route is
+not a sensor signature or independently witnessed camera identity.
+
+The v1/v2 portable primitives remain available for compatibility/testing; hybrid
+v2 is not a second automatic publication format. Actual Pixel/GrapheneOS
+Keystore, camera/USB UI and empirical calibration acceptance remain deferred.

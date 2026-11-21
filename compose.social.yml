@@ -11,6 +11,7 @@ x-social: &social
     - bitcoin:/bitcoin:ro
     - social-data:/data
     - artifacts:/artifacts
+    - evidence-config:/evidence-config:ro
   environment: &social-env
     PHOTOANCHOR_DATA_DIR: /data
     PHOTOANCHOR_PUBLIC_URL: ${PHOTOANCHOR_PUBLIC_URL:-http://127.0.0.1:8080}
@@ -19,6 +20,7 @@ x-social: &social
     PHOTOANCHOR_CALENDARS: http://calendar:14788
     PHOTOANCHOR_BITCOIN_CONF: /config/client.conf
     PHOTOANCHOR_TIMEOUT: "10"
+    PHOTOANCHOR_EVIDENCE_CONFIG: /evidence-config/config.json
 
 services:
   bitcoin:
@@ -47,12 +49,51 @@ services:
       timeout: 3s
       retries: 30
     restart: unless-stopped
+  evidence-init:
+    <<: *social
+    command: ["python", "-m", "social.provision", "init", "--authority-dir", "/authority", "--config-dir", "/evidence-config"]
+    volumes:
+      - evidence-authority:/authority
+      - evidence-config:/evidence-config
+    networks: [social]
+  provision:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "social.provision", "--help"]
+    volumes:
+      - social-data:/data
+      - evidence-authority:/authority:ro
+      - evidence-config:/evidence-config
+      - ${PHOTOANCHOR_OPERATOR_DIR:-./social-artifacts/operator}:/operator:ro,z
+  v3-app-demo:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "/app/scripts/v3_app_demo.py"]
+    depends_on:
+      calendar:
+        condition: service_healthy
+      relay:
+        condition: service_healthy
+  v3-app-tests:
+    <<: *social
+    profiles: [tools]
+    command: ["python", "-m", "pytest", "-q", "-m", "social", "tests/test_v3_app_integration.py"]
+    environment:
+      <<: *social-env
+      PHOTOANCHOR_V3_APP_TEST: "1"
+    depends_on:
+      calendar:
+        condition: service_healthy
+      relay:
+        condition: service_healthy
   api:
     <<: *social
     ports: ["127.0.0.1:${PHOTOANCHOR_API_PORT:-8080}:8080"]
     depends_on:
       relay:
         condition: service_healthy
+      evidence-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).close()"]
       interval: 2s
@@ -62,6 +103,12 @@ services:
   worker:
     <<: *social
     command: ["python", "-m", "social.worker"]
+    volumes:
+      - bitcoin:/bitcoin:ro
+      - social-data:/data
+      - artifacts:/artifacts
+      - evidence-config:/evidence-config:ro
+      - evidence-authority:/authority:ro
     depends_on:
       api:
         condition: service_healthy
@@ -113,3 +160,5 @@ networks:
 volumes:
   social-data:
   relay-data:
+  evidence-authority:
+  evidence-config:

@@ -1,5 +1,9 @@
 # FingerprinTO implementation progress
 
+Native app follow-up: [connected v3 workflow](V3-APP-INTEGRATION.md).
+The source-branch status statements below predate this application integration;
+real hardware/manufacturer/empirical calibration gates remain open.
+
 Integration status: this source-branch document predates the
 [executed integration review](reviews/LEOMAIN_PR9.md). Statements below about
 awaiting execution describe that earlier snapshot. Hardware/camera acceptance

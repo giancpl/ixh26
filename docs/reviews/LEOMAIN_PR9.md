@@ -1,5 +1,9 @@
 # FingerprinTO / PR #9 integration and validation
 
+Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
+The source-branch status statements below predate this application integration;
+real hardware/manufacturer/empirical calibration gates remain open.
+
 The integration branch `integration/leomain-pr9` starts from main `814cb8e` and
 merges the source history through `leomain@686a4ce`. Runtime review and fixes
 use `f3bd1ef`; the later source commits add diagrams and their renderer only. The original `leomain`,
