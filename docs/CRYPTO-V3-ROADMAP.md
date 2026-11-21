@@ -91,6 +91,14 @@ not a reducer input and cannot change verification or C.
   separate requirements; see `PRNU-EXPERIMENT.md`.
 - Stage 5 tooling checks disjoint sets and emits per-device/mode empirical
   counts, without approving thresholds. Real-device calibration remains open.
+- Stage 7 offline orchestration and retained authority records implemented:
+  authenticated updates/revocation, separately approved reference thresholds,
+  both validators, enrolled-key issuance, verified sign-once retries and
+  independent verification of current findings versus signed claims. 73 Python
+  methods pass. See `V3-TRUST-AND-WORKFLOW.md` for administrative boundaries.
+- Stage 6 has an injectable manufacturer adapter and conservative default
+  presence inspection only. A qualifying production issuer/credential validator
+  is still required before any real manufacturer pass is available.
 - Old checkpoint documents describe the pre-v3 implementation, not completion of
   this roadmap. Record each subsequent step and its actual checks here.
 
