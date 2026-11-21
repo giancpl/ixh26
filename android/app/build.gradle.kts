@@ -17,10 +17,14 @@ android {
     buildFeatures { buildConfig = true }
     buildTypes {
         debug {
+            val authorityPin = providers.gradleProperty("photoAuthoritySpki").orElse("").get()
+            require(authorityPin.matches(Regex("[A-Za-z0-9+/=]*")))
+            buildConfigField("String", "AUTHORITY_SPKI", "\"$authorityPin\"")
             buildConfigField("String", "API_URL", "\"http://127.0.0.1:8080\"")
             buildConfigField("String", "RELAY_URL", "\"ws://127.0.0.1:7777\"")
         }
         release {
+            buildConfigField("String", "AUTHORITY_SPKI", "\"\"")
             // No public services or cleartext endpoints are configured for release.
             buildConfigField("String", "API_URL", "\"\"")
             buildConfigField("String", "RELAY_URL", "\"\"")

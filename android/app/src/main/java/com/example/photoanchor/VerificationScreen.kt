@@ -39,6 +39,7 @@ internal fun PinDetailDialog(
     onDismiss: () -> Unit,
     onCheckCopy: () -> Unit,
     onExportBundle: () -> Unit,
+    onExportEvidence: () -> Unit,
 ) {
     val p = LocalPalette.current
     val creatorName = entry?.name?.ifBlank { "Creator" } ?: "Creator"
@@ -179,6 +180,10 @@ internal fun PinDetailDialog(
                     title = "Timestamp · configured local node · regtest",
                     value = state.verification?.timestamp ?: "Requesting a fresh local node check…",
                 )
+                VerificationCard(icon = DeckIcon.Shield, title = "P-256 v3 receipt · on this device", value = state.verification?.receipt ?: "Not checked")
+                VerificationCard(icon = DeckIcon.Shield, title = "Device enrollment · local authority", value = state.verification?.device ?: "Not checked")
+                VerificationCard(icon = DeckIcon.Camera, title = "Origin · local server analysis", value = state.verification?.origin ?: "Origin not verified")
+                VerificationCard(icon = DeckIcon.Bitcoin, title = "v3 timestamp · local node · regtest", value = state.verification?.evidenceTimestamp ?: "No v3 timestamp")
                 VerificationCard(
                     icon = DeckIcon.Globe,
                     title = "Relay publication · independent of timestamp",
@@ -192,6 +197,9 @@ internal fun PinDetailDialog(
                 )
                 SelectionContainer {
                     Text("Signer: ${selected.pubkey}\nEvent: ${selected.id}", color = p.ink, fontSize = 12.sp)
+                }
+                if (selected.evidenceCommitment != null) {
+                    BitPolitoOutlinedButton(text = "Export v3 evidence separately", onClick = onExportEvidence, enabled = !state.busy)
                 }
                 AnimatedVisibility(visible = showProofDetails) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
