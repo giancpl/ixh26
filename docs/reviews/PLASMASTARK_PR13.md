@@ -1,6 +1,8 @@
 # PlasmaStark PR #13: documentation integration review
 
-Reviewed source: `leomain@42b40a8dad614bd2fea8de9fcc4643c5e16747a9`.
+Reviewed source: `leomain@4a05fa02e8c8aa8387c08153c0c843fbeb8b6da7`.
+The documentation was reviewed at `42b40a8`; the subsequent commit only adds
+the pitch illustration, which was inspected separately and left unchanged.
 Integration base: `main@726a3bf`, after PR #11 and PR #12. All reconciliation
 is on `integration/plasmastark-pr13`; the author's branch is untouched.
 
