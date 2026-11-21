@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "external_media_url",
+    "message": "The photo URL must reference this service's media archive."
+  }
+}

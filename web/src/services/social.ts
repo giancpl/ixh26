@@ -55,7 +55,7 @@ export function parsePhotoPin(event: Event): PhotoPin | undefined {
 
   const dim = tagValue(event.tags, "dim");
   const mDim = /^(\d+)x(\d+)$/.exec(dim);
-  const title = tagValue(event.tags, "title") || "Scatto PhotoAnchor";
+  const title = tagValue(event.tags, "title") || "Scatto PhoTO";
   const board = tagValue(event.tags, "board") || "Generale";
   const mime = tagValue(event.tags, "m") || "image/jpeg";
   const otsUrl = tagValue(event.tags, "ots") || undefined;
@@ -133,6 +133,19 @@ export type SocialState = {
   relayStatus: "disconnected" | "connecting" | "connected" | "offline";
 };
 
+const SOCIAL_CACHE_KEY = "bitpin-social-cache-v1";
+
+type SerializedSocialCache = {
+  pins: PhotoPin[];
+  boards: Array<[string, Board]>;
+  profiles: Array<[string, PublicProfile]>;
+  reactions: Array<[string, PinReaction[]]>;
+  comments: Array<[string, PinComment[]]>;
+  anchors: Array<[string, AnchorInfo]>;
+  follows: Array<[string, { createdAt: number; targets: string[] }]>;
+  relays: string[];
+};
+
 export class SocialService {
   state: SocialState = {
     pins: [],
@@ -152,8 +165,59 @@ export class SocialService {
   private seenEvents = new Set<string>();
   private stopped = true;
   private anchorRefreshInFlight = false;
+  private cacheTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(private signer: NostrSigner) {}
+  constructor(private signer: NostrSigner) {
+    this.restoreCacheSync();
+  }
+
+  private restoreCacheSync() {
+    try {
+      if (typeof localStorage === "undefined") return;
+      const raw = localStorage.getItem(SOCIAL_CACHE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw) as Partial<SerializedSocialCache>;
+      if (Array.isArray(data.pins)) this.state.pins = data.pins;
+      if (Array.isArray(data.boards)) this.state.boards = new Map(data.boards);
+      if (Array.isArray(data.profiles))
+        this.state.profiles = new Map(data.profiles);
+      if (Array.isArray(data.reactions))
+        this.state.reactions = new Map(data.reactions);
+      if (Array.isArray(data.comments))
+        this.state.comments = new Map(data.comments);
+      if (Array.isArray(data.anchors))
+        this.state.anchors = new Map(data.anchors);
+      if (Array.isArray(data.follows))
+        this.state.follows = new Map(data.follows);
+      if (Array.isArray(data.relays) && data.relays.length)
+        this.state.relays = data.relays;
+    } catch {
+      /* ignore corrupt cache */
+    }
+  }
+
+  private schedulePersistCache() {
+    if (typeof localStorage === "undefined") return;
+    if (this.cacheTimer) return;
+    this.cacheTimer = setTimeout(() => {
+      this.cacheTimer = undefined;
+      try {
+        const snapshot: SerializedSocialCache = {
+          pins: this.state.pins.slice(0, 150),
+          boards: [...this.state.boards.entries()],
+          profiles: [...this.state.profiles.entries()],
+          reactions: [...this.state.reactions.entries()],
+          comments: [...this.state.comments.entries()],
+          anchors: [...this.state.anchors.entries()],
+          follows: [...this.state.follows.entries()],
+          relays: this.state.relays,
+        };
+        localStorage.setItem(SOCIAL_CACHE_KEY, JSON.stringify(snapshot));
+      } catch {
+        /* ignore quota errors */
+      }
+    }, 150);
+  }
 
   subscribe(fn: () => void) {
     this.listeners.add(fn);
@@ -163,6 +227,7 @@ export class SocialService {
   }
 
   private emit() {
+    this.schedulePersistCache();
     if (!this.stopped) this.listeners.forEach((fn) => fn());
   }
 
@@ -455,7 +520,7 @@ export class SocialService {
     source: PhotoSource;
     otsUrl?: string;
   }): Promise<PhotoPin> {
-    const title = input.title.trim() || "Scatto PhotoAnchor";
+    const title = input.title.trim() || "Scatto PhoTO";
     const board = input.board.trim() || "Generale";
     const cleanTags = [
       ...new Set(

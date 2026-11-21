@@ -1,5 +1,12 @@
 # v3 roadmap: test whether the exercise is reasonably solvable
 
+**Current merged integration:** the [Pixel 9 Pro/GrapheneOS acceptance report](../reviews/PIXEL9_PRO_2026-11-21.md) records real enrollment, capture, signing and regtest proof checks. The dated source notes below do not negate those results. Manufacturer validation, empirical PRNU calibration, two-phone acceptance and physical beacon trials remain separate gates.
+
+
+Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
+The source-branch status statements below predate this application integration;
+real hardware/manufacturer/empirical calibration gates remain open.
+
 ## Separate beacon track: implemented baseline, open physical gate
 
 On `leomaster`, [external optical tokens](../prnu/BEACON-EXPERIMENT.md) are
@@ -23,6 +30,7 @@ Next steps, in order:
 
 The stages below remain the manufacturer/PRNU roadmap; beacon tests do not
 satisfy their empirical or implementation completion gates.
+
 
 
 Baseline: `db5a857` saves v1/v2 code; `c3ca43c` clarifies the checkpoint.

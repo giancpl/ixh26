@@ -1,5 +1,17 @@
 # Crypto module implementation audit
 
+**Current merged integration:** the [Pixel 9 Pro/GrapheneOS acceptance report](../reviews/PIXEL9_PRO_2026-11-21.md) records real enrollment, capture, signing and regtest proof checks. The dated source notes below do not negate those results. Manufacturer validation, empirical PRNU calibration, two-phone acceptance and physical beacon trials remain separate gates.
+
+
+Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
+The source-branch status statements below predate this application integration;
+real hardware/manufacturer/empirical calibration gates remain open.
+
+Integration status: this source-branch document predates the
+[executed integration review](../reviews/LEOMAIN_PR9.md). Statements below about
+awaiting execution describe that earlier snapshot. Hardware/camera acceptance
+remains open; see the [PhoTO documentation map](../README.md).
+
 ## Scoped addendum: external optical token
 
 The earlier audit below remains a dated source review. On `leomaster`,
@@ -20,6 +32,7 @@ Splicing and same-session reuse intentionally pass token checks while preserving
 `physicalOriginVerified=false`. These are documented counterexamples to a
 physical-origin claim. No real device, Android build or OTS verification ran.
 This does not close the implementation/calibration gaps listed below.
+
 
 
 Review entry point: [CRYPTO-REVIEW-HANDOFF.md](CRYPTO-REVIEW-HANDOFF.md), including

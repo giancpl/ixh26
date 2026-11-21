@@ -1,3 +1,6 @@
+Integration follow-up: [PR #9 reconciliation and validation](../reviews/LEOMAIN_PR9.md).
+The handoff below records the original source branch and its historical scope.
+
 # Crypto branch review handoff
 
 ## Current extension: external beacon on leomaster

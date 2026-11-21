@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "proof_not_ready",
+    "message": "The OpenTimestamps proof is not available yet."
+  }
+}

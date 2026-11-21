@@ -88,6 +88,15 @@ class InstallationKeys(context: Context) {
         InstallationSignature.sign(key, evidence.publicKey, root)
     }
 
+    /** Explicit UI-confirmed retirement. Does not delete receipts or Nostr keys. */
+    fun retire() = locked {
+        val store = store()
+        if (store.containsAlias(ALIAS)) store.deleteEntry(ALIAS)
+        val file = File(directory, "enrollment.bin")
+        if (file.exists()) check(file.renameTo(File(directory, "retired-${System.currentTimeMillis()}.bin")))
+        record.delete()
+    }
+
     private fun loadLocked(): Evidence {
         // noBackupFilesDir prevents stale active enrollment being restored by backup.
         val bytes = record.openRead().use { input ->

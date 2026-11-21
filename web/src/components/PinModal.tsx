@@ -1,16 +1,17 @@
-import { Bitcoin, Hourglass, Share2 } from "./PixelIcon";
+import {
+  Bitcoin,
+  Bookmark,
+  Camera,
+  Heart,
+  Hourglass,
+  Share2,
+} from "./PixelIcon";
 import { useState, type FormEvent } from "react";
 import { npubEncode } from "nostr-tools/nip19";
 import type { AnchorInfo, Board, PhotoPin, PinComment } from "../services/contracts";
 import { initials, shortNpub } from "../services/identity";
 import { AnchorBadge } from "./PinCard";
-import {
-  Dialog,
-  Feedback,
-  formatTime,
-  sha256File,
-  useOperation,
-} from "./primitives";
+import { Dialog, Feedback, formatTime, useOperation } from "./primitives";
 
 export default function PinModal({
   pin,
@@ -49,24 +50,7 @@ export default function PinModal({
     boards[0]?.title || pin.board || "Preferiti",
   );
   const [commentText, setCommentText] = useState("");
-  const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string }>();
   const task = useOperation();
-
-  async function checkLocalFile(file: File | undefined) {
-    if (!file) return;
-    const digest = await sha256File(file);
-    if (digest === pin.sha256) {
-      setVerifyMsg({
-        ok: true,
-        text: `Integrità verificata: SHA-256 identico (${digest.slice(0, 16)}…).`,
-      });
-    } else {
-      setVerifyMsg({
-        ok: false,
-        text: `File diverso! Atteso ${pin.sha256.slice(0, 12)}…, trovato ${digest.slice(0, 12)}….`,
-      });
-    }
-  }
 
   return (
     <Dialog title={pin.title} close={onClose}>
@@ -86,11 +70,12 @@ export default function PinModal({
             }}
           >
             <span className="badge">
+              <Camera size={12} />
               {pin.source === "android-photoanchor"
-                ? "Scattata con PhotoAnchor Android"
+                ? "Scattata con PhoTO"
                 : pin.source === "web-camera"
-                  ? "Fotocamera Web"
-                  : "Caricata"}
+                  ? "Scattata da fotocamera web"
+                  : "Origine non verificata"}
             </span>
             {pin.width && pin.height && (
               <span className="badge">
@@ -145,7 +130,7 @@ export default function PinModal({
                 onClick={() => void task.run(onLike)}
                 disabled={task.busy}
               >
-                {liked ? "♥" : "♡"} {likeCount}
+                <Heart size={14} /> {likeCount}
               </button>
               <button
                 type="button"
@@ -208,14 +193,14 @@ export default function PinModal({
                 <option key={b.id} value={b.title} />
               ))}
               <option value="Preferiti" />
-              <option value="PhotoAnchor" />
+              <option value="PhoTO" />
             </datalist>
             <button
               className="btn-primary"
               disabled={task.busy}
               style={{ flexShrink: 0 }}
             >
-              Salva in bacheca
+              <Bookmark size={14} /> Salva in bacheca
             </button>
           </form>
 
@@ -292,28 +277,6 @@ export default function PinModal({
               )}
             </div>
 
-            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--bd)" }}>
-              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
-                Verifica un file dal tuo dispositivo contro questo hash:
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => void checkLocalFile(e.target.files?.[0])}
-              />
-              {verifyMsg && (
-                <p
-                  style={{
-                    marginTop: 6,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: verifyMsg.ok ? "var(--ok)" : "var(--rd)",
-                  }}
-                >
-                  {verifyMsg.text}
-                </p>
-              )}
-            </div>
           </div>
 
           <details style={{ marginBottom: 14 }}>

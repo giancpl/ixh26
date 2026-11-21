@@ -36,13 +36,17 @@ Bitcoin / OTS & Inclusion, not observation\\
 \end{frame}
 
 \begin{frame}[noframenumbering]{Every committed component has a name}
-{\small\begin{align*}
+{\small\setlength{\jot}{0pt}\setlength{\abovedisplayskip}{4pt}\setlength{\belowdisplayskip}{4pt}\begin{align*}
 ID_I &= \HH(pk_I)\\
 F_I &= \D(\texttt{install},ID_I,\mathit{pkg},\mathit{versionCode},\mathit{signerDigest})\\
 E &= [\mathit{placement},\mathit{detachedHash},\mathit{manufacturerResult},\mathit{prnuResult},\\
 &\hspace{1cm}\mathit{refHash},\mathit{policyHash},\mathit{reportHash}]\\
 L_i &= \D(\texttt{field},\mathit{name}_i,\mathit{value}_i)\\
-F_D &= \Node(\Node(\Node(L_0,L_1),\Node(L_2,L_3)),L_4)
+F_D &= \Node(\Node(\Node(L_0,L_1),\Node(L_2,L_3)),L_4)\\
+F_P &= \D(\texttt{photo/evidence-v3},F_I,\HH(J),E)\\
+T &= \Node(\Node(F_I,F_P),F_D),\quad R=\D(\texttt{fingerprinto/evidence-v3},T)\\
+\sigma_I &= \mathsf{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R),\quad C=\D(\texttt{receipt},R,\sigma_I)\\
+h_{\rm OTS} &= \HH(C)
 \end{align*}}
 \vspace{0.2cm}
 \labelsmall{$L_0\ldots L_4$: installation ID, manufacturer, model, localTime, sessionChallenge.\par

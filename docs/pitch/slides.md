@@ -10,75 +10,67 @@ Large `assets/to.png` logo, project name, IXH26 Bari.
 
 ---
 
-# A valid signature does not identify the sensor
+# Capture. Sign. Share. Check.
 
-Sensor A -> Photo J -> Phone B signs -> receipt + anchor.
+Capture -> prepare JPEG -> sign post -> publish.
 
-Signature matches. Hash matches. Commitment timestamped.
+Keep the original. Sign the JPEG selected for publication.
+Readers check signature, downloaded bytes and timestamp independently.
 
-**B never captured J.**
+**The evidence travels with the photo.**
 
-<!-- SAY: 0:10-0:40. Scenario ipotetico: non dire che tutti i controlli indipendenti d'origine passano. -->
-
----
-
-# "Authentic" hides five different claims
-
-| Claim | Strength / limit |
-|---|---|
-| Byte integrity | Cryptographic binding |
-| Installation identity | Hardware-rooted key |
-| Capture credential | Vendor-path dependent |
-| Sensor compatibility | Statistical; copyable |
-| Commitment inclusion | Not exposure time |
-
-**Software can bind physical evidence. It cannot create it.**
-
-<!-- SAY: 0:40-1:05. Non leggere tutta la tabella. Le cautele su scena/tempo/AI detection restano nel backup. -->
+<!-- SAY: 0:10-0:40. Flusso effettivo della app: nessun sensore A/telefono B ipotetico. La pubblicazione ordinaria puo usare una copia pulita; il percorso v3 opzionale firma l'originale. Non promettere che ogni originale resti privato anche quando l'utente decide di pubblicarlo. -->
 
 ---
 
-# The receipt binds installation, photo and evidence
-
-Binary tree: FI / FP -> Node; Node / FD -> T -> R.
+# Verify the post. Verify the bytes.
 
 \[
-\begin{aligned}
-F_P &= D(\texttt{photo/evidence-v3},F_I,H(J),E)\\
-T &= \mathrm{Node}(\mathrm{Node}(F_I,F_P),F_D)\\
-R &= D(\texttt{fingerprinto/evidence-v3},T)\\
-\sigma &= \mathrm{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R)\\
-C &= D(\texttt{receipt},R,\sigma),\qquad h_{\mathrm{OTS}}=H(C).
-\end{aligned}
+h_J=\mathrm{SHA256}(J_{\rm published}),\qquad
+\sigma_N=\mathrm{SchnorrSign}_{sk_N}(\mathit{id}(E_N)).
 \]
 
-\(H=\mathrm{SHA256}\), \(D(\ell,x_1,\ldots)=H(\mathrm{CBOR}([\ell,x_1,\ldots]))\), \(\mathrm{Node}(a,b)=D(\texttt{node},a,b)\).
+The signed Nostr event EN contains the selected JPEG hash.
 
-**One 32-byte commitment binds the record.**
+| Signed post | Matching JPEG | Timestamp evidence |
+|---|---|---|
+| Event ID + signature | Download + hash | OTS + selected chain |
 
-<!-- SAY: 1:05-1:30. Formule visive, non nuove frasi da pronunciare. DER esatto, non-hiding e linkabilita passano al backup del byte contract; non rimuoverli dal materiale tecnico. -->
+**Three separate results. No automatic sensor-origin claim.**
+
+<!-- SAY: 0:40-1:05. Questo e il modello implementato della app: evento Nostr, byte della foto e prova temporale. Non confondere la chiave Nostr con la chiave P-256 del dispositivo. -->
 
 ---
 
-# A valid token is not physical presence
+# Add a device receipt when evidence is available
 
-Software experiment / physical validation pending.
+Original + report + policy -> root R -> receipt.
 
 \[
-\begin{aligned}
-b &= D(\texttt{beacon-session/1},c,ID_I),\quad c\gets\{0,1\}^{256}\\
-p &= [\texttt{fingerprinto/beacon/1},H(pk_B),\lfloor t/10\rfloor,b]\\
-\mathit{code} &= \mathrm{CBOR}([p,\mathrm{Sign}_{sk_B}(D(\texttt{beacon-code/1},p))]).
-\end{aligned}
+\sigma_I=\mathrm{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R),\qquad
+C=D(\texttt{receipt},R,\sigma_I).
 \]
 
-| Checks | Does not detect |
-|---|---|
-| Key / signature / session / slot | Splicing, relay, within-session replay |
+Device key != Nostr profile key.
 
-**Token valid != physically verified. No level upgrade.**
+**Optional v3 evidence. Independent origin assessment.**
 
-<!-- SAY: 1:30-1:50. Non confondere il token software con l'ingresso del segnale attraverso l'ottica. -->
+<!-- SAY: 1:05-1:30. Percorso aggiuntivo, non una condizione implicita di ogni post. Tutte le formule di dettaglio restano nel backup, non sono lette a voce. -->
+
+---
+
+# One Merkle root. Many timestamped commitments.
+
+Payload digest + other digests -> Merkle root -> Bitcoin block.
+
+Keep payload + .ots proof. Recompute the path. Verify Bitcoin.
+
+P is the exact application payload: signed-event envelope for Nostr, raw C for optional v3.
+The diagram is schematic; actual operations and attestation are specified by the .ots proof.
+
+**Calendar promise != confirmed anchor. Block time != shutter time.**
+
+<!-- SAY: 1:30-1:50. OpenTimestamps e il punto centrale: aggregazione, prova portabile e verifica Bitcoin. Il beacon non e nel percorso principale. -->
 
 ---
 
@@ -140,3 +132,5 @@ Sources: [original Claude outline](claude-pitch.md) and
 [author-supplied revision](claude-slides-revision.md), preserved unchanged.
 Build/validation provenance belongs in [the work log](presentation/REVISION-LOG.md),
 not on projected pages.
+
+<!-- MERGE INTEGRATION NOTE: main now includes native v3 software integration and recorded real Pixel acceptance. See ../V3-APP-INTEGRATION.md and ../reviews/PIXEL9_PRO_2026-11-21.md. These later results are separate from the supplied recorded UI footage and the beacon's unvalidated physical path. The eight-screen reviewed deck remains the presentation source. -->

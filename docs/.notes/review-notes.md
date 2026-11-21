@@ -1,3 +1,12 @@
+> **Historical source-branch context.** This document records the earlier
+> `leomain` baseline and its then-current scope. PR #10 later reconciled and
+> tested the crypto corrections; PR #12 connected and tested the native software
+> path. The original build/merge restrictions and missing-integration statements
+> below describe that earlier assignment, not current execution instructions.
+> See [current setup](../V3-APP-INTEGRATION.md) and
+> [executed software validation](../reviews/V3_APP.md). Physical-origin,
+> manufacturer-validation and real-device/calibration gates remain open.
+
 <!-- AGENT CONTEXT: Analisi dei problemi ancora aperti di FingerprinTO, confrontando la repo con le 42 pagine di "IXH26 Bari - Welcome Slides.pdf". Distingue limiti del modello, codice mancante, verifiche non eseguite e requisiti esterni. Non dichiara il challenge risolto e non autorizza merge, build Android o nuove integrazioni. Per il piano operativo da passare a Claude leggere task.md. -->
 
 # Problemi aperti: rispondiamo davvero al challenge?

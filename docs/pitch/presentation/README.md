@@ -35,16 +35,16 @@ not an independent authorship audit.
 | Clock | Screen |
 |---|---|
 | 0:00-0:10 | Logo / title |
-| 0:10-0:40 | Signing phone versus capturing sensor |
-| 0:40-1:05 | Five distinct claims |
-| 1:05-1:30 | Receipt tree and equations |
+| 0:10-0:40 | Actual capture/sign/share flow |
+| 0:40-1:05 | Nostr event, published JPEG, OTS checks |
+| 1:05-1:30 | Optional device evidence receipt |
 | 1:30-1:50 | Beacon token / limits |
 | 1:50-2:20 | Latest supplied demo |
 | 2:20-2:50 | What's next / close |
 | 2:50-2:55 | AI-use disclosure |
 
-Five seconds remain as buffer. The script has **238 spoken words**, including
-demo narration; the crypto segment remains 104 words. Formulas are visual
+Five seconds remain as buffer. The script has **237 spoken words**, including
+demo narration; the crypto segment contains 100 words. Formulas are visual
 support, not additional speech. These timings are planned, not rehearsed.
 Do not present the nine backup pages during the three-minute pitch.
 
@@ -106,3 +106,24 @@ attested API has been validated on the reviewed capture route; ordinary request
 metadata alone is insufficient. Source-backed rationale stays in `pitch.md`,
 not on the screen. No new runtime tests, device result or independent theoretical
 proof is implied by this presentation revision. Actual checks are in the work log.
+
+## Main reconciliation and app-flow correction
+
+Before PR merge, main `18ae342` was integrated. Its Android/web/backend/runtime
+code and package extras are preserved; the separate beacon module is the only
+additional runtime file relative to that main snapshot. Current app setup and
+[recorded Pixel acceptance](../../reviews/PIXEL9_PRO_2026-11-21.md) remain
+authoritative rather than older source-branch integration-gap statements.
+
+At the author's request, screen 2 no longer uses Sensor A / Phone B. It shows
+the implemented capture, prepare-JPEG, sign-post and publication path. Screen 3
+uses only published-image SHA-256 and the Nostr event signature, with separate
+event/bytes/timestamp checks. Screen 4 explicitly presents v3 as an optional
+device-identity path, separate from the Nostr profile key; the beacon screen
+is reduced to one session-binding formula. Full v3 equations stay in the
+byte-contract backup. Source checks used upp_protocol/protocol.py,
+contracts/README.md and native PhotoProtocol.kt, not the obsolete draft model.
+
+The merged crypto suite passed 97 tests and 134 subtests. This result does not
+replace the earlier recorded device tests or assert new Android execution.
+The spoken script is 237 words; revised PDF layouts are checked before merging.

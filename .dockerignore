@@ -8,3 +8,12 @@ proofs
 regtest-artifacts
 build
 dist
+web/node_modules
+web/dist
+android/.gradle
+android/.kotlin
+android/app/build
+.photoanchor
+social-artifacts
+.worktrees
+.local

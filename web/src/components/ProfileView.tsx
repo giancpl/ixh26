@@ -9,7 +9,16 @@ import type {
   PublicProfile,
 } from "../services/contracts";
 import { initials, shortNpub } from "../services/identity";
-import { Bitcoin, MessageSquare, Share2, UserRound } from "./PixelIcon";
+import {
+  ArrowLeft,
+  Bitcoin,
+  Camera,
+  MessageSquare,
+  QrCode,
+  Star,
+  UserRound,
+  Wrench,
+} from "./PixelIcon";
 import PinCard from "./PinCard";
 import { Feedback, formatTime, useOperation } from "./primitives";
 
@@ -100,7 +109,7 @@ export default function ProfileView({
       {!isOwn && (
         <div style={{ marginBottom: 14 }}>
           <button type="button" onClick={onBackToMe}>
-            ← Torna al mio profilo
+            <ArrowLeft size={14} /> Torna al mio profilo
           </button>
         </div>
       )}
@@ -108,16 +117,16 @@ export default function ProfileView({
       <section className="surf profile-hero">
         <div className="avatar-circle avatar-lg">{initials(displayName)}</div>
         <div className="profile-hero-info">
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div className="profile-title-row">
             <h1>{displayName}</h1>
             <span className="badge">
-              <UserRound size={12} /> {isOwn ? "Il tuo profilo Nostr" : "Utente Nostr"}
+              <UserRound size={12} /> {isOwn ? "Il tuo profilo" : "Utente Nostr"}
             </span>
           </div>
           {profile?.about && (
             <p style={{ marginTop: 6, color: "var(--muted-ink)" }}>{profile.about}</p>
           )}
-          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div className="profile-chips-row">
             <button
               type="button"
               className="chip-btn mono"
@@ -131,10 +140,10 @@ export default function ProfileView({
             {isOwn && (
               <>
                 <button type="button" className="chip-btn" onClick={onOpenShare}>
-                  <Share2 size={13} /> Condividi QR
+                  <QrCode size={13} /> QR Profilo
                 </button>
                 <button type="button" className="chip-btn" onClick={onOpenSettings}>
-                  Modifica profilo
+                  <Wrench size={13} /> Impostazioni
                 </button>
               </>
             )}
@@ -153,15 +162,15 @@ export default function ProfileView({
               <strong>{followingCount}</strong> Seguiti
             </span>
             <span>
-              <strong>{confirmedCount}</strong> Confermati BTC
+              <strong>{confirmedCount}</strong> <Bitcoin size={13} /> BTC
             </span>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="profile-hero-actions">
           {isOwn ? (
             <button type="button" className="btn-primary" onClick={onOpenCamera}>
-              + Scatta / Carica foto
+              <Camera size={15} /> Scatta
             </button>
           ) : (
             <>
@@ -171,7 +180,13 @@ export default function ProfileView({
                 disabled={task.busy}
                 onClick={() => void task.run(onToggleFollow)}
               >
-                {isFollowing ? "Segui già ✓" : "+ Segui su Nostr"}
+                {isFollowing ? (
+                  <>
+                    <Star size={13} /> Segui già
+                  </>
+                ) : (
+                  "+ Segui"
+                )}
               </button>
               <button type="button" onClick={() => onMessageUser(viewingPubkey)}>
                 <MessageSquare size={15} /> Messaggio
@@ -181,7 +196,7 @@ export default function ProfileView({
         </div>
       </section>
 
-      <div className="segmented" style={{ maxWidth: 520 }}>
+      <div className="segmented profile-tabs">
         <button
           type="button"
           className={subTab === "pins" ? "selected" : ""}
@@ -199,13 +214,13 @@ export default function ProfileView({
         >
           Bacheche ({userBoards.length})
         </button>
-        {isOwn && (
+        {isOwn && inbox.length > 0 && (
           <button
             type="button"
             className={subTab === "inbox" ? "selected" : ""}
             onClick={() => setSubTab("inbox")}
           >
-            Dalla Fotocamera ({inbox.length})
+            In coda ({inbox.length})
           </button>
         )}
       </div>
@@ -219,7 +234,7 @@ export default function ProfileView({
               <h3>Nessuna foto pubblicata ancora</h3>
               <p className="field-hint" style={{ margin: "8px 0 16px" }}>
                 {isOwn
-                  ? "Scatta una foto con l'app Android PhotoAnchor o dalla Fotocamera per pubblicare il tuo primo Pin ancorato su Bitcoin."
+                  ? "Scatta una foto con l'app Android PhoTO o dalla Fotocamera per pubblicare il tuo primo Pin ancorato su Bitcoin."
                   : "Questo utente non ha ancora pubblicato foto su questi relay Nostr."}
               </p>
               {isOwn && (
@@ -259,7 +274,7 @@ export default function ProfileView({
                 display: "flex",
                 gap: 10,
                 maxWidth: 460,
-                marginBottom: 20,
+                margin: "0 auto 20px",
               }}
             >
               <input
@@ -344,7 +359,7 @@ export default function ProfileView({
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button type="button" onClick={() => setSelectedBoardId(null)}>
-                ← Tutte le bacheche
+                <ArrowLeft size={14} /> Tutte le bacheche
               </button>
               <h2>{selectedBoard.title}</h2>
             </div>
@@ -395,7 +410,7 @@ export default function ProfileView({
           </div>
           {inbox.length === 0 ? (
             <p className="field-hint">
-              Nessuna foto in coda. Collega la tua app Android PhotoAnchor dalla sezione Fotocamera!
+              Nessuna foto in coda. Collega la tua app Android PhoTO dalla sezione Fotocamera!
             </p>
           ) : (
             <div className="inbox-list">

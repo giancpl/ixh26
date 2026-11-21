@@ -17,10 +17,10 @@ The supplied app recording illustrates a later interface; this branch's old inte
 | Clock | Screen | Purpose |
 |---|---|---|
 | 0:00-0:10 | 1 | Logo, FingerprinTO, opening claim |
-| 0:10-0:40 | 2 | Signing phone versus capturing sensor |
-| 0:40-1:05 | 3 | Five separate claims |
-| 1:05-1:30 | 4 | Tree, root, signature and commitment |
-| 1:30-1:50 | 5 | Beacon token and physical-origin limits |
+| 0:10-0:40 | 2 | Capture, prepare, sign, publish |
+| 0:40-1:05 | 3 | Signed event, JPEG hash and timestamp checks |
+| 1:05-1:30 | 4 | Optional device-signed evidence receipt |
+| 1:30-1:50 | 5 | OpenTimestamps Merkle aggregation and Bitcoin verification |
 | 1:50-2:20 | 6 | Latest supplied app recording |
 | 2:20-2:50 | 7 | What's next and closing contribution |
 | 2:50-2:55 | 8 | AI-use disclosure |
@@ -34,23 +34,23 @@ formulas or play more than one video in the main slot.
 
 > FingerprinTO reports what the evidence establishes, rather than compressing everything into an authenticity badge.
 
-## 0:10-0:40 - Counterexample
+## 0:10-0:40 - App workflow
 
-> Imagine one phone captures a photo and another signs it. The hash matches, the signature verifies, and the receipt can be timestamped. None of this proves that the signing phone captured the image.
+> Capture a photo, choose what to publish, and sign the post. The app keeps the original and binds the selected JPEG to its caption. Other people can inspect the signature, downloaded bytes and timestamp evidence independently.
 
 ## 0:40-1:50 - Crypto
 
 <!-- SAY / SLIDE 3: 0:40-1:05. Le cinque righe separano proprieta diverse. Non leggere la tabella. -->
 
-> We distinguish file integrity, installation identity, capture credentials, statistical sensor compatibility, and timestamped publication. Software can bind physical evidence; it cannot create it.
+> The Nostr post contains the published image hash. Readers verify the event signature and compare that hash with the downloaded JPEG. Bitcoin timestamp evidence is checked separately. These are distinct results, not an automatic claim of sensor origin.
 
 <!-- SAY / SLIDE 4: 1:05-1:30. Tre sottoalberi, una root, firma e commitment. Le formule restano visive. -->
 
-> Our receipt commits to the image, installation metadata, evidence report and policy. We sign that root, preserve the exact signature bytes, and anchor a commitment through OpenTimestamps on Bitcoin.
+> For the optional evidence path, a separate device key signs a receipt over the original and its evidence. The receipt commitment can be anchored independently. The Nostr identity and the device identity serve different purposes.
 
 <!-- SAY / SLIDE 5: 1:30-1:50. Il beacon e implementato come esperimento S, non prova H. Non rivendicare ingresso attraverso l'ottica. -->
 
-> We also implemented an external beacon experiment. A separate device displays a signed code bound to a fresh session challenge and time slot. The verifier checks the token, but splicing and relay remain possible. A valid code is not proof of physical presence, and it does not upgrade the photo's origin level.
+> OpenTimestamps aggregates payload hashes in a Merkle tree and anchors the result on Bitcoin. Keep the payload and its proof: anyone with the required chain data can independently verify the hash path and anchor. A calendar promise is still pending; block time is not shutter time.
 
 ## 1:50-2:20 - Demo
 
@@ -136,3 +136,5 @@ Beacon windows require honest release/clock and independently justified anchor
 time bounds; no precise exposure or Bitcoin wall-clock claim is made. The
 draft's reported independent v1 recomputation is not newly verified here.
 The author has now supplied the disclosure: theory is human, code and slides are LLM-generated. Tools named: OpenAI Codex and Claude. No assertion of human code review is added.
+
+<!-- MERGE INTEGRATION NOTE: main now includes native v3 software integration and recorded real Pixel acceptance. See ../V3-APP-INTEGRATION.md and ../reviews/PIXEL9_PRO_2026-11-21.md. These later results are separate from the supplied recorded UI footage and the beacon's unvalidated physical path. The eight-screen reviewed deck remains the presentation source. -->

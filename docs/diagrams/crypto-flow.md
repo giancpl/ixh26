@@ -176,6 +176,9 @@ python scripts/render_crypto_diagrams.py --mermaid-bundle /percorso/mermaid/dist
 ```
 
 Se necessario, specificare il browser con `--browser /percorso/eseguibile`.
+Per confronti pixel per pixel occorre usare anche la stessa versione del browser
+e gli stessi font: il solo pin di Mermaid e Playwright non garantisce PNG
+identici su sistemi diversi.
 Il bundle è disponibile nella [distribuzione ufficiale Mermaid su npm](https://www.npmjs.com/package/mermaid/v/12.3.0).
 Il renderer blocca le richieste di rete del browser e non scarica un browser,
 non esegue test del modulo e non richiede Android SDK.

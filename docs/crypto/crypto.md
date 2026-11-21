@@ -1,4 +1,15 @@
-# FingerprinTO | Android capture and source evidence
+# PhoTO crypto research — FingerprinTO module
+
+Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
+The source-branch status statements below predate this application integration;
+real hardware/manufacturer/empirical calibration gates remain open.
+
+This is the experimental origin-evidence specification, not the native Nostr
+app's current publication protocol. See the [project map](../README.md) for that
+boundary and the [integration review](../reviews/LEOMAIN_PR9.md) for checks actually
+executed after the source audit. The historical appendix retains earlier designs.
+Current anchoring uses Bitcoin/OpenTimestamps; XRPL references in that appendix
+are historical proposals.
 
 ## Supplementary experiment: external beacon tokens
 
@@ -23,9 +34,10 @@ attribution and the signed byte binding.
 
 **Implementation audit:** [CRYPTO-MODULE-AUDIT.md](../implementation/CRYPTO-MODULE-AUDIT.md)
 maps this target to the source, corrections and still-missing implementation.
-The full Android/manufacturer flow is not yet complete. Tests of the latest
-audit changes are deferred to the separate validation branch. Regulatory
-relevance and qualified-service limits are in [regulations.md](regulations.md).
+The full Android/manufacturer flow is not yet complete. The source audit
+predates the execution results in the [integration review](../reviews/LEOMAIN_PR9.md);
+device and real-camera gates remain open. Regulatory relevance and
+qualified-service limits are in [regulations.md](regulations.md).
 
 **Current implementation target:** the P-256 evidence profile proposed below (wire version 3). The user-facing question is “What evidence supports this photo’s origin?” A manufacturer can authenticate a capture claim. Photo-response non-uniformity (PRNU) can support statistical attribution to an enrolled camera. Neither establishes the truth of the depicted event. Photographing a screen is still a physical capture.
 

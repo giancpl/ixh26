@@ -17,31 +17,79 @@ import SettingsView from "./components/SettingsView";
 import ShareProfileModal from "./components/ShareProfileModal";
 import {
   Bitcoin,
+  Camera,
   Globe,
   LockKeyhole,
   MessageSquare,
   UserRound,
+  Zap,
 } from "./components/PixelIcon";
 import { Feedback, ThemeToggle } from "./components/primitives";
 
 type Area = "Explore" | "Users" | "Profile" | "Camera" | "Messages" | "Settings";
 
+const VALID_AREAS: Area[] = [
+  "Explore",
+  "Users",
+  "Profile",
+  "Camera",
+  "Messages",
+  "Settings",
+];
+const AREA_STORAGE_KEY = "bitpin-active-area";
+const VIEWING_PUBKEY_KEY = "bitpin-viewing-pubkey";
+
+function readSavedArea(): Area {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      const saved = sessionStorage.getItem(AREA_STORAGE_KEY) as Area | null;
+      if (saved && VALID_AREAS.includes(saved)) return saved;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "Explore";
+}
+
+function readSavedViewingPubkey(fallback: string): string {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      const saved = sessionStorage.getItem(VIEWING_PUBKEY_KEY);
+      if (saved && /^[0-9a-f]{64}$/i.test(saved)) return saved;
+    }
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
 type ActiveSession = {
   signer: NostrSigner;
   social: SocialService;
   messenger: MessagingService;
+  initialProfile?: { name: string; about: string };
 };
+
+function createSessionFromVault(
+  vault: VaultService,
+  initialProfile?: { name: string; about: string },
+): ActiveSession {
+  const signer = vault.asSigner();
+  const social = new SocialService(signer);
+  const messenger = new MessagingService(vault);
+  return { signer, social, messenger, initialProfile };
+}
 
 export default function App() {
   const [vault] = useState(() => new VaultService(new BrowserStorage()));
-  const [exists, setExists] = useState<boolean>();
   const [session, setSession] = useState<ActiveSession>();
-  const [area, setArea] = useState<Area>("Explore");
+  const [exists, setExists] = useState<boolean>();
+  const [area, setAreaState] = useState<Area>(() => readSavedArea());
   const [search, setSearch] = useState("");
   const [filterMode, setFilterMode] = useState<
     "all" | "following" | "camera" | "btc" | "pending"
   >("all");
-  const [viewingPubkey, setViewingPubkey] = useState<string>("");
+  const [viewingPubkey, setViewingPubkeyState] = useState<string>("");
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [inbox, setInbox] = useState<CameraInboxItem[]>([]);
@@ -49,28 +97,26 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [, tick] = useState(0);
-  const currentRef = useRef<ActiveSession | undefined>(undefined);
+  const currentRef = useRef<ActiveSession | undefined>(session);
   const seqRef = useRef(0);
 
-  useEffect(() => {
-    void vault
-      .exists()
-      .then((b) => setExists(Boolean(b)))
-      .catch(() =>
-        setError("Impossibile accedere a IndexedDB in questo browser."),
-      );
-    return () => {
-      currentRef.current?.social.disconnect();
-      currentRef.current?.messenger.disconnect();
-      vault.lock();
-    };
-  }, [vault]);
+  const setArea = useCallback((next: Area) => {
+    setAreaState(next);
+    try {
+      sessionStorage.setItem(AREA_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(""), 4500);
-    return () => clearTimeout(t);
-  }, [notice]);
+  const setViewingPubkey = useCallback((pk: string) => {
+    setViewingPubkeyState(pk);
+    try {
+      if (pk) sessionStorage.setItem(VIEWING_PUBKEY_KEY, pk);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const refreshInbox = useCallback(async () => {
     const active = currentRef.current;
@@ -83,33 +129,28 @@ export default function App() {
     }
   }, []);
 
-  function startSession(initialProfile?: { name: string; about: string }) {
-    currentRef.current?.social.disconnect();
-    currentRef.current?.messenger.disconnect();
+  useEffect(() => {
+    currentRef.current = session;
+    if (!session) return;
 
-    const signer = vault.asSigner();
-    const social = new SocialService(signer);
-    const messenger = new MessagingService(vault);
-    const next: ActiveSession = { signer, social, messenger };
-    currentRef.current = next;
-
-    social.subscribe(() => {
-      if (currentRef.current === next) tick((n) => n + 1);
+    const unsubSocial = session.social.subscribe(() => {
+      if (currentRef.current === session) tick((n) => n + 1);
     });
-    messenger.subscribe(() => {
-      if (currentRef.current === next) tick((n) => n + 1);
+    const unsubMessenger = session.messenger.subscribe(() => {
+      if (currentRef.current === session) tick((n) => n + 1);
     });
-
-    setSession(next);
-    setViewingPubkey(signer.pubkey);
-    setArea("Explore");
-    setError("");
 
     const relays = [defaultRelayUrl()];
-    void social.connect(relays).then(async () => {
-      if (initialProfile?.name && currentRef.current === next) {
+    void session.social.connect(relays).then(async () => {
+      if (
+        session.initialProfile?.name &&
+        currentRef.current === session
+      ) {
         try {
-          await social.publishProfile(initialProfile.name, initialProfile.about);
+          await session.social.publishProfile(
+            session.initialProfile.name,
+            session.initialProfile.about,
+          );
         } catch {
           /* profile can be published later */
         }
@@ -117,7 +158,47 @@ export default function App() {
       await refreshInbox();
     });
 
-    void messenger.connect().catch(() => {});
+    void session.messenger.connect().catch(() => {});
+
+    return () => {
+      unsubSocial();
+      unsubMessenger();
+      session.social.disconnect();
+      session.messenger.disconnect();
+    };
+  }, [session, refreshInbox]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void vault.exists().then((backup) => {
+      if (!cancelled) setExists(Boolean(backup));
+    }).catch(() => {
+      if (!cancelled) setError("Impossibile accedere a IndexedDB in questo browser.");
+    });
+    return () => {
+      cancelled = true;
+      currentRef.current?.social.disconnect();
+      currentRef.current?.messenger.disconnect();
+      vault.lock();
+    };
+  }, [vault]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(""), 4500);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  function startSession(initialProfile?: { name: string; about: string }) {
+    currentRef.current?.social.disconnect();
+    currentRef.current?.messenger.disconnect();
+
+    const next = createSessionFromVault(vault, initialProfile);
+    currentRef.current = next;
+    setViewingPubkey(readSavedViewingPubkey(next.signer.pubkey));
+    setArea("Explore");
+    setError("");
+    setSession(next);
   }
 
   function lockSession() {
@@ -220,8 +301,8 @@ export default function App() {
             <img className="lt" src="/lab-assets/cow-icon-blue.svg" alt="" />
             <img className="dk" src="/lab-assets/cow-icon-white.svg" alt="" />
             <span>
-              BitPin
-              <span className="brand-sub">PhotoAnchor · IXH26</span>
+              PhoTO
+              <span className="brand-sub">Nostr · IXH26</span>
             </span>
           </a>
 
@@ -244,22 +325,11 @@ export default function App() {
             </button>
             <button
               type="button"
-              className={`nav-btn ${area === "Profile" ? "active" : ""}`}
-              onClick={() => {
-                setViewingPubkey(signer.pubkey);
-                setArea("Profile");
-              }}
-            >
-              <UserRound size={18} />
-              <span>Profilo</span>
-            </button>
-            <button
-              type="button"
-              className={`nav-btn ${area === "Camera" ? "active" : ""}`}
+              className={`nav-btn nav-btn-camera ${area === "Camera" ? "active" : ""}`}
               onClick={() => setArea("Camera")}
             >
-              <Bitcoin size={18} />
-              <span>Fotocamera</span>
+              <Camera size={18} />
+              <span>Scatta</span>
               {inbox.length > 0 && (
                 <span className="nav-count">{inbox.length}</span>
               )}
@@ -274,7 +344,20 @@ export default function App() {
             </button>
             <button
               type="button"
-              className={`nav-btn ${area === "Settings" ? "active" : ""}`}
+              className={`nav-btn ${
+                area === "Profile" || area === "Settings" ? "active" : ""
+              }`}
+              onClick={() => {
+                setViewingPubkey(signer.pubkey);
+                setArea("Profile");
+              }}
+            >
+              <UserRound size={18} />
+              <span>Profilo</span>
+            </button>
+            <button
+              type="button"
+              className={`nav-btn nav-only-desktop ${area === "Settings" ? "active" : ""}`}
               onClick={() => setArea("Settings")}
             >
               <LockKeyhole size={18} />
@@ -314,7 +397,7 @@ export default function App() {
             >
               <img className="lt" src="/lab-assets/cow-icon-blue.svg" alt="" />
               <img className="dk" src="/lab-assets/cow-icon-white.svg" alt="" />
-              <span>BitPin</span>
+              <span>PhoTO</span>
             </a>
 
             <div className="search-wrap">
@@ -333,10 +416,10 @@ export default function App() {
             <div className="topbar-actions">
               <button
                 type="button"
-                className="btn-primary btn-pill"
+                className="btn-primary btn-pill topbar-cta-desktop"
                 onClick={() => setArea("Camera")}
               >
-                + Scatta / Carica
+                <Camera size={15} /> Scatta
               </button>
               <ThemeToggle />
               <button
@@ -349,16 +432,7 @@ export default function App() {
                 title="Il mio profilo Nostr"
               >
                 <span className="avatar-circle">{initials(myName)}</span>
-                <span
-                  style={{
-                    maxWidth: 110,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {myName}
-                </span>
+                <span className="avatar-name">{myName}</span>
               </button>
             </div>
           </header>
@@ -382,8 +456,7 @@ export default function App() {
                     [
                       ["all", `Tutti (${pins.length})`],
                       ["following", `Seguiti (${followingSet.size})`],
-                      ["camera", "Da PhotoAnchor Android"],
-                      ["btc", "Confermati Bitcoin"],
+                      ["btc", "Certificati BTC"],
                       ["pending", "In attesa OTS"],
                     ] as const
                   ).map(([key, label]) => (
@@ -393,32 +466,30 @@ export default function App() {
                       className={`chip-btn ${filterMode === key ? "active" : ""}`}
                       onClick={() => setFilterMode(key)}
                     >
+                      {key === "btc" && <Bitcoin size={13} />}
                       {label}
                     </button>
                   ))}
                   <button
                     type="button"
                     className="chip-btn"
-                    style={{ marginLeft: "auto" }}
                     onClick={() => void social.refreshAllAnchors()}
                   >
-                    Aggiorna stato Bitcoin
+                    <Zap size={13} /> Aggiorna BTC
                   </button>
                 </div>
 
                 {filteredPins.length === 0 ? (
-                  <div className="surf" style={{ padding: 48, textAlign: "center" }}>
+                  <div className="surf empty-hero-card">
                     <img
-                      className="lt"
+                      className="lt empty-hero-icon"
                       src="/lab-assets/cow-icon-blue.svg"
                       alt=""
-                      style={{ width: 64, height: 64, marginBottom: 14 }}
                     />
                     <img
-                      className="dk"
+                      className="dk empty-hero-icon"
                       src="/lab-assets/cow-icon-white.svg"
                       alt=""
-                      style={{ width: 64, height: 64, marginBottom: 14 }}
                     />
                     <h2>
                       {filterMode === "following"
@@ -427,11 +498,11 @@ export default function App() {
                     </h2>
                     <p
                       className="field-hint"
-                      style={{ maxWidth: 460, margin: "8px auto 18px" }}
+                      style={{ maxWidth: 420, margin: "8px auto 18px" }}
                     >
                       {filterMode === "following"
                         ? "Vai nella scheda Utenti per scoprire e seguire altri fotografi su Nostr."
-                        : "Scatta una foto con l'app Android PhotoAnchor oppure dalla Fotocamera Browser: verrà pubblicata su Nostr e ancorata su Bitcoin."}
+                        : "Scatta una foto: viene certificata su Bitcoin con OpenTimestamps e condivisa su Nostr."}
                     </p>
                     <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
                       <button
@@ -441,9 +512,15 @@ export default function App() {
                           setArea(filterMode === "following" ? "Users" : "Camera")
                         }
                       >
-                        {filterMode === "following"
-                          ? "Scopri Utenti"
-                          : "Apri Modulo Fotocamera"}
+                        {filterMode === "following" ? (
+                          <>
+                            <UserRound size={15} /> Scopri Utenti
+                          </>
+                        ) : (
+                          <>
+                            <Camera size={15} /> Scatta una foto
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -591,9 +668,7 @@ export default function App() {
                 social={social}
                 messenger={messenger}
                 exportBackup={exportBackup}
-                changePassword={(curr, next) =>
-                  vault.changePassword(curr, next)
-                }
+                onLogout={lockSession}
                 notify={setNotice}
               />
             )}
@@ -604,7 +679,7 @@ export default function App() {
             <img className="dk" src="/lab-assets/cow-bull-white.svg" alt="" />
             <span>Fatto con</span>
             <i className="ic i-heart" />
-            <span>da BitPolito · PhotoAnchor &amp; Nostr · IXH26</span>
+            <span>da BitPolito · PhoTO &amp; Nostr · IXH26</span>
           </footer>
         </div>
       </div>

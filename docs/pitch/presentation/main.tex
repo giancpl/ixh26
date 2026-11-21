@@ -48,103 +48,81 @@
 \end{columns}
 \end{frame}
 
-% 0:10--0:40: counterexample; these checks do not authenticate origin.
-\begin{frame}{A valid signature does not identify the sensor}
-\vspace{0.4cm}
+% 0:10--0:40: actual native app flow, not an invented two-device scenario.
+\begin{frame}{Capture. Sign. Share. Check.}
+\vspace{0.65cm}
 \begin{center}
-\begin{tikzpicture}[node distance=0.45cm,box/.style={draw=kn-rule,fill=kn-block,
-rounded corners=2mm,minimum height=0.85cm,inner sep=8pt,align=center},arr/.style={-{Latex[length=2mm]},thick,kn-acc}]
-\node[box](a){Sensor A};
-\node[box,right=of a](j){Photo $J$};
-\node[box,right=of j](b){Phone B signs};
-\node[box,right=of b](r){Receipt + anchor};
-\draw[arr](a)--(j);\draw[arr](j)--(b);\draw[arr](b)--(r);
+\begin{tikzpicture}[node distance=0.55cm,box/.style={draw=kn-rule,fill=kn-block,
+rounded corners=2mm,minimum height=1.0cm,inner sep=9pt,align=center},arr/.style={-{Latex[length=2mm]},thick,kn-acc}]
+\node[box](a){Capture};
+\node[box,right=of a](b){Prepare JPEG};
+\node[box,right=of b](c){Sign post};
+\node[box,right=of c](d){Publish};
+\draw[arr](a)--(b);\draw[arr](b)--(c);\draw[arr](c)--(d);
 \end{tikzpicture}
 \end{center}
+\vspace{0.5cm}
+Keep the original. Sign the JPEG selected for publication.\par
 \vspace{0.3cm}
-\begin{columns}[c,onlytextwidth]
-\begin{column}{0.40\textwidth}\(\textcolor{kn-acc}{\checkmark}\ \mathsf{Verify}(pk_B,R,\sigma_B)=1\)\end{column}
-\begin{column}{0.27\textwidth}\(\textcolor{kn-acc}{\checkmark}\ \HH(J)\text{ matches}\)\end{column}
-\begin{column}{0.30\textwidth}\(\textcolor{kn-acc}{\checkmark}\ C\text{ timestamped}\)\end{column}
-\end{columns}
-\vspace{0.5cm}
-{\Large\bfseries\color{kn-acc}B never captured $J$.\par}
+\muted{Readers check the signature, downloaded bytes and timestamp separately.}\par
 \vfill
-
+\textcolor{kn-acc}{\Large\textbf{The evidence travels with the photo.}}
 \end{frame}
 
-% 0:40--1:05: source 3 and 5. Conditional strengths, no universal authenticity bit.
-\begin{frame}{``Authentic'' hides five different claims}
-\vspace{0.2cm}
-\renewcommand{\arraystretch}{1.7}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{5.0cm}>{\raggedright\arraybackslash}p{7.8cm}@{}}
-\textbf{Claim} & \textbf{Strength / limit}\\\hline
-Byte integrity & Cryptographic binding\\
-Installation identity & Hardware-rooted key\\
-Capture credential & Vendor-path dependent\\
-Sensor compatibility & Statistical; copyable\\
-Commitment inclusion & Not exposure time\\
-\end{tabular}\par
-\vspace{0.5cm}
-\textcolor{kn-acc}{\textbf{Software can bind physical evidence. It cannot create it.}}\par
-\end{frame}
-
-% 1:05--1:30: source 6, with exact current v3 transcript and an actual binary tree.
-\begin{frame}{The receipt binds installation, photo and evidence}
-\vspace{0.1cm}
-\begin{columns}[c,onlytextwidth]
-\begin{column}{0.25\textwidth}
-\centering
-\begin{tikzpicture}[n/.style={draw=kn-rule,fill=kn-block,rounded corners=2pt,inner sep=5pt},
-arr/.style={-{Latex[length=1.5mm]},kn-acc}]
-\node[n](fi) at (0,0){$F_I$};\node[n](fp) at (1.2,0){$F_P$};
-\node[n](ip) at (0.6,1){$\Node$};\node[n](fd) at (2,1){$F_D$};
-\node[n](t) at (1.3,2){$T$};\node[n](r) at (1.3,3){$R$};
-\draw[arr](fi)--(ip);\draw[arr](fp)--(ip);\draw[arr](ip)--(t);\draw[arr](fd)--(t);\draw[arr](t)--(r);
-\end{tikzpicture}
-\end{column}
-\begin{column}{0.72\textwidth}
-{\small\begin{align*}
-F_P &= \D(\texttt{photo/evidence-v3},F_I,\HH(J),E)\\
-T &= \Node(\Node(F_I,F_P),F_D)\\
-R &= \D(\texttt{fingerprinto/evidence-v3},T)\\
-\sigma &= \mathsf{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R)\\
-C &= \D(\texttt{receipt},R,\sigma),\qquad h_{\rm OTS}=\HH(C)
-\end{align*}}
-\end{column}
-\end{columns}
-\vspace{0.2cm}
-\labelsmall{$\HH=\mathrm{SHA256}$; $\D(\ell,x_1,\ldots)=\HH(\mathrm{CBOR}([\ell,x_1,\ldots]))$; $\Node(a,b)=\D(\texttt{node},a,b)$.
-}
-\vfill
-\textcolor{kn-acc}{\textbf{One 32-byte commitment binds the record.}}
-\end{frame}
-
-% 1:30--1:50: sources 9--10, corrected to implemented SOFTWARE token semantics.
-\begin{frame}{A valid token is not physical presence}
-\vspace{0.15cm}
-\labelsmall{Software experiment / physical validation pending.}\par
+% 0:40--1:05: implemented Nostr/byte/timestamp checks; two small equations.
+\begin{frame}{Verify the post. Verify the bytes.}
+\vspace{0.35cm}
 \begin{align*}
-b &= \D(\texttt{beacon-session/1},c,ID_I),\qquad c\gets\{0,1\}^{256}\\
-p &= [\texttt{fingerprinto/beacon/1},\HH(pk_B),\lfloor t/10\rfloor,b]\\
-\mathit{code} &= \mathrm{CBOR}([p,\mathsf{Sign}_{sk_B}(\D(\texttt{beacon-code/1},p))])
+h_J &= \mathrm{SHA256}(J_{\rm published})\\
+\sigma_N &= \mathrm{SchnorrSign}_{sk_N}(\mathit{id}(E_N))
 \end{align*}
+\labelsmall{$E_N$: the Nostr photo event containing $h_J$; $sk_N$: the user's Nostr key.}
+\vspace{0.35cm}
 \begin{columns}[T,onlytextwidth]
-\begin{column}{0.48\textwidth}
-\begin{pitchcard}
-\textbf{Checks}\par
-Key / signature / session / slot
-\end{pitchcard}
-\end{column}
-\begin{column}{0.49\textwidth}
-\begin{pitchcard}
-\textbf{Does not detect}\par
-Splicing, relay, within-session replay
-\end{pitchcard}
-\end{column}
+\begin{column}{0.31\textwidth}\begin{pitchcard}\textbf{Signed post}\par Event ID + signature\end{pitchcard}\end{column}
+\begin{column}{0.31\textwidth}\begin{pitchcard}\textbf{Matching JPEG}\par Download + hash\end{pitchcard}\end{column}
+\begin{column}{0.33\textwidth}\begin{pitchcard}\textbf{Timestamp evidence}\par OTS + selected chain\end{pitchcard}\end{column}
 \end{columns}
 \vfill
-\labelsmall{Token valid $\ne$ physically verified. No level upgrade.}
+\textcolor{kn-acc}{\textbf{Three separate results. No automatic sensor-origin claim.}}
+\end{frame}
+
+% 1:05--1:30: optional evidence-v3, distinct from ordinary Nostr publication.
+\begin{frame}{Add a device receipt when evidence is available}
+\vspace{0.4cm}
+\begin{center}
+Original + report + policy\quad$\longrightarrow$\quad root $R$\quad$\longrightarrow$\quad receipt
+\end{center}
+\vspace{0.2cm}
+\begin{align*}
+\sigma_I &= \mathrm{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R)\\
+C &= D(\texttt{receipt},R,\sigma_I)
+\end{align*}
+\vspace{0.25cm}
+\muted{The device key is separate from the Nostr profile key.}\par
+\vfill
+\textcolor{kn-acc}{\textbf{Optional v3 evidence. Independent origin assessment.}}
+\end{frame}
+
+% 1:30--1:50: OpenTimestamps aggregation and independent Bitcoin verification.
+\begin{frame}{One Merkle root. Many timestamped commitments.}
+\begin{center}
+\begin{tikzpicture}[n/.style={draw=kn-rule,fill=kn-block,rounded corners=2pt,inner sep=6pt},arr/.style={-{Latex[length=1.5mm]},kn-acc,thick}]
+\node[n](a) at (0,0){$H(P)$};\node[n](b) at (2,0){Other digests};
+\node[n](c) at (4.5,0){Other digests};\node[n](d) at (7,0){Other digests};
+\node[n](l) at (1,1){Hash};\node[n](r) at (5.75,1){Hash};
+\node[n](root) at (3.4,2){Merkle root};\node[n](btc) at (8,2){Bitcoin block};
+\draw[arr](a)--(l);\draw[arr](b)--(l);\draw[arr](c)--(r);\draw[arr](d)--(r);
+\draw[arr](l)--(root);\draw[arr](r)--(root);\draw[arr](root)--(btc);
+\end{tikzpicture}
+\end{center}
+\vspace{0.2cm}
+\textbf{Keep the payload + .ots proof. Recompute the path. Verify Bitcoin.}\par
+\vspace{0.3cm}
+\labelsmall{$P$: exact timestamp payload. Nostr: signed-event envelope; optional v3: raw commitment $C$.\par
+Schematic aggregation; the .ots file specifies the actual hash operations and Bitcoin attestation.}
+\vfill
+\textcolor{kn-acc}{\textbf{Calendar promise $\ne$ confirmed anchor. Block time $\ne$ shutter time.}}
 \end{frame}
 
 % 1:50--2:20: supplied recording; external playback from the exported PDF.

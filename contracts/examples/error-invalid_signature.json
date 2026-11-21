@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_signature",
+    "message": "The Nostr signature is invalid."
+  }
+}
