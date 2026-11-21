@@ -6,6 +6,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-socia
 COPY settlement ./settlement
 COPY upp_protocol ./upp_protocol
 COPY social ./social
+COPY fingerprinto ./fingerprinto
 RUN --mount=type=cache,target=/root/.cache/pip pip install --no-deps . && pip check
 COPY contracts ./contracts
 COPY tests ./tests

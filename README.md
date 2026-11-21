@@ -1,5 +1,19 @@
 # UPP Bitcoin settlement
 
+The experimental FingerprinTO crypto module is integrated as a separate Python
+package and portable Android primitives. Start with the
+[PR #9 integration report](docs/reviews/LEOMAIN_PR9.md),
+[crypto roadmap](docs/CRYPTO-V3-ROADMAP.md) and
+[experiment runbook](docs/V3-EXPERIMENT-RUNBOOK.md).
+Install all supported components with
+`pip install -c requirements-server.lock '.[social,server,test,prnu,hybrid]'`.
+Use `python -m fingerprinto v3 --help` for the explicit evidence-v3 CLI.
+The native Nostr capture path still signs its existing event payload; crypto
+receipts are an explicit experimental API, not a new automatic authenticity claim.
+All image-processing components pin Pillow 13.0.0. Its PRNU decoder identity is
+versioned; changing a decoder/build requires validation and calibration.
+
+
 The repository is being consolidated through small PRs from separate
 `integration/*` branches. Shared PhotoAnchor contracts, an independent bundle
 verifier and the target `/v1` API are available alongside the existing web app.

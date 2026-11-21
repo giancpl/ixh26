@@ -312,3 +312,12 @@ in PR #6. The source branch is not changed. See
 [PIETRO_ANDROID.md](reviews/PIETRO_ANDROID.md) for scope, findings, corrections,
 validation and remaining device-acceptance gates. No settlement, backend,
 contracts, signed-event payload or identity-storage migration is included.
+
+## FingerprinTO integration follow-up
+
+The later user-authorized integration of `leomain@f3bd1ef` is prepared on our
+`integration/leomain-pr9` branch. Earlier instructions in this historical ledger
+to keep it separate describe the prior scope. The source branch remains intact.
+See [the reconciliation and validation report](reviews/LEOMAIN_PR9.md) for P1/P2
+corrections, Pillow 13, actual automated/Docker evidence and deferred hardware
+acceptance. The native Nostr capture flow does not claim experimental v3 origin.

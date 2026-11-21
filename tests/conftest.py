@@ -1,4 +1,5 @@
 import hashlib
+import ipaddress
 import socket
 from pathlib import Path
 from typing import Any
@@ -31,7 +32,19 @@ def offline(request: Any, monkeypatch: Any) -> None:
     def forbidden(*args: Any, **kwargs: Any) -> None:
         raise AssertionError("Network access forbidden in offline tests")
 
-    monkeypatch.setattr(socket.socket, "connect", forbidden)
+    if request.node.get_closest_marker("local_http"):
+        original = socket.socket.connect
+        def loopback_only(sock: Any, address: Any) -> Any:
+            if sock.family in (socket.AF_INET, socket.AF_INET6) and isinstance(address, tuple):
+                try:
+                    if ipaddress.ip_address(address[0]).is_loopback:
+                        return original(sock, address)
+                except ValueError:
+                    pass
+            return forbidden()
+        monkeypatch.setattr(socket.socket, "connect", loopback_only)
+    else:
+        monkeypatch.setattr(socket.socket, "connect", forbidden)
 
 
 @pytest.fixture
