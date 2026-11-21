@@ -148,3 +148,22 @@ were reviewed; the reducer/PRNU spacing fixes were re-rendered and inspected.
 Both PDFs retain the two launch links to the unchanged 29.41-second recording.
 All 140 local documentation links resolve. No timed rehearsal, GUI playback or
 new device/cryptographic execution result is implied by these document checks.
+
+## Additional supplied recording
+
+The second Play button on page 5 links the newly supplied
+[video_2026-11-21_11-11-30.mp4](../assets/video_2026-11-21_11-11-30.mp4),
+preserved unchanged (H.264/AAC, 576x1280, approximately 35.05 seconds).
+Reviewed sample frames show unavailable authority pin/enrollment, camera
+capture and a not-submitted photo. This is user-supplied footage, not an
+independent successful trust/enrollment/origin test. It is included in both
+archives and linked from both PDF editions.
+
+The primary 29.41-second/1.5x silent demo and its narration are unchanged.
+The second film is optional Q&A material; do not play both during the
+three-minute pitch. PDF launches are external: keep the assets folder beside
+the exported PDFs and pre-open a player if the viewer blocks Launch actions.
+
+SHA-256 of the new original: `f14142a5cb700ad0cb9ad1383c7ddec9f7d9591816457b8167bdd3440fbc45c3`.
+Its duration/codec were inspected using the existing isolated FFmpeg tooling;
+no transcode, trim or audio change was applied to this attachment.

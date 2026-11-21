@@ -84,6 +84,8 @@ p &= [\texttt{fingerprinto/beacon/1},H(pk_B),\lfloor t/10\rfloor,b]\\
 
 [Preview](assets/demo-poster.png) / [play video](assets/demo-pitch.mp4).
 
+[Additional supplied recording](assets/video_2026-11-21_11-11-30.mp4): 35.05 seconds, unchanged; optional after the timed pitch.
+
 Capture preparation. Private calibration controls. Device enrollment status.
 
 Missing authority trust stays unavailable. Recorded local demo / Bitcoin regtest.

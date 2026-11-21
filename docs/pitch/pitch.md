@@ -67,7 +67,12 @@ Before presenting, open the exported PDF from `docs/pitch` with its `assets`
 folder alongside it. Click the preview or Play demo video button; they launch
 `assets/demo-pitch.mp4` in an external player. Some PDF/browser viewers block
 external launch actions. Open the MP4 in advance and use a direct player/window
-switch if the link is blocked. Return to slide 6 immediately after playback;
+switch if the link is blocked. The slide also links an [additional original recording](assets/video_2026-11-21_11-11-30.mp4)
+(35.05 seconds, normal speed), showing enrollment status and camera capture.
+It is optional material for questions, not a second clip to play in the timed
+pitch; its unavailable trust/not-submitted states remain visible.
+
+Return to slide 6 immediately after playback;
 do not add another live test or repeat the original at normal speed.
 
 The screen recording shows a local/regtest-labelled interface, not a verified
