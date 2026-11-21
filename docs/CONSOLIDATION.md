@@ -262,7 +262,7 @@ by this UX recovery. Browser/device acceptance is not inferred from the build.
 | [#3](https://github.com/giancpl/ixh26/pull/3) | Durable /v1 backend | Merged after Python 3.11/3.14 CI passed |
 | [#4](https://github.com/giancpl/ixh26/pull/4) | Docker infrastructure | Merged after CI, real demo and restart checks |
 | [#5](https://github.com/giancpl/ixh26/pull/5) | Native Android reconciliation | Merged after Python CI and hosted APK/JVM/lint passed |
-| [#6](https://github.com/giancpl/ixh26/pull/6) | Compatible web UX | CI gate before merge |
+| [#6](https://github.com/giancpl/ixh26/pull/6) | Compatible web UX | Merged after Python, web and Android CI passed |
 
 Android's initial hosted setup failed because the action requested the retired
 SDK package `tools`. Selecting `platform-tools` fixed setup; both subsequent
@@ -273,10 +273,32 @@ Hosted APKs use the runner's own debug signing key and need not have that hash.
 
 The original worktrees and source branches are preserved. Remaining gates:
 
-- The legacy automatic-mining branch needs a separate opt-in configuration
-  review, including its verification fallback and proof-write behavior; do not
-  merge it wholesale into the explicit-mining native MVP.
+- The legacy automatic-mining branch is superseded by the opt-in adapter
+  documented below; the native MVP retains explicit operator mining.
 - Migrate legacy web posts and media URLs only with a versioned compatibility
   plan; preserve old signed events and image-byte proofs verbatim.
 - Perform actual two-phone acceptance when the user resumes it.
 - Keep `leomain` separate as explicitly requested; it is outside this sequence.
+
+## Cleanup and regtest adapter, 2026-11-21
+
+The five completed PR branches had already been deleted remotely. Their local
+copies/worktrees and the historical settlement branch have now been removed.
+The three original MVP aliases are replaced by the published annotated tag
+`archive/nostr-photo-mvp-68ff268`. The redundant Dockerfile stash was verified
+against the MVP, archived and removed. Full Git history, 109 non-cache artifacts
+and the stash patch are preserved, with hashes, under
+`social-artifacts/consolidation-cleanup-20261121-a3df4b3d/`.
+The local main ref was not reset and other people's branches were not changed.
+
+Only small config files required by the two still-running relay bind mounts
+remain at their former `/tmp` paths; these are not registered worktrees.
+User-owned `feature-mobileApp` and `leomain` remain separate and untouched.
+
+The useful server behavior from our `feat/regtest-auto-settlement` (`c0043ad`)
+is integrated selectively on `integration/regtest-optional-mining`. See
+[REGTEST_SERVER.md](REGTEST_SERVER.md) for defaults, the fresh verification
+endpoint, no-overwrite proof handling, offline tests and real Docker evidence.
+The legacy manual-proof construction and digest-membership fallback are removed;
+automatic mining is opt-in and regtest-only. The native `/v1` package and worker
+keep their existing explicit-mining behavior. No web/Android UI is changed.
