@@ -237,6 +237,9 @@ class DeviceEvidenceRepository(private val context: Context, private val keys: K
         val roots = decoded.verify(ByteArrayInputStream(asset), files["credential.bin"]?.let { ByteArrayInputStream(it) })
         val commitment = ReceiptV1.protocolHash("receipt", roots.getValue("R"), decoded.signature())
         require(commitment.contentEquals(files.getValue("commitment.bin")) && AuthorityRecords.hex(commitment) == post.evidenceCommitment)
-        return "VALID — P-256 signature, attachments, JPEG and signed post commitment checked on this device"
+        val report = StrictJson.parseObject(files.getValue("report.json"))
+        return "VALID — P-256 signature, attachments, JPEG and signed post commitment checked on this device\n" +
+            "Signed claims — manufacturer: ${report.getJSONObject("manufacturer").getString("status")}; " +
+            "PRNU: ${report.getJSONObject("prnu").getString("status")}. See the separate recomputed server result."
     }
 }

@@ -193,8 +193,11 @@ class SocialRepository(private val context: Context) {
                 if (assessment != null && assessment.has("decision")) {
                     result = result.copy(origin = "Local server analysis — " + assessment.getJSONObject("decision").getString("label") +
                         "\nManufacturer: " + assessment.getJSONObject("manufacturer").getString("status") +
-                        " · PRNU: " + assessment.getJSONObject("prnu").getString("status"),
-                        device = "Local authority — " + assessment.getJSONObject("enrollment").getString("status"))
+                        " · " + assessment.getJSONObject("manufacturer").getString("reason") +
+                        "\nPRNU: " + assessment.getJSONObject("prnu").getString("status") +
+                        " · " + assessment.getJSONObject("prnu").getString("reason"),
+                        device = "Local authority — " + assessment.getJSONObject("enrollment").getString("status") +
+                            " · " + assessment.getJSONObject("enrollment").getString("reason"))
                 }
                 if (v3Settlement != null) {
                     require(v3Settlement.getString("network") == "regtest")
@@ -213,7 +216,12 @@ class SocialRepository(private val context: Context) {
                         val block = v3Settlement.getJSONObject("bitcoin")
                         require(!block.isNull("block_height") && !block.isNull("block_time"))
                     }
-                    result = result.copy(evidenceTimestamp = v3Settlement.getString("status") + " — v3 timestamp from local node — regtest")
+                    val blockDetails = if (v3Status == "CONFIRMED") {
+                        val block = v3Settlement.getJSONObject("bitcoin")
+                        "\nBlock ${block.getLong("block_height")} · ${java.time.Instant.ofEpochSecond(block.getLong("block_time"))}"
+                    } else ""
+                    val source = if (v3Status == "CONFIRMED") " — verified by local node — regtest" else " — regtest"
+                    result = result.copy(evidenceTimestamp = v3Status + " — v3 timestamp" + source + blockDetails)
                 }
 
             } catch (_: Exception) {

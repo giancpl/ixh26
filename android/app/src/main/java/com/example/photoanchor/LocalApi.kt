@@ -62,7 +62,7 @@ class LocalApi(val baseUrl: String = BuildConfig.API_URL) {
         connection("/v1/posts/${post.id}/evidence/proof", "GET"), 2 * 1024 * 1024)
 
     fun evidenceBundle(post: PhotoPost): ByteArray = response(
-        connection("/v1/posts/${post.id}/evidence/bundle", "GET"), 24 * 1024 * 1024)
+        connection("/v1/posts/${post.id}/evidence/bundle", "GET"), 48 * 1024 * 1024)
 
     fun upload(file: File): JSONObject {
         require(file.length() in 1..PhotoProtocol.MAX_PHOTO_BYTES.toLong())
