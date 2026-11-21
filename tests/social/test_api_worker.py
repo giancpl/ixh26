@@ -119,7 +119,7 @@ def test_malformed_json_is_sanitized(client, body):
 def test_accept_idempotent_conflicting_retry_restart(config, client, app):
     accepted = accept(client)
     assert accepted.status_code == 202
-    assert accepted.json() == {"event": EVENT, "publication_status": "QUEUED", "settlement": None}
+    assert accepted.json() == {"event": EVENT, "publication_status": "QUEUED", "settlement": None, "evidence": None}
     assert client.post("/v1/posts", json={"event": dict(reversed(list(EVENT.items())))}).status_code == 200
     conflict = dict(EVENT, sig="0" * 128)
     assert client.post("/v1/posts", json={"event": conflict}).status_code == 409

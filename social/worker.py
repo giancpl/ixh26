@@ -42,11 +42,17 @@ class Worker:
         self.store = store or Store(self.config)
         self.service = service or SettlementService(self.config.ots_config())
         self.relay = relay or RelayPublisher(self.config)
+        from .evidence_worker import EvidenceWorker
+        self.evidence_worker = EvidenceWorker(self.config, self.service)
+        self._prefer_evidence = False
 
     def tick(self):
+        self._prefer_evidence = not self._prefer_evidence
+        if self._prefer_evidence and self.evidence_worker.tick():
+            return True
         job = self.store.claim()
         if job is None:
-            return False
+            return self.evidence_worker.tick()
         locks = self.config.data_dir / "locks"
         locks.mkdir(parents=True, exist_ok=True)
         lock_fd = os.open(locks / (job["event_id"] + ".lock"), os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)

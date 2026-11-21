@@ -92,10 +92,17 @@ def create_app(config=None, *, service=None):
     async def operational_error(request, exc):
         return JSONResponse({"error": {"code": "operation_failed", "message": "The local operation could not be completed."}}, status_code=500)
 
+    from .evidence_routes import install
+    evidence_service = install(app, config, APIError, bounded_body, jpeg_dimensions)
+
     def require_post(event_id):
         if not HEX.fullmatch(event_id) or store.get(event_id) is None:
             raise APIError(404, "post_not_found", "The post was not found.")
-        return store.snapshot(event_id)
+        snapshot = store.snapshot(event_id)
+        from upp_protocol.protocol import evidence_commitment
+        commitment = evidence_commitment(snapshot['event'])
+        snapshot['evidence'] = evidence_service.snapshot(commitment) if commitment else None
+        return snapshot
 
     def require_proof(event_id, status=404):
         require_post(event_id)
@@ -154,11 +161,26 @@ def create_app(config=None, *, service=None):
         validate_photo_event(event, expected_sha256=hashlib.sha256(data).hexdigest())
         if jpeg_dimensions(data) != (photo.width, photo.height):
             raise APIError(400, "photo_dimensions_mismatch", "The signed dimensions do not match the stored JPEG.")
+        from upp_protocol.protocol import evidence_commitment
+        commitment = evidence_commitment(photo.event)
+        if commitment:
+            attachment = evidence_service.store.attach(commitment, photo.pubkey, photo.photo_sha256, photo.event_id, operation=True)
+            if store.get(photo.event_id) is None:
+                from fingerprinto.workflow_v3 import verify_v3
+                from social.evidence import utc
+                current = verify_v3(evidence_service.bundle(attachment), now=utc(), store=evidence_service.trust(), reference_loader=evidence_service.reference)
+                if current['decision']['state'] != 'complete':
+                    from .evidence_store import Conflict
+                    raise Conflict('Current evidence does not authorize publication')
+            evidence_service.store.attach(commitment, photo.pubkey, photo.photo_sha256, photo.event_id)
         try:
             created = store.accept(photo.event)
         except ValueError:
             raise APIError(409, "event_conflict", "This event ID is already registered with different content.") from None
-        return JSONResponse(store.snapshot(photo.event_id), status_code=202 if created else 200)
+        if commitment:
+            identity = hashlib.sha256(('anchor:' + commitment).encode()).hexdigest()[:32]
+            evidence_service.store.enqueue(identity, photo.pubkey, 'anchor', {'commitment': commitment})
+        return JSONResponse(require_post(photo.event_id), status_code=202 if created else 200)
 
     @app.post("/v1/posts")
     async def create_post(request: Request):
@@ -177,7 +199,10 @@ def create_app(config=None, *, service=None):
         payload = store.payload_path(event)
         result = service.verify_file(payload, proof)
         store.settlement(event_id, result)
-        return store.snapshot(event_id)
+        snapshot = require_post(event_id)
+        if snapshot['evidence']:
+            snapshot['evidence'] = evidence_service.snapshot(snapshot['evidence']['commitment'], verify=True)
+        return snapshot
 
     @app.get("/v1/posts/{event_id}/proof")
     def proof(event_id: str):

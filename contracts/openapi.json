@@ -426,6 +426,694 @@
           }
         }
       }
+    },
+    "/v1/enrollments/challenge": {
+      "post": {
+        "description": "Owner-authorized one-use hardware enrollment challenge. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentChallenge"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          }
+        },
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "post_v1_enrollments_challenge",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentChallengeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/enrollments": {
+      "post": {
+        "description": "Queue certificate chain and enrollment proof of possession. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          },
+          "202": {
+            "description": "New persistent operation queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "post_v1_enrollments",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/enrollments/{id}": {
+      "get": {
+        "description": "Current owner-scoped enrollment and signed authority record. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "get_v1_enrollments_id"
+      }
+    },
+    "/v1/calibrations": {
+      "post": {
+        "description": "Create private calibration; caller cannot approve thresholds. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          },
+          "202": {
+            "description": "New persistent operation queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "post_v1_calibrations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calibrations/{id}": {
+      "get": {
+        "description": "Private frame counts and independently measured scores. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "get_v1_calibrations_id"
+      }
+    },
+    "/v1/calibrations/{id}/frames/{role}/{sha256}": {
+      "put": {
+        "description": "Original private JPEG; body digest authenticated; disjoint splits. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sha256",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "put_v1_calibrations_id_frames_role_sha256",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calibrations/{id}/evaluate": {
+      "post": {
+        "description": "Queue private reference estimation and measurement. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "post_v1_calibrations_id_evaluate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evidence": {
+      "post": {
+        "description": "Queue immutable v3 preparation; never sign with server-owned user keys. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          },
+          "202": {
+            "description": "New persistent operation queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "post_v1_evidence",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evidence/{id}": {
+      "get": {
+        "description": "Owner-scoped signed proposal and bounded base64 attachments. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "get_v1_evidence_id"
+      }
+    },
+    "/v1/evidence/{id}/receipt": {
+      "post": {
+        "description": "Accept exact device-signed CBOR after fresh trust and binding checks. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "commitment",
+                    "assessment"
+                  ],
+                  "properties": {
+                    "commitment": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "assessment": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed NIP-98 authorization"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "NostrHttpAuth": []
+          }
+        ],
+        "operationId": "post_v1_evidence_id_receipt",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/posts/{event_id}/evidence/proof": {
+      "get": {
+        "description": "Standard OTS proof for the 32 raw bytes C. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "get_v1_posts_event_id_evidence_proof"
+      }
+    },
+    "/v1/posts/{event_id}/evidence/bundle": {
+      "get": {
+        "description": "Standard evidence-v3 ZIP; no private reference material. See EVIDENCE-V3.md for the exact shared contract.",
+        "responses": {
+          "200": {
+            "description": "Operation/result, or binary proof/bundle",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "409": {
+            "description": "Immutable operation conflict"
+          },
+          "503": {
+            "description": "Required trust/service unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "get_v1_posts_event_id_evidence_bundle"
+      }
+    },
+    "/v1/posts/{event_id}/evidence/verify": {
+      "post": {
+        "description": "Fresh local v3 trust/origin/OTS verification, independent of the Nostr proof. Never upgrades or mines.",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fresh evidence result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostEvidence"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No attached receipt"
+          }
+        },
+        "operationId": "post_v1_posts_event_id_evidence_verify"
+      }
     }
   },
   "components": {
@@ -659,8 +1347,405 @@
                 "type": "null"
               }
             ]
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PostEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
+      },
+      "InstallationFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "chain",
+          "package",
+          "version",
+          "signer",
+          "manufacturer",
+          "model",
+          "time",
+          "challenge"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "minLength": 124,
+            "maxLength": 124
+          },
+          "chain": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "contentEncoding": "base64",
+              "maxLength": 21848
+            }
+          },
+          "package": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "signer": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "manufacturer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "time": {
+            "type": "integer"
+          },
+          "challenge": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "EnrollmentChallengeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          }
+        }
+      },
+      "EnrollmentChallenge": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "challenge",
+          "expires",
+          "policy"
+        ],
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "expires": {
+            "type": "number"
+          },
+          "policy": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "EnrollmentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id",
+          "fields",
+          "possession"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "fields": {
+            "$ref": "#/components/schemas/InstallationFields"
+          },
+          "possession": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "minLength": 12,
+            "maxLength": 96
+          }
+        }
+      },
+      "PrnuGeometry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "camera",
+          "mode",
+          "width",
+          "height",
+          "decoder",
+          "source_width",
+          "source_height"
+        ],
+        "properties": {
+          "camera": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 512,
+            "multipleOf": 2
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 512,
+            "multipleOf": 2
+          },
+          "decoder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "source_width": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 33554432
+          },
+          "source_height": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 33554432
+          }
+        }
+      },
+      "CalibrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id",
+          "enrollment_id",
+          "geometry"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/PrnuGeometry"
+          }
+        }
+      },
+      "EvidenceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id",
+          "enrollment_id",
+          "media_sha256",
+          "time"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "media_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "time": {
+            "type": "integer"
+          },
+          "reference_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "EvidenceOperation": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "state",
+          "output",
+          "error"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "kind": {
+            "enum": [
+              "enrollment",
+              "calibration",
+              "evidence"
+            ]
+          },
+          "state": {
+            "enum": [
+              "QUEUED",
+              "PROCESSING",
+              "READY",
+              "COMPLETE",
+              "ERROR",
+              "COLLECTING",
+              "ACCEPTED",
+              "REJECTED",
+              "EXPIRED",
+              "UNAVAILABLE"
+            ]
+          },
+          "output": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fields": {
+            "$ref": "#/components/schemas/InstallationFields"
+          },
+          "frames": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "PreparationOutput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "envelope",
+          "template",
+          "policy",
+          "report",
+          "fields"
+        ],
+        "properties": {
+          "envelope": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "body",
+              "signature"
+            ],
+            "properties": {
+              "body": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "signature": {
+                "type": "string",
+                "pattern": "^[0-9a-f]+$",
+                "maxLength": 144
+              }
+            }
+          },
+          "template": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "maxLength": 349528
+          },
+          "policy": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "maxLength": 1398104
+          },
+          "report": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "maxLength": 1398104
+          },
+          "fields": {
+            "$ref": "#/components/schemas/InstallationFields"
+          }
+        }
+      },
+      "PostEvidence": {
+        "type": "object",
+        "required": [
+          "profile",
+          "commitment",
+          "assessment",
+          "settlement",
+          "proof_url",
+          "bundle_url"
+        ],
+        "properties": {
+          "profile": {
+            "const": "evidence-v3"
+          },
+          "commitment": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "assessment": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "settlement": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "proof_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bundle_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "NostrHttpAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "NIP-98: Nostr base64(event); payload hash required, +/-60 seconds, single use."
       }
     }
   }

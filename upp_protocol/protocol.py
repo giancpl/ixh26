@@ -69,6 +69,10 @@ def validate_photo_event(event: Mapping[str, Any], *, expected_media_url: str | 
     """Validate the signature and the single JPEG reference, without fetching URLs."""
     event = _signed_event(event, 20)
     tags = event["tags"]
+    evidence = [t for t in tags if t[0] == "photo-evidence"]
+    if evidence and (len(evidence) != 1 or len(evidence[0]) != 3
+                     or evidence[0][1] != "fingerprinto/evidence-v3" or not _HEX64.fullmatch(evidence[0][2])):
+        raise ProtocolError("invalid_evidence_tag", "Expected one evidence-v3 commitment tag.")
 
     def single(name: str) -> list[str]:
         found = [t for t in tags if t[0] == name]
@@ -123,3 +127,8 @@ def validate_profile_event(event: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(metadata, dict):
         raise ProtocolError("invalid_profile", "Profile content must be a JSON object.")
     return result
+
+
+def evidence_commitment(event):
+    photo = validate_photo_event(event)
+    return next((t[2] for t in photo.event["tags"] if t[0] == "photo-evidence"), None)

@@ -69,7 +69,7 @@ def manufacturer_unconfigured(asset, credential, placement):
     if candidate is True and placement != 0:
         return Finding(Outcome.FAIL, "ambiguous_or_hidden_embedded_evidence", {})
     if placement == 1 or candidate is True:
-        return Finding(Outcome.INCONCLUSIVE, "manufacturer_validator_unconfigured", {})
+        return Finding(Outcome.UNAVAILABLE, "manufacturer_validator_unconfigured", {})
     if placement == 0:
         return Finding(Outcome.INCONCLUSIVE, "embedded_evidence_not_supported", {})
     return Finding(Outcome.UNAVAILABLE if candidate is False else Outcome.INCONCLUSIVE,
@@ -182,14 +182,13 @@ def verify_v3(bundle, *, now: datetime, store=None, reference_loader=None,
             "prnu": RESULTS[receipt.evidence.prnu_result]}, "computed": {k: v.hex() for k, v in roots.items()}}
 
 
-def issue_v3(fields: Receipt, asset: bytes, *, placement: int, credential: bytes | None,
+def prepare_v3(fields: Receipt, asset: bytes, *, placement: int, credential: bytes | None,
              policy: bytes, reference_hash: bytes | None, now: datetime, store,
-             journal, operation: str, sign_root, reference_loader=None, manufacturer_validator=None):
-    """Validate both checks, then journal one verified signature before transport.
+             reference_loader=None, manufacturer_validator=None):
+    """Evaluate trust/origin and preflight immutable attachments before any signing.
 
-    sign_root receives R and must use the enrolled installation key. Hardware
-    key invocation on Android uses the same byte profile; this Python path is
-    the independently testable orchestration, not a claim of hardware execution.
+    Shared by local issuance and the application remote-signing adapter.
+    Returning a draft is not a valid signature or transport authorization.
     """
     # Fail malformed inputs before any validator/signing callback.
     commitments(fields, asset)
@@ -214,6 +213,15 @@ def issue_v3(fields: Receipt, asset: bytes, *, placement: int, credential: bytes
     draft = ReceiptV3(fields, evidence)
     EvidenceBundle(draft.with_signature(b"\0" * 72).to_bytes(), asset, credential, profile="evidence-v3",
                    policy=policy, report=report).files()
+    return draft, policy, report
+
+
+def issue_v3(fields: Receipt, asset: bytes, *, placement: int, credential: bytes | None,
+             policy: bytes, reference_hash: bytes | None, now: datetime, store,
+             journal, operation: str, sign_root, reference_loader=None, manufacturer_validator=None):
+    draft, policy, report = prepare_v3(fields, asset, placement=placement, credential=credential,
+        policy=policy, reference_hash=reference_hash, now=now, store=store,
+        reference_loader=reference_loader, manufacturer_validator=manufacturer_validator)
     root = draft.roots(asset, credential)["R"]
     def produce():
         signed = draft.with_signature(sign_root(root))
