@@ -1,8 +1,8 @@
 # PlasmaStark PR #13: documentation integration review
 
-Reviewed source: `leomain@4a05fa02e8c8aa8387c08153c0c843fbeb8b6da7`.
-The documentation was reviewed at `42b40a8`; the subsequent commit only adds
-the pitch illustration, which was inspected separately and left unchanged.
+Reviewed source: `leomain@1f42d1302f95a89b098287a18c405792467d513a`.
+The documentation was reviewed at `42b40a8`; the subsequent commits only add
+and refine the pitch illustration, inspected separately and included verbatim.
 Integration base: `main@726a3bf`, after PR #11 and PR #12. All reconciliation
 is on `integration/plasmastark-pr13`; the author's branch is untouched.
 
@@ -15,6 +15,12 @@ is on `integration/plasmastark-pr13`; the author's branch is untouched.
 | P1 | File moves leave links from the current documentation map and integration follow-ups pointing at removed paths. | Repair 21 broken local references and two documentation-map links whose meaning changed when a new crypto README was added. Validate local targets and section anchors. |
 | P2 | The new 360-line settlement guide duplicates the operational guide already maintained on main, with older status statements. | Retain its new URL as a short entry point to canonical `docs/SETTLEMENT.md`. |
 | Coordination | PR #13 is a draft and explicitly asks not to merge or enable auto-merge; it also conflicts with current main in both READMEs. | Prepare a separate, merge-ready integration PR with resolved conflicts. Do not promote, push to or rewrite `leomain`. |
+
+PR #14 (`docs/three-minute-pitch@276a35d`) separately republishes the same pitch,
+adding a note that its status claims need reconciliation with PR #12 and an
+alternate diagram path for pre-reorganisation main. Those needs are already
+addressed here. It adds no distinct runtime feature or stage script to apply;
+merging both draft pitch copies independently would duplicate/conflict.
 
 The technical exposition distinguishes byte integrity, installation-key
 possession, manufacturer evidence, statistical PRNU and timestamp semantics.
