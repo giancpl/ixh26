@@ -11,9 +11,9 @@ JSON_LIMIT = 1024 * 1024
 RESULTS = ("unavailable", "inconclusive", "pass", "fail")
 
 
-def json_object(raw: bytes) -> dict:
+def json_object(raw: bytes, *, limit: int = JSON_LIMIT) -> dict:
     """Bounded UTF-8 JSON object, rejecting duplicate keys/nonfinite numbers."""
-    if type(raw) is not bytes or not 1 <= len(raw) <= JSON_LIMIT:
+    if type(raw) is not bytes or not 1 <= len(raw) <= limit:
         raise ValueError("Invalid JSON attachment size")
 
     def unique(pairs):

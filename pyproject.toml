@@ -13,6 +13,7 @@ dependencies = ["opentimestamps-client==0.8.0", "opentimestamps==0.5.0"]
 test = ["pytest>=8,<10", "cryptography>=46.0.7,<47", "pqcrypto==0.4.0"]
 fingerprinto = ["cryptography>=46.0.7,<47"]
 hybrid = ["cryptography>=46.0.7,<47", "pqcrypto==0.4.0"]
+prnu = ["cryptography>=46.0.7,<47", "Pillow==13.0.0"]
 
 [project.scripts]
 upp-settlement = "settlement.cli:main"

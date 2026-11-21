@@ -83,7 +83,14 @@ not a reducer input and cannot change verification or C.
   golden vectors cover the three levels and pass/pass. Tamper/schema/JSON tests
   pass in 65 Python methods; see `EVIDENCE-V3-FORMATS.md` for the exact boundary.
   Java import/JSON decoding remains outside this construction adapter.
-- Image processing, trusted references and real-data evaluation remain to do.
+- Stages 3/4 mechanisms: experimental Haar residual/reference/PCE implemented
+  in Python and Java on decoded green arrays. Python additionally has a pinned
+  optional JPEG adapter, exact-byte reference records and atomic publication.
+  1,028 cross-language numeric comparisons pass; 69 Python methods pass.
+  Decoder interoperability on Android and trusted physical provisioning remain
+  separate requirements; see `PRNU-EXPERIMENT.md`.
+- Stage 5 tooling checks disjoint sets and emits per-device/mode empirical
+  counts, without approving thresholds. Real-device calibration remains open.
 - Old checkpoint documents describe the pre-v3 implementation, not completion of
   this roadmap. Record each subsequent step and its actual checks here.
 
