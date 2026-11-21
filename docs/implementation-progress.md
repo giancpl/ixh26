@@ -1,5 +1,10 @@
 # FingerprinTO implementation progress
 
+**Current v3 work:** [CRYPTO-V3-ROADMAP.md](CRYPTO-V3-ROADMAP.md) tracks the
+manufacturer/PRNU direction. Stage 1 now has a pure Python/Java evidence reducer
+and independent PRNU policy/quality guards. Image processing, calibrated
+attribution and the v3 wire format are not implemented by this first stage.
+
 **Save point before redesign:** start with
 [CRYPTO-CHECKPOINT-2026-11-21.md](CRYPTO-CHECKPOINT-2026-11-21.md) for the current
 module map, outstanding work, trust boundaries and deferred validation.
@@ -9,9 +14,9 @@ direction before continuing the old backlog.
 
 At save commit `db5a857` (`ADD: partial 1`), `docs/crypto.md` already introduces
 the **v3 P-256 manufacturer/PRNU proposal** and moves v1 into a historical
-appendix. The implementation recorded below remains v1/v2. The v3 codec,
-evidence reducer, PRNU reference/scoring/calibration and new attachments are
-not implemented; their module-level delta is listed in the checkpoint document.
+appendix. At that save point the implementation covered v1/v2 only: the v3
+codec, reducer, PRNU reference/scoring/calibration and attachments were missing.
+The current roadmap above supersedes that historical backlog as stages finish.
 The prior v1/v2 test counts are not validation of v3.
 
 ## Piece 1: deterministic encoding and commitments

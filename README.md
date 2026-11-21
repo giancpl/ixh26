@@ -1,6 +1,8 @@
 # UPP Bitcoin settlement
 
 The proposed FingerprinTO receipt implementation is in `fingerprinto/`.
+Current manufacturer/PRNU v3 work follows the
+[v3 roadmap](docs/CRYPTO-V3-ROADMAP.md), with explicit empirical feasibility gates.
 For the saved state before the crypto redesign, start with the
 [crypto checkpoint](docs/CRYPTO-CHECKPOINT-2026-11-21.md).
 Its independent bundle CLI, current checks and remaining Android/origin work
