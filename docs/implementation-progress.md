@@ -1,5 +1,12 @@
 # FingerprinTO implementation progress
 
+**Save point before redesign:** start with
+[CRYPTO-CHECKPOINT-2026-11-21.md](CRYPTO-CHECKPOINT-2026-11-21.md) for the current
+module map, outstanding work, trust boundaries and deferred validation.
+The numbered sections below are historical snapshots, not cumulative claims
+that every later requirement has already been satisfied. Read the user's new
+direction before continuing the old backlog.
+
 ## Piece 1: deterministic encoding and commitments
 
 Implemented in `fingerprinto/`, independently of Android and the existing OTS
@@ -194,8 +201,9 @@ old-domain rejection, file tampering, stamp/upgrade/verify, bundle round trips,
 malicious ZIP members, bounded decompression, CRC corruption, atomic publication
 failure and verifier-owned network selection.
 
-The code is currently local and uncommitted; documentation and new modules are
-untracked until explicitly included in a commit. Passing these tests does not
+At the pieces 1–4 audit, code and documentation were still local/uncommitted;
+later commits and the redesign checkpoint supersede that Git-state note.
+Passing these tests does not
 establish camera-route feasibility, Android enrollment, origin acceptance or
 real-chain inclusion. The HTTP server/web/Android suites have not been run in
 this audit; their application flows are not wired to these new modules yet.
@@ -355,6 +363,62 @@ unknown profiles, malformed DER, appended attacker certificates, policy scope,
 expiry, replay, concurrent consumption, issuer RSA/EC, StrongBox and receipt
 proof of possession. No SDK or app build was used; XRPL remains out of scope.
 
+## Piece 12: experimental hybrid suite and hardware wrapping
+
+Implemented v2 ML-DSA-65 AND Ed25519 primitives/receipt construction in Python
+and Java with distinct profiles, domains and strict lengths. The verifier pins
+an enrolled hybrid device ID and requires both signatures. The hardware P-256
+key binds the complete hybrid public-key descriptor. The new Python/Java receipt
+wire bytes, root and commitment agree; v1/v2 decoding does not fall back.
+
+After explicit user agreement, added Android hardware AES-GCM wrapping of the
+software hybrid keys, with atomic encrypted storage, hardware KeyInfo checks,
+identity/binding checks and temporary buffer clearing. This is protection at
+rest; the hybrid keys enter app RAM for signing and are not native hardware PQ
+keys. Software-only P-256 installation keys are now rejected locally. The
+enrollment verifier was restricted to EC issuer chains to follow the no-RSA
+instruction; policy digests include that restriction.
+
+Added Python/Android sign-once journals to reuse exact receipt/signature bytes
+on retry and reject operation/input conflicts. Python journal tests cover
+concurrency, restart reuse, failure rollback and accidental corruption. Android
+adapters are source-reviewed only; no SDK/license operation or app build was
+performed. JVM tests use software fixture keys and do not prove hardware backing.
+
+Validation: 51 Python unittest methods passed on Windows; 117 tests and 90
+subtests passed in WSL, including existing OTS checks. Real ML-DSA/Ed25519
+signatures cross-verify in both directions using BC 1.87 and PQClean/pqcrypto
+0.4.0. JVM tests cover the AES envelope, binding, v2 receipt bytes and C.
+See [hybrid-v2.md](hybrid-v2.md) for exact byte contracts and limitations.
+
+## Piece 13: explicit hybrid bundle/CLI/OTS transport
+
+Connected the v2 profile through explicitly selected bundle import/export,
+offline verification, submission and Bitcoin verification. Commands are
+`pack-hybrid`, `inspect-hybrid`, `verify-hybrid`, `stamp-hybrid` and
+`verify-hybrid-ots`; expected device ID is required for verification/submission,
+and Bitcoin commands require an explicit network. Existing commands remain v1;
+there is no automatic fallback or trust in a bundle-supplied identity/network.
+
+Both signature checks precede submission. OTS binds SHA256(C), and retrieved
+Bitcoin attestations are checked through the existing verifier. Results retain
+independent signature/origin/enrollment/anchor outcomes. A confirmed anchor does
+not repair invalid signatures or mark origin/enrollment accepted. Explicit ZIP
+profile selection reuses the same path, size, CRC and no-overwrite controls.
+
+The v2 receipt can reconstruct C for diagnostic transport even when a component
+signature fails. Hardware-binding errors fail v2 decoding. A pinned device ID
+alone still does not constitute a validated retained enrollment decision.
+See [hybrid-v2.md](hybrid-v2.md) for commands, APIs and trust boundaries.
+
+Validation: 56 Windows unittest methods passed; 127 tests and 90 subtests passed
+in WSL. New coverage includes embedded/detached bundles, profile/identity
+requirements, invalid component transport, malformed binding, CLI submission
+and reuse, confirmed proofs with unresolved trust, wrong proof contract, wrong
+network and refusal to submit invalid signatures. Official OTS serialization
+and stamping client are used with simulated calendars/RPC. No real calendar,
+Bitcoin confirmation, Android build or hardware test occurred.
+
 ## Next pieces (crypto-module scope)
 
 1. Establish the real camera-credential route on target hardware, as required
@@ -362,10 +426,10 @@ proof of possession. No SDK or app build was used; XRPL remains out of scope.
 2. Origin-credential validator and policy; production Android trust configuration
    and authenticated revocation-status acquisition for the implemented enrollment
    verifier. Validate its restricted path profile against actual target hardware.
-3. Consistent signed-record persistence/retry handling and durable, authenticated
-   enrollment-decision retention/recovery. The intake verifier and challenge
-   issuance/consumption store are implemented, but historical receipt verification
-   must be bound to retained trusted enrollment evidence.
+3. Durable, authenticated enrollment-decision retention/recovery, including the
+   accepted hybrid device ID/suite. The intake verifier, challenge store and
+   local sign-once journal exist, but historical receipt verification must bind
+   to that retained decision. Explicit v2 bundle/CLI/OTS transport is now wired.
 4. Module-level integration and tests with real evidence. Application compilation
    and UI/server integration are deferred to another branch by user request;
    XRPL is excluded. Existing Bitcoin/OTS module transport remains available.

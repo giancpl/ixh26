@@ -1,4 +1,4 @@
-"""Local v1 evidence transport. Importing never extracts files or trusts evidence.
+"""Explicitly selected v1/v2 evidence transport. No extraction or trust from import.
 
 The ZIP layout is a transport convention, not a change to the signed protocol.
 Network hints are untrusted; verification configuration belongs to the caller.
@@ -57,6 +57,7 @@ class EvidenceBundle:
     credential: bytes | None = None
     ots_proof: bytes | None = None
     anchor_locator: bytes | None = None
+    profile: str = "v1"
 
     def files(self) -> dict[str, bytes]:
         """Validate transport/schema limits and reconstruct C, without trust checks."""
@@ -76,8 +77,19 @@ class EvidenceBundle:
                 raise ValueError("Excessive locator nesting") from exc
             if self.ots_proof is not None and locator["backend"] != "opentimestamps-bitcoin":
                 raise ValueError("Conflicting anchor backend")
-        receipt = Receipt.from_bytes(self.receipt)
-        files["commitment.bin"] = commitments(receipt, self.asset, self.credential)["C"]
+        if self.profile == "v1":
+            receipt = Receipt.from_bytes(self.receipt)
+            files["commitment.bin"] = commitments(receipt, self.asset, self.credential)["C"]
+        elif self.profile == "hybrid-v2":
+            from cryptography.exceptions import InvalidSignature
+            from .hybrid_receipt import HybridReceipt
+            try:
+                receipt = HybridReceipt.from_bytes(self.receipt)
+            except InvalidSignature as exc:
+                raise ValueError("Invalid hybrid hardware binding") from exc
+            files["commitment.bin"] = receipt.commitment(self.asset, self.credential)
+        else:
+            raise ValueError("Unsupported bundle profile")
         if sum(map(len, files.values())) > MAX_TOTAL:
             raise ValueError("Oversized evidence bundle")
         return files
@@ -105,7 +117,7 @@ def export_bundle(bundle: EvidenceBundle, destination: str | Path) -> Path:
     return destination
 
 
-def import_bundle(source: str | Path) -> EvidenceBundle:
+def import_bundle(source: str | Path, *, profile: str = "v1") -> EvidenceBundle:
     """Read only the fixed allowlisted names; never extract archive paths.
 
     Size checks apply before and during decompression. CRC errors, encrypted
@@ -153,7 +165,7 @@ def import_bundle(source: str | Path) -> EvidenceBundle:
                     files[info.filename] = bytes(data)
         bundle = EvidenceBundle(files["receipt.cbor"], files["asset.bin"],
                                 files.get("credential.bin"), files.get("commitment.bin.ots"),
-                                files.get("anchor.json"))
+                                files.get("anchor.json"), profile)
         if bundle.files()["commitment.bin"] != files["commitment.bin"]:
             raise ValueError("Bundled commitment does not match evidence")
         return bundle
@@ -164,6 +176,8 @@ def import_bundle(source: str | Path) -> EvidenceBundle:
 def verify_bundle(bundle: EvidenceBundle):
     """Offline signature check; anchor hints/evidence are never trusted."""
     from .verification import verify_receipt
+    if bundle.profile != "v1":
+        raise ValueError("Use the explicit hybrid verifier and a trusted device ID")
     bundle.files()
     evidence = bundle.ots_proof if bundle.ots_proof is not None else bundle.anchor_locator
     return verify_receipt(bundle.receipt, bundle.asset, bundle.credential,
@@ -173,9 +187,32 @@ def verify_bundle(bundle: EvidenceBundle):
 def verify_bundle_ots(bundle: EvidenceBundle, *, config):
     """Explicit Bitcoin RPC verification using verifier-owned network config."""
     from .anchoring import verify_receipt_ots
+    if bundle.profile != "v1":
+        raise ValueError("Use the explicit hybrid verifier and a trusted device ID")
     bundle.files()
     if bundle.ots_proof is None and bundle.anchor_locator is not None:
         # A locator is evidence to resolve, not a proof of absence or inclusion.
         return verify_bundle(bundle)
     return verify_receipt_ots(bundle.receipt, bundle.asset, bundle.credential,
                               proof=bundle.ots_proof, config=config)
+
+
+def verify_bundle_hybrid(bundle: EvidenceBundle, *, expected_device_id: bytes):
+    from .hybrid_receipt import verify_hybrid_receipt
+    if bundle.profile != "hybrid-v2":
+        raise ValueError("Expected an explicitly selected hybrid-v2 bundle")
+    bundle.files()
+    evidence = bundle.ots_proof if bundle.ots_proof is not None else bundle.anchor_locator
+    return verify_hybrid_receipt(bundle.receipt, bundle.asset, bundle.credential,
+                                 expected_device_id=expected_device_id, anchor_evidence=evidence)
+
+
+def verify_bundle_hybrid_ots(bundle: EvidenceBundle, *, expected_device_id: bytes, config):
+    from .anchoring import verify_hybrid_receipt_ots
+    if bundle.profile != "hybrid-v2":
+        raise ValueError("Expected an explicitly selected hybrid-v2 bundle")
+    bundle.files()
+    if bundle.ots_proof is None and bundle.anchor_locator is not None:
+        return verify_bundle_hybrid(bundle, expected_device_id=expected_device_id)
+    return verify_hybrid_receipt_ots(bundle.receipt, bundle.asset, bundle.credential,
+                                     expected_device_id=expected_device_id, proof=bundle.ots_proof, config=config)

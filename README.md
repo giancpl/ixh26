@@ -1,6 +1,8 @@
 # UPP Bitcoin settlement
 
 The proposed FingerprinTO receipt implementation is in `fingerprinto/`.
+For the saved state before the crypto redesign, start with the
+[crypto checkpoint](docs/CRYPTO-CHECKPOINT-2026-11-21.md).
 Its independent bundle CLI, current checks and remaining Android/origin work
 are described in [implementation progress](docs/implementation-progress.md).
 The proposed protocol is in [the cryptographic manual](docs/crypto.md).

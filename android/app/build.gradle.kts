@@ -43,5 +43,6 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.87")
     testImplementation("junit:junit:4.13.2")
 }

@@ -1,10 +1,96 @@
-# FingerprinTO | Android cryptographic manual
+# FingerprinTO | Android capture and source evidence
+
+**Current implementation target:** the P-256 evidence profile proposed below (wire version 3). The user-facing question is “What evidence supports this photo’s origin?” A manufacturer can authenticate a capture claim. Photo-response non-uniformity (PRNU) can support statistical attribution to an enrolled camera. Neither establishes the truth of the depicted event. Photographing a screen is still a physical capture.
+
+## <u>Changed: receipt issuance and the three evidence levels</u>
+
+Run **both** origin checks on the same immutable file, even when the manufacturer check succeeds. Keep the two results visible in Details. The following reducer is shared by the Android app and the independent verifier. Evaluate rows from top to bottom.
+
+| Condition | Italian UI label | User action |
+|---|---|---|
+| A definitive origin check failure or conflicting evidence, or an invalid receipt signature, binding or enrollment | **Verifica fallita**; show the specific failed check | Block issuance on capture and block trust/acceptance on import. Keep diagnostic details. |
+| Manufacturer capture evidence passes the configured trust and asset-binding checks | **Verifica del produttore** | Show issuer and exact authenticated claim. Offer personal trust choice. |
+| Manufacturer evidence is absent or indeterminate, and PRNU passes against a trusted reference for the claimed camera | **Verifica PRNU** | Show sensor compatibility, reference provenance and calibration results. Offer personal trust choice. |
+| Neither check passes and neither has definitively failed | **Nessuna verifica** | Explain the missing or inconclusive evidence. Offer personal trust choice. |
+
+A signed receipt requires an enrolled installation key. Pending enrollment can display local findings but cannot produce an authenticated receipt. For imported receipts, pending signature/enrollment checks keep the decision pending. Treat a missing mandatory signed attachment or a digest mismatch as a failure. Anchor status is displayed separately: absent or pending anchoring leaves the origin evidence interpretable; a false claimed anchor is a failed check on the bundle and blocks acceptance. Provide “Mi fido” and “Non mi fido” only after all required checks complete. Persist a user's optional choice locally against C, separately from verification results. Never upgrade a level, modify the receipt, or let that choice override failure. An origin failure concerns this claim; it is not a declaration that the scene is fake.
+
+**Manufacturer outcomes.** Set pass only for a trusted capture signer, valid signature, hard binding to J and accepted capture semantics. A broken signature/binding or a claim contradicted by the authenticated provenance fails. Absence, unsupported format, unavailable trust data and an issuer for which the verifier has no policy give no positive evidence; name the reason. A signer explicitly rejected by the configured policy fails. Never downgrade an invalid recognized credential by retrying in absent mode. Inspect the original asset for embedded evidence regardless of the claimed placement.
+
+## <u>New: estimate the camera reference on Android</u>
+
+A single query photo yields a noise residual. Estimating a reusable reference requires separate known-source images. Enroll each physical camera and capture mode independently. Keep front, wide and telephoto, image sizes, crops and processing modes separate. If a logical camera switches lenses or applies an unknown geometry, mark PRNU unavailable for that route.
+
+1. In the app's calibration flow capture a series of evenly illuminated, slightly defocused, low-texture frames with the target lens. Move the phone slightly between frames, avoid clipping, and lock the tested geometry. For a prototype start with 30 accepted frames, then use held-out genuine captures to determine whether more are needed. Never add the photo under test to its own reference. Enrollment through an untrusted import proves no physical identity.
+2. Use the same versioned decoder, channel, orientation and fixed sensor-coordinate region for enrollment and query. A practical initial JPEG profile uses the decoded green channel in stored orientation and a fixed central crop at native scale. Reject unsupported rotation/crop/size combinations. Pin decoder, color conversion, denoiser and parameters, normalization, numeric precision and mask rules in a versioned configuration. For an initial experiment use a wavelet denoiser; freeze its actual implementation and settings before calibrating thresholds. An algorithm or camera-pipeline change requires revalidation.
+3. For each frame let I be its aligned intensity array and W = I − denoise(I) its noise residual. Let m be the per-pixel validity mask excluding dark, saturated and otherwise unusable samples. Accumulate numerator and denominator in floating point, element by element, one frame at a time on a worker thread. Estimate the multiplicative pattern as
+
+       K[p] = sum_i(m_i[p] * I_i[p] * W_i[p]) / sum_i(m_i[p] * I_i[p]^2)
+
+   Mark poorly supported or zero-denominator pixels invalid. Suppress shared row/column artifacts using the fixed preprocessing configuration. Store the resulting reference K, its mask, geometry, capture-mode identifier, algorithm version, enrollment provenance and calibration-policy identifier in a versioned reference record. Persist atomically only after calibration completes. Hash its exact serialized bytes as refHash. Keep reference material access-controlled; make it available to an authorized independent verifier.
+4. The verifier must independently trust the association between refHash, installation and physical camera, for example through witnessed provisioning and a signed enrollment record. A user-created reference may support a local exploratory score. Display its provenance and withhold the verified PRNU level until enrollment satisfies the verifier's policy. Re-enroll after camera replacement or incompatible processing changes.
+
+## <u>New: compare each capture and calibrate the decision</u>
+
+From the finalized original J derive query intensity I and residual W with the same preprocessing. Compare W with the predicted sensor component I × K over valid overlapping pixels. For a fixed-geometry prototype use a normalized correlation surface over shifts with the expected aligned shift fixed at zero. Let r0 be the correlation there. Signed peak-to-correlation energy is sign(r0) × r0² divided by the mean squared off-peak correlations outside the configured exclusion window. Pin shift grid, mask handling, exclusion window and minimum valid area. A change to alignment search changes score statistics and requires recalibration. Zero off-peak energy or insufficient usable area gives an inconclusive result.
+
+| PRNU result | Decision |
+|---|---|
+| Adequate quality, supported geometry, trusted reference and score at or above the calibrated acceptance threshold | Match |
+| Adequate quality and score in a separately validated rejection region for the claimed sensor | Mismatch: block even if a manufacturer credential passes. Explain that the claimed sensor attribution failed statistically. |
+| Intermediate score, poor quality, untrusted/missing reference, unsupported processing or unavailable calibration | Inconclusive or unavailable; show reason. A low score alone on an unsuitable image is not a failure. |
+
+Use disjoint enrollment, threshold-development and final test images. Include ordinary scenes from the enrolled device and from other units **of the same model**, captured through the same app route. Estimate false-match, false-rejection and inconclusive rates on held-out images, broken down by device/mode; report sample counts. Do not ship a universal PCE threshold or translate a score into a probability of truth. Enable pass and mismatch independently only where their error rates meet a documented deployment policy. Until then display experimental scores as inconclusive. PRNU can be copied and does not date a capture. [PRNU estimation](https://ws2.binghamton.edu/fridrich/Research/EI6505-25.pdf) · [Brightness and PCE](https://doi.org/10.1111/1556-4029.15673) · [Smartphone camera processing](https://iris.polito.it/retrieve/d00f5446-2562-479a-b723-1e432511eed0/bhat_ICIP2022_OA.pdf)
+
+## <u>Changed: bind the evidence to the signed receipt</u>
+
+Use a fresh P-256 profile because the previous receipt assumed a credential. Reserve wire version 3 for this proposal after checking the repo's version registry. The separately specified ML-DSA-65 + Ed25519 experiment retains its own key-protection boundary and wire version 2 ([hybrid-v2.md](hybrid-v2.md)). No cross-profile fallback. The appendix specifies the inherited deterministic CBOR, D, Node, installation enrollment, F_I, F_D, signature bytes, limits and anchor semantics.
+
+For v3, replace the previous photo branch and root with the following. Codes and digest fields below are CBOR integers and raw byte strings respectively. The literal null denotes CBOR null.
+
+```text
+E = [placement, detachedHash, manufacturerResult, prnuResult,
+     refHash, policyHash, reportHash]
+F_P = D("photo/evidence-v3", F_I, SHA256(J), E)
+T = Node(Node(F_I, F_P), F_D)
+R = D("fingerprinto/evidence-v3", T)
+sigma = Sign(sk_I, R)
+C = D("receipt", R, sigma)
+receipt.cbor = [3, pk_I, chain, packageName, versionCode, signerDigest,
+                manufacturer, model, localTime, sessionChallenge, E, sigma]
+```
+
+- placement: 0 embedded, 1 detached, 2 absent. detachedHash is SHA256(A) only for 1, otherwise null. Enforce the selected placement and supply exact detached bytes when applicable. Refuse ambiguous evidence selection.
+- Both result codes: 0 unavailable/absent, 1 inconclusive, 2 pass, 3 fail. A failed attempt may generate a diagnostic record but cannot issue an acceptable receipt. The report carries specific reason codes. The displayed level is derived, never trusted from a signed label.
+- refHash is the 32-byte reference digest whenever a reference was used, otherwise null. policyHash and reportHash are SHA-256 of the exact supplied policy and diagnostic report files. Bundle those two files. For interoperability use UTF-8 JSON without duplicate keys, persisted once and hashed as raw bytes. Preserve their original bytes across export and retries. The report records each check's status and reason, capture mode/geometry, method version, reference and policy identifiers, quality measurements, score and thresholds when available. Serialize finite scores with round-trip precision; use null when unavailable. Bind the exact scoring configuration and thresholds through the policy. Reject report/receipt disagreement.
+- The independent verifier checks digests, reconstructs R, verifies the signature and independently evaluates both checks using its own trusted policy and enrollment association. A supplied policy is evidence of what the signer used, never a trust anchor. If the external reference cannot be retrieved, show the signed claim separately and mark the verifier's PRNU result unavailable. Never display a PRNU pass based solely on the app's report. Record evaluation time and distinguish subsequent policy changes from corruption of the original bundle.
+- Apply the inherited bounds to v3 with the new seven-item E array. All non-null hashes are exactly 32 bytes. Limit each JSON attachment to 1 MiB and count both within the aggregate limit. Check attachment lengths and digests before parsing. Preserve the original J, the camera credential when present, and the signed receipt. Keep the existing commitment and backend-specific OTS/XRPL conventions.
+
+## <u>Codex implementation delta and acceptance tests</u>
+
+1. Find the real Android capture completion callback, persistence layer, verifier, upload/anchor queue and detail screen. Snapshot one finalized J. Replace the previous unconditional stop on **missing** manufacturer evidence with the reducer above. Keep invalid evidence blocking. Run manufacturer and PRNU checks independently; a successful first check must never skip the second.
+2. Add a calibration screen per physical lens/mode, quality feedback, a cancellable background estimator, reference storage and the independent enrollment association. Implement the scorer with the same versioned algorithm on Android and the verifier. Do not ship a placeholder matcher or assign match from an EXIF camera identifier.
+3. Add v3 encode/decode and strict dispatch, preserving v1 stored records, its four legacy vectors and the separate hybrid experiment. Export the evidence files, independently recompute reports where inputs are available, and update persistence and the upload queue to reuse the same receipt on retry.
+4. Implement the three labels, separate failed/pending states, detailed reasons and the user's local decision. For each pair of manufacturer/PRNU outcomes test priority, including pass/pass, pass/mismatch, invalid/match, absent/match and absent/inconclusive. Test that failure cannot be accepted and a user's preference never changes C.
+5. Add shared v3 golden vectors covering each issued level. Tamper separately with J, detached evidence, reference, report, policy and E. Test wrong lens, low light, reference loss and missing optional credentials. Capture on A and register the unchanged file against B's enrolled sensor. Measure attribution errors on real devices. Existing v1 vectors cover only the inherited primitive operations. Treat calibration performance and manufacturer support on the actual app route as unverified until measured.
+
+---
+
+## Historical appendix | P-256 v1 specification and fixtures
+
+The material below is the legacy profile for existing receipts and regression tests. Its mandatory manufacturer gate, receipt schema, domain label and origin outcomes apply **only to v1**. The sections above govern new v3 captures.
+
+## FingerprinTO | Android cryptographic manual
+
+This document retains the proposed v1 P-256 profile. The separately versioned
+ML-DSA-65 + Ed25519 experiment and its hardware-protection boundary are specified
+in [hybrid-v2.md](hybrid-v2.md); v1 and v2 must not be interpreted interchangeably.
 
 Under the proposed protocol, PhoTO signs a receipt for **the exact file returned by capture, after verifying its camera-origin credential**. Three principals contribute different evidence. The camera credential issuer authenticates a capture claim about an asset. The installation key signs PhoTO's record of receiving that asset. XRP Ledger (XRPL) records a commitment to the signed receipt. A verifier needs the original evidence as well as the ledger entry.
 
 Sections 1–4 describe the protocol. The final implementer note fixes the previously unspecified byte formats and Android integration choices for a proposed v1 profile. The formulas and field names retain the original draft's meanings.
 
-## 1. Installation identity
+### 1. Installation identity
 
 At first enrollment, PhoTO generates a signing key pair in Android Keystore. The private key `sk_I` stays there. The public value `pk_I` is the DER SubjectPublicKeyInfo of its public key. A verifier checks the key's hardware backing and the app identity at key generation using Android key attestation.
 
@@ -24,7 +110,7 @@ Here `D(label, ...fields)` hashes the deterministic CBOR array containing the la
 
 `F_I` binds the key identifier to the app's declared identity at receipt creation. An ordinary app update can preserve `ID_I` and change `F_I`. Attestation describes the app at **key generation**. A newer version code in a signed receipt remains an app declaration. Neither the version code nor the signer digest is a hash of the APK contents.
 
-## 2. Photo and origin credential
+### 2. Photo and origin credential
 
 `J` is the complete, finalized encoded file delivered to PhoTO, including metadata. `A` is an issuer's origin credential for this asset. Its format defines the authenticated byte ranges, signer and capture assertions. First validate that binding, the signer's authority and the meaning of the claim. Only then compute the photo fingerprint.
 
@@ -35,7 +121,7 @@ Here `D(label, ...fields)` hashes the deterministic CBOR array containing the la
 
 For a detached credential, `A` means its exact delivered bytes. For an embedded credential, the whole-file digest already covers it. The receipt also commits to bytes outside the issuer's authenticated ranges. A later metadata rewrite can therefore invalidate the receipt even if the issuer still accepts the asset. Identical inputs give the same `F_P`. There is no per-photo nonce.
 
-## 3. Device and session
+### 3. Device and session
 
 For each row in the following order, compute `L_i = D("field", name, value)`, indexing from zero. The name is the exact case-sensitive text in the first column.
 
@@ -54,7 +140,7 @@ F_D = Node(Node(Node(L_0, L_1), Node(L_2, L_3)), L_4)
 
 This is a binary Merkle tree with unpaired children promoted unchanged at each level. A receipt containing an outstanding challenge can demonstrate a response to that challenge. Dating the capture itself would require the capture component to authenticate that same challenge with the asset.
 
-## 4. Receipt and verification claim
+### 4. Receipt and verification claim
 
 ```text
 T     = Node(Node(F_I, F_P), F_D)
@@ -72,17 +158,17 @@ C     = D("receipt", R, sigma)
 
 A successful result establishes that the attested installation key signed for this precise asset carrying accepted capture evidence. If phone A captures a genuine photo and phone B registers it, B's signature is consistent with every formula above. Independent attribution to B's sensor would require evidence linking the capture, session and installation to the same physical unit. Ledger closure dates the commitment to the precision of the ledger clock. It does not establish shutter time or the truth of the depicted scene.
 
----
+**---**
 
-## Implementer note | Proposed v1 profile
+### Implementer note | Proposed v1 profile
 
-### Integration points in the existing app
+#### Integration points in the existing app
 
 The repository review reports that Android already captures a file, computes SHA-256 and uploads it to the server. The existing timestamping path uses Bitcoin/OpenTimestamps (OTS). The review found no attested enrollment, camera-credential validation, CBOR receipts or XRPL integration. Locate the capture callback and upload path in the checkout. Preserve the semantics of existing records.
 
 Nostr publication uses a separate key. Even a signed Nostr event referencing C would show only that the event author published that receipt. v1 defines no proof of common ownership between the installation and publication keys.
 
-### First milestone: validate one real capture off-device
+#### First milestone: validate one real capture off-device
 
 1. Record handset, OS build, camera provider and version, PhoTO build, capture entry point and mode. Specify the authorized issuer and which signed assertion qualifies as original capture.
 2. Capture through the normal PhoTO UI. Export the completed file and any detached evidence unchanged. Compare the SHA-256 digests at capture and on the independent host. Optionally collect a native-camera sample on the same handset as a diagnostic control.
@@ -91,7 +177,7 @@ Nostr publication uses a separate key. Even a signed Nostr event referencing C w
 
 No qualifying sample accompanies this manual. Establish feasibility for the tested app route first, freeze receipt encoding against shared vectors second, and integrate anchoring third.
 
-### Exact byte contract
+#### Exact byte contract
 
 Use RFC 8949 §4.2.1 core deterministic encoding with definite-length arrays and shortest integer and length encodings. Protocol text is valid UTF-8 as supplied, without Unicode normalization, case conversion or trimming. Binary inputs are CBOR byte strings. Use CBOR integers for version and time, and simple value null for an absent challenge. Reject invalid UTF-8, wrong types or arity, indefinite lengths, tags, floats, non-minimal encodings and trailing bytes. At export and import use the following positional schema; array entries are individual items, never flattened subarrays.
 
@@ -123,7 +209,7 @@ A size-limit failure is a profile rejection. Report it separately from a cryptog
 
 Derived digests need no wire fields. Exporters may display hex for diagnostics only. The receipt version selects this exact profile; reject unknown versions. Wire version 1 selects the exact UTF-8 label `fingerprinto/v1` inside R. Reject earlier-draft signatures over bare T and never fall back after verification fails. Verify the chain and ledger locator independently. [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1)
 
-### Enrollment and signing
+#### Enrollment and signing
 
 1. Use a stable app-private Keystore alias. Provision once under a lock. On API 24+ obtain a fresh 32-byte challenge from the enrollment verifier, separate from the optional capture challenge. Have the verifier record issuance, expiry and consumption. If enrollment is offline or pending, preserve that state and resume before issuing verified receipts.
 2. Use `KeyPairGenerator.getInstance("EC", "AndroidKeyStore")` and `KeyGenParameterSpec.Builder(alias, PURPOSE_SIGN)` with `ECGenParameterSpec("secp256r1")`, `DIGEST_SHA256` and `setAttestationChallenge(enrollmentChallenge)`. Request StrongBox only if supported and required by policy. A TEE is acceptable when policy allows it. Absence of an acceptable hardware attestation leaves enrollment unsupported. Older API levels cannot perform this enrollment flow.
@@ -135,7 +221,7 @@ Derived digests need no wire fields. Exporters may display hex for diagnostics o
 
 [Android Keystore](https://developer.android.com/privacy-and-security/keystore) · [Key attestation verification and trust anchors](https://developer.android.com/privacy-and-security/security-key-attestation) · [Attestation fields](https://source.android.com/docs/security/features/keystore/attestation) · [SigningInfo](https://developer.android.com/reference/android/content/pm/SigningInfo)
 
-### Capture and credential validation
+#### Capture and credential validation
 
 For CameraX, prefer the existing full-resolution file output path using `ImageCapture.takePicture(OutputFileOptions, executor, OnImageSavedCallback)`. On successful completion, snapshot the finalized bytes in app-private storage before any EXIF edit, metadata stripping, bitmap conversion, thumbnail creation or re-encoding. If the app delegates capture, pass a full-resolution output URI and read that completed output through `ContentResolver`. An intent thumbnail cannot serve as J. Bind the callback and any detached credential to the same pending capture. Stream SHA-256 over the immutable snapshot and validate the credential on that very snapshot. On cancellation, incomplete writes or permission failure, discard the incomplete capture.
 
@@ -151,7 +237,7 @@ For C2PA, use a maintained validator supporting the asset format and manifest ve
 
 [CameraX file capture](https://developer.android.com/media/camera/camerax/take-photo) · [Pixel Camera requirements](https://support.google.com/pixelcamera/answer/16507662?hl=en) · [C2PA specification](https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html)
 
-### Persistence, challenge and anchoring
+#### Persistence, challenge and anchoring
 
 Associate each pending capture with its own local operation ID. Snapshot its input fields once. Persist the receipt, exact signature and evidence consistently before placing C in an anchor queue. A process restart or network retry must reuse that saved receipt. If the verifier requires a session challenge, compare the signed bytes to its outstanding value, check expiry and atomically consume it on acceptance. Keep repeated verification of a stored receipt separate from accepting it as a fresh response.
 
@@ -161,7 +247,7 @@ XRPL is a proposed backend requiring a submitter and configured network. Existin
 
 A trusted XRPL node on the expected network must report the identified transaction as validated, with metadata result `tesSUCCESS`. Check the decoded memo type and exact 32-byte commitment, and the publisher account when policy requires it. Return separate results for signed, anchor pending, anchor failed and anchor verified. A submission acknowledgment, matching transaction hash alone or unvalidated ledger is insufficient. Record the validated ledger index and close time for display. [XRPL transaction memos](https://xrpl.org/docs/references/protocol/transactions/common-fields#memos-field) · [Ledger close times](https://xrpl.org/docs/concepts/ledgers/ledger-close-times)
 
-### Independent verification results and evaluation time
+#### Independent verification results and evaluation time
 
 Return one result per row. Use an indeterminate outcome and a reason when required evidence is unavailable. Continue independent checks where inputs allow them.
 
@@ -174,13 +260,13 @@ Return one result per row. Use an indeterminate outcome and a reason when requir
 
 Record evaluation time, policy identifier and digest, trust-anchor set, revocation evidence and its validity interval, validator version and reason codes. A current assessment applies the verifier's current trust policy and applicable status evidence. To report a past acceptance decision, retain an authenticated, time-evidenced decision identifying the exact bundle, policy and outcomes. For independent historical re-evaluation also archive the applicable policy, trust anchors, chains, signed status evidence and trustworthy evidence of the evaluation time. Missing historical evidence yields an indeterminate historical assessment. Device time and ledger closure cannot reconstruct past revocation or trust policy. Display current and historical assessments separately.
 
-### Encoding check
+#### Encoding check
 
 For the absent challenge leaf, the deterministic CBOR preimage of `D("field", "sessionChallenge", null)` is `83656669656c647073657373696f6e4368616c6c656e6765f6`. The expected SHA-256 digest is `08af3a4d5c4355de83f11a0a38a2bdda38fcbeb17a2b2899efeb1e17c456d580`. Hash the decoded bytes.
 
 For a synthetic T of 32 zero bytes, the preimage of R is `826f66696e6765727072696e746f2f763158200000000000000000000000000000000000000000000000000000000000000000` and R is `e48a020f88749bf33817bc525f835609183afdbea8433a3ea3f091e1ec6f7bae`. Verify that a signature for this R fails on bare T and on an R computed with another protocol label.
 
-### Acceptance checks
+#### Acceptance checks
 
 - Compare Android and independent verifier outputs for both credential placements, null and present challenges, and the unpaired-leaf rule. Check DER signature interoperability using the original signature bytes.
 - Modify one original byte, detached credential byte, app field, session field and signature in separate tests. Every altered bundle must fail the affected verification step or anchor check.
@@ -188,7 +274,7 @@ For a synthetic T of 32 zero bytes, the preimage of R is `826f66696e676572707269
 - On a supported handset, compare native camera output with the app's actual capture output. Record device, OS, capture app and mode, credential presence and validator result. A successful native-camera sample does not establish app-route support.
 - Test app update with the same key, key loss, two simultaneous captures, interrupted export and XRPL submission timeout. Test wrong network, wrong memo, failed transaction and pending validation independently.
 
-### Complete synthetic interoperability vectors
+#### Complete synthetic interoperability vectors
 
 The JSON block carries four standalone sets of file bytes plus shared decoded fields. Decode hex to bytes. Each case supplies the original JPEG J, the detached A when applicable, the entire receipt.cbor, and every expected tree and receipt intermediate. In the embedded cases the JPEG APP15 payload is the synthetic credential. N01 and N23 combine device leaves, N0123 combines those nodes, and N_IP combines F_I and F_P. The fixture reuses its self-signed certificate as the synthetic APK signer certificate. The enrollment chain has no Android attestation and the synthetic credential has no authorized issuer. Expected results are a valid installation signature, no accepted origin or enrollment, and an absent anchor. OTS_SHA256_C is the input digest for a detached OTS proof. No ledger proof is supplied. Verify each supplied DER signature verbatim; production ECDSA signers may generate different valid signatures for the same R.
 

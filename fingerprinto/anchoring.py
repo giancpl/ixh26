@@ -36,9 +36,13 @@ def verify_receipt_ots(
     independent; a verified anchor does not make a bad signature valid.
     """
     result = verify_receipt(receipt_bytes, asset, credential, anchor_evidence=proof)
+    return _verify_ots_result(result, proof, config, "fingerprinto/v1-bitcoin-ots")
+
+
+def _verify_ots_result(result, proof, config, profile):
     details = {"backend": "opentimestamps-bitcoin", "network": config.network}
     result = replace(result, anchor_details=details,
-                     verifier_profile="fingerprinto/v1-bitcoin-ots")
+                     verifier_profile=profile)
     if proof is None:
         return result
     if type(proof) is not bytes or len(proof) > MAX_OTS_BYTES:
@@ -64,6 +68,13 @@ def verify_receipt_ots(
     }
     check = checks.get(status, Check("indeterminate", "bitcoin_anchor_error", "Bitcoin verification failed operationally."))
     return replace(result, anchor=check, anchor_details=details)
+
+
+def verify_hybrid_receipt_ots(receipt_bytes, asset, credential=None, *, expected_device_id, proof, config):
+    from .hybrid_receipt import verify_hybrid_receipt
+    result = verify_hybrid_receipt(receipt_bytes, asset, credential,
+                                   expected_device_id=expected_device_id, anchor_evidence=proof)
+    return _verify_ots_result(result, proof, config, "fingerprinto/v2-hybrid-bitcoin-ots")
 
 
 def _publish_commitment(path: Path, value: bytes) -> None:
@@ -97,6 +108,10 @@ def export_commitment(
     Use an app-owned directory and keep original receipt/asset evidence.
     """
     result = verify_receipt(receipt_bytes, asset, credential)
+    return _export_result(result, output_dir)
+
+
+def _export_result(result, output_dir):
     if result.profile.status != "accepted" or result.installation_signature.status != "valid":
         raise ValueError("A well-formed receipt with a valid installation signature is required")
     value = bytes.fromhex(result.computed["C"])
@@ -126,5 +141,14 @@ def stamp_receipt(
     makes no origin/enrollment claim and does not automatically verify Bitcoin.
     """
     path = export_commitment(receipt_bytes, asset, output_dir, credential)
+    settlement = SettlementService(config).stamp_file(path, path.parent)
+    return AnchorSubmission(path, settlement)
+
+
+def stamp_hybrid_receipt(receipt_bytes, asset, output_dir, credential=None, *, expected_device_id, config):
+    """Explicit submission of v2 C after both signature/pinned-ID checks pass."""
+    from .hybrid_receipt import verify_hybrid_receipt
+    result = verify_hybrid_receipt(receipt_bytes, asset, credential, expected_device_id=expected_device_id)
+    path = _export_result(result, output_dir)
     settlement = SettlementService(config).stamp_file(path, path.parent)
     return AnchorSubmission(path, settlement)

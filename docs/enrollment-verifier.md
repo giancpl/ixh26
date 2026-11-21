@@ -64,8 +64,10 @@ validated. Successful enrollment never authorizes an image-origin claim.
 
 The module checks the exact P-256 SPKI, an ordered leaf-first chain of 2–8 DER
 certificates, an exact pinned root, certificate validity at verifier time,
-issuer signatures, CA/keyCertSign constraints and path length. RSA issuer keys
-must be at least 2048 bits; EC issuer curves are P-256/P-384/P-521. Certificate
+issuer signatures, CA/keyCertSign constraints and path length. Following the
+EC-only requirement, RSA issuer chains are unsupported; EC issuer curves are
+P-256/P-384/P-521. Deployments need independently trusted EC attestation roots
+and compatible device chains; do not substitute an incoming root. Certificate
 signature hashes must be SHA-256/384/512. No AIA or general path building occurs.
 Unsupported critical extensions, name/policy constraints, EKU and self-issued
 intermediates yield indeterminate, rather than bypassing unsupported constraints.

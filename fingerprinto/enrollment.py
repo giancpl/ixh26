@@ -14,7 +14,7 @@ import sqlite3
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ObjectIdentifier, ExtensionOID
 
 from . import android_attestation as der
@@ -52,6 +52,7 @@ class EnrollmentPolicy:
     @property
     def digest(self) -> bytes:
         value = {"profile": "fingerprinto/android-enrollment/v1", "id": self.identifier,
+                 "issuer_algorithms": ["ecdsa-p256", "ecdsa-p384", "ecdsa-p521"],
                  "roots": sorted(hashlib.sha256(root).hexdigest() for root in self.roots),
                  "packages": sorted(self.packages), "signers": sorted(d.hex() for d in self.signer_digests),
                  "levels": sorted(self.security_levels), "os": self.minimum_os_version,
@@ -117,10 +118,7 @@ def _path(chain: tuple[bytes, ...], policy: EnrollmentPolicy, now: datetime):
         if cert.signature_hash_algorithm is None or cert.signature_hash_algorithm.name not in {"sha256", "sha384", "sha512"}:
             raise _Unsupported("certificate_algorithm_unsupported")
         key = cert.public_key()
-        if isinstance(key, rsa.RSAPublicKey):
-            if key.key_size < 2048:
-                raise _Rejected("certificate_key_strength_rejected")
-        elif isinstance(key, ec.EllipticCurvePublicKey):
+        if isinstance(key, ec.EllipticCurvePublicKey):
             if key.curve.name not in {"secp256r1", "secp384r1", "secp521r1"}:
                 raise _Unsupported("certificate_curve_unsupported")
         else:
@@ -142,8 +140,10 @@ def _path(chain: tuple[bytes, ...], policy: EnrollmentPolicy, now: datetime):
             # Self-issued intermediates require more path processing; unsupported.
             if index < len(certs) - 1 and cert.subject == cert.issuer:
                 raise _Unsupported("self_issued_intermediate_unsupported")
-        if index < len(certs) - 1:
-            cert.verify_directly_issued_by(certs[index + 1])
+    # Preflight every issuer algorithm before invoking any signature verifier.
+    # Unsupported RSA paths must not run an RSA verification on an earlier leaf.
+    for child, issuer in zip(certs, certs[1:]):
+        child.verify_directly_issued_by(issuer)
     return certs
 
 

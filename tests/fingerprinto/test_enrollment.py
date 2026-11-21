@@ -11,7 +11,6 @@ import unittest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 
 from fingerprinto import android_attestation as der
@@ -213,8 +212,8 @@ class EnrollmentTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             der.items(b"\xbf\x80\x01\x00")
 
-    def test_rsa_issuer_and_strongbox_profile(self):
-        self.rootkey = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    def test_ec_issuer_and_strongbox_profile(self):
+        self.rootkey = ec.generate_private_key(ec.SECP384R1())
         self.root = self.certificate(self.rootkey, self.rootkey, self.rootname, self.rootname, ca=True, serial=8)
         self.policy = replace(self.policy, roots=(self.root.public_bytes(serialization.Encoding.DER),), security_levels=frozenset({2}))
         self.challenge = self.requests.issue(self.policy.digest, now=self.now)

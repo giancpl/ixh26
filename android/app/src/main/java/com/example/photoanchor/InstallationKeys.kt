@@ -3,11 +3,13 @@ package com.example.photoanchor
 import android.content.Context
 import android.content.pm.PackageManager
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
 import java.io.File
 import java.io.RandomAccessFile
 import java.security.KeyPairGenerator
+import java.security.KeyFactory
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.spec.ECGenParameterSpec
@@ -51,6 +53,7 @@ class InstallationKeys(context: Context) {
         generator.initialize(specification)
         // No fallback after failure; any residual alias requires explicit recovery.
         val pair = generator.generateKeyPair()
+        requireHardware(pair.private)
         val key = pair.public.encoded
         InstallationSignature.publicKey(key)
         val evidence = evidence(store(), key, challenge)
@@ -81,6 +84,7 @@ class InstallationKeys(context: Context) {
         }
         val key = store().getKey(ALIAS, null) as? PrivateKey
             ?: error("Installation private key unavailable; new enrollment required")
+        requireHardware(key)
         InstallationSignature.sign(key, evidence.publicKey, root)
     }
 
@@ -105,6 +109,8 @@ class InstallationKeys(context: Context) {
 
     private fun evidence(store: KeyStore, key: ByteArray, challenge: ByteArray): Evidence {
         check(store.containsAlias(ALIAS)) { "Installation key lost; new enrollment required" }
+        val privateKey = store.getKey(ALIAS, null) as? PrivateKey ?: error("Installation key unavailable")
+        requireHardware(privateKey)
         val chain = store.getCertificateChain(ALIAS)?.map { it.encoded }
             ?: error("Missing enrollment certificate chain")
         check(chain.size in 1..8 && chain.all { it.size in 1..16384 }) { "Unsupported certificate chain" }
@@ -115,6 +121,13 @@ class InstallationKeys(context: Context) {
     }
 
     private fun store(): KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+    @Suppress("DEPRECATION")
+    private fun requireHardware(key: PrivateKey) {
+        val info = KeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
+            .getKeySpec(key, KeyInfo::class.java)
+        check(info.isInsideSecureHardware) { "Software-only installation keys are unsupported" }
+    }
 
     private fun <T> locked(operation: () -> T): T = synchronized(PROCESS_LOCK) {
         check(directory.isDirectory || directory.mkdirs()) { "Cannot create installation storage" }

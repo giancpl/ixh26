@@ -138,6 +138,15 @@ public final class ReceiptV1 {
         return out.toByteArray();
     }
 
+    // Shared byte encoder only; v2 callers supply their own domain/version.
+    static byte[] protocolEncode(Object[] value) { return encode(value); }
+
+    static byte[] protocolHash(String label, Object... fields) { return d(label, fields); }
+
+    static byte[] protocolHashStream(InputStream input, long limit, boolean nonempty) throws IOException {
+        return hashStream(input, limit, nonempty);
+    }
+
     private static void write(ByteArrayOutputStream out, Object value) {
         if (value == null) out.write(0xf6);
         else if (value instanceof Long) {
