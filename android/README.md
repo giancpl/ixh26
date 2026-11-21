@@ -3,7 +3,7 @@
 The app captures a full-resolution JPEG through CameraX, stores it privately,
 and can upload the exact file to the configured photo server. The camera screen
 also exports an unsigned diagnostic ZIP with the original and a capture report.
-See [capture feasibility](../docs/capture-feasibility.md) for independent checks.
+See [capture feasibility](../docs/implementation/capture-feasibility.md) for independent checks.
 
 ## Build
 

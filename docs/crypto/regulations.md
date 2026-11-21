@@ -13,7 +13,7 @@ findings, and independently checkable anchoring evidence. This supports a
 customer's evidential/document-management process. It does not currently justify
 a blanket EU/Italian compliance label. The branch remains an offline prototype;
 physical-camera performance, manufacturer validation and Android integration
-retain the acceptance gates in `CRYPTO-V3-ROADMAP.md`.
+retain the acceptance gates in `../implementation/CRYPTO-V3-ROADMAP.md`.
 
 The clearest potential premium feature is **qualified electronic time stamping
 through an existing qualified trust service provider**, alongside OTS. That is

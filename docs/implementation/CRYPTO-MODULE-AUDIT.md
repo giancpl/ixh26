@@ -21,7 +21,7 @@ there is still missing integration/validator code, not merely testing to do.
 Do not label this branch as a complete capture application or a calibrated
 camera-attribution product. The empirical exercise remains an open stop/go gate.
 
-The review covers the current `crypto.md` requirements, the v3 roadmap and the
+The review covers the current `../crypto/crypto.md` requirements, the v3 roadmap and the
 preserved v1/v2 implementations. UI, app compilation/SDK licence acceptance,
 upload-server integration and XRPL remain outside the agreed branch scope.
 No RSA device keys or RSA enrollment issuer paths were found in the module;
@@ -108,5 +108,5 @@ threshold, trusted boolean or an inferred device identity from EXIF.
 Only source inspection, syntax/static checks and diff checks were performed
 for this audit. Execute the above on the separate branch before claiming that
 the new corrections pass. Regulatory relevance is documented separately in
-[regulations.md](regulations.md); there is no new certification or qualified
+[../crypto/regulations.md](../crypto/regulations.md); there is no new certification or qualified
 timestamp implementation in this audit.

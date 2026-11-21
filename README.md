@@ -2,12 +2,12 @@
 
 The proposed FingerprinTO receipt implementation is in `fingerprinto/`.
 Current manufacturer/PRNU v3 work follows the
-[v3 roadmap](docs/CRYPTO-V3-ROADMAP.md), with explicit empirical feasibility gates.
+[v3 roadmap](docs/implementation/CRYPTO-V3-ROADMAP.md), with explicit empirical feasibility gates.
 For the saved state before the crypto redesign, start with the
-[crypto checkpoint](docs/CRYPTO-CHECKPOINT-2026-11-21.md).
+[crypto checkpoint](docs/implementation/CRYPTO-CHECKPOINT-2026-11-21.md).
 Its independent bundle CLI, current checks and remaining Android/origin work
-are described in [implementation progress](docs/implementation-progress.md).
-The proposed protocol is in [the cryptographic manual](docs/crypto.md).
+are described in [implementation progress](docs/implementation/implementation-progress.md).
+The proposed protocol is in [the cryptographic manual](docs/crypto/crypto.md).
 
 A standalone Python 3.11+ component that timestamps arbitrary **opaque binary
 files** with OpenTimestamps (OTS). It hashes locally, stores standard portable
@@ -309,11 +309,11 @@ and stderr to avoid credential leakage.
 ## Tests
 
 The evidence-v3 crypto-module experiment is documented in
-[the v3 runbook](docs/V3-EXPERIMENT-RUNBOOK.md), with its
-[roadmap and remaining acceptance gates](docs/CRYPTO-V3-ROADMAP.md).
-The [source audit](docs/CRYPTO-MODULE-AUDIT.md) lists still-missing implementation
+[the v3 runbook](docs/implementation/V3-EXPERIMENT-RUNBOOK.md), with its
+[roadmap and remaining acceptance gates](docs/implementation/CRYPTO-V3-ROADMAP.md).
+The [source audit](docs/implementation/CRYPTO-MODULE-AUDIT.md) lists still-missing implementation
 and recent corrections awaiting the dedicated test branch. Relevant legal
-frameworks and limits of commercial claims are in [regulations](docs/regulations.md).
+frameworks and limits of commercial claims are in [regulations](docs/crypto/regulations.md).
 Use `python -m fingerprinto v3 --help` for the explicit profile; v1 and hybrid-v2
 remain separate. Synthetic passing tests do not establish real-camera accuracy.
 

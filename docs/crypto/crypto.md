@@ -1,10 +1,10 @@
 # FingerprinTO | Android capture and source evidence
 
-**Visual overview:** [PRNU, hashes and signature](crypto-flow.md) illustrates the
+**Visual overview:** [PRNU, hashes and signature](../diagrams/crypto-flow.md) illustrates the
 v3 cryptographic flow (Italian), including the difference between statistical
 attribution and the signed byte binding.
 
-**Implementation audit:** [CRYPTO-MODULE-AUDIT.md](CRYPTO-MODULE-AUDIT.md)
+**Implementation audit:** [CRYPTO-MODULE-AUDIT.md](../implementation/CRYPTO-MODULE-AUDIT.md)
 maps this target to the source, corrections and still-missing implementation.
 The full Android/manufacturer flow is not yet complete. Tests of the latest
 audit changes are deferred to the separate validation branch. Regulatory

@@ -4,7 +4,7 @@
 implemented primitives, source corrections awaiting the test branch, missing
 manufacturer/Android integration, and empirical acceptance gates. The module
 must not be described as entirely implemented. Regulatory notes are in
-[regulations.md](regulations.md).
+[../crypto/regulations.md](../crypto/regulations.md).
 
 **Current v3 work:** [CRYPTO-V3-ROADMAP.md](CRYPTO-V3-ROADMAP.md) tracks the
 manufacturer/PRNU direction. Implemented pieces now include the shared reducer,
@@ -21,7 +21,7 @@ The numbered sections below are historical snapshots, not cumulative claims
 that every later requirement has already been satisfied. Read the user's new
 direction before continuing the old backlog.
 
-At save commit `db5a857` (`ADD: partial 1`), `docs/crypto.md` already introduces
+At save commit `db5a857` (`ADD: partial 1`), `docs/crypto/crypto.md` already introduces
 the **v3 P-256 manufacturer/PRNU proposal** and moves v1 into a historical
 appendix. At that save point the implementation covered v1/v2 only: the v3
 codec, reducer, PRNU reference/scoring/calibration and attachments were missing.
@@ -41,7 +41,7 @@ python -m unittest discover -s tests/fingerprinto -p test_core.py -v
 ```
 
 The four fixtures in `tests/fingerprinto/fixtures/v1.json` are copied from the
-synthetic vectors in `docs/crypto.md`. They are interoperability fixtures, not
+synthetic vectors in `docs/crypto/crypto.md`. They are interoperability fixtures, not
 accepted camera or enrollment evidence.
 
 This piece does **not** validate SPKI curve points, certificate DER/chains,
@@ -164,7 +164,7 @@ implement a bundle archive/importer or change the app's existing photo uploads.
 ## Piece 4: evidence-bundle export/import
 
 Implemented in `fingerprinto/bundle.py`. This is a local ZIP transport convention
-for v1 evidence; it does not change the signed CBOR schema in `crypto.md`.
+for v1 evidence; it does not change the signed CBOR schema in `../crypto/crypto.md`.
 
 ```python
 from fingerprinto.bundle import EvidenceBundle, export_bundle, import_bundle, verify_bundle
@@ -305,7 +305,7 @@ and real credential validation remain outstanding.
 ## Piece 8: reproducible Android build configuration
 
 Added Gradle Wrapper 8.11.1 with the official distribution SHA-256, Windows and
-POSIX launchers, and [Android build instructions](../android/README.md). The
+POSIX launchers, and [Android build instructions](../../android/README.md). The
 existing standalone export test is now included in `testDebugUnitTest` through
 a JUnit adapter. Downloaded local JDK/Gradle/command-line tools live in the
 ignored `.tools-android/` directory; no global Java/Gradle installation changed.
@@ -372,7 +372,7 @@ consumption. `enroll_receipt` checks receipt signature possession before intake;
 it returns separate enrollment/origin/signature outcomes and policy diagnostics.
 No phone-supplied trust flags, roots, time or revocation metadata are used.
 
-See [enrollment-verifier.md](enrollment-verifier.md) for inputs, API, restricted
+See [../crypto/enrollment-verifier.md](../crypto/enrollment-verifier.md) for inputs, API, restricted
 X.509/Android profiles and remaining deployment responsibilities. In particular,
 authenticated production revocation acquisition, real trust configuration and
 durable/historical enrollment-decision recovery are not supplied by this piece.
@@ -410,7 +410,7 @@ Validation: 51 Python unittest methods passed on Windows; 117 tests and 90
 subtests passed in WSL, including existing OTS checks. Real ML-DSA/Ed25519
 signatures cross-verify in both directions using BC 1.87 and PQClean/pqcrypto
 0.4.0. JVM tests cover the AES envelope, binding, v2 receipt bytes and C.
-See [hybrid-v2.md](hybrid-v2.md) for exact byte contracts and limitations.
+See [../crypto/hybrid-v2.md](../crypto/hybrid-v2.md) for exact byte contracts and limitations.
 
 ## Piece 13: explicit hybrid bundle/CLI/OTS transport
 
@@ -430,7 +430,7 @@ profile selection reuses the same path, size, CRC and no-overwrite controls.
 The v2 receipt can reconstruct C for diagnostic transport even when a component
 signature fails. Hardware-binding errors fail v2 decoding. A pinned device ID
 alone still does not constitute a validated retained enrollment decision.
-See [hybrid-v2.md](hybrid-v2.md) for commands, APIs and trust boundaries.
+See [../crypto/hybrid-v2.md](../crypto/hybrid-v2.md) for commands, APIs and trust boundaries.
 
 Validation: 56 Windows unittest methods passed; 127 tests and 90 subtests passed
 in WSL. New coverage includes embedded/detached bundles, profile/identity

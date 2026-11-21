@@ -4,7 +4,7 @@
 
 Data: 21 novembre 2026. Snapshot della repo: `leomain`, commit `686a4ce`.
 Questa è la mia valutazione del progetto, non una certificazione né un nuovo
-risultato sperimentale. Il documento complementare è [task.md](task.md).
+risultato sperimentale. Il documento complementare è [../challenge/task.md](../challenge/task.md).
 Questa analisi e il relativo handoff sono stati redatti con assistenza di
 OpenAI Codex; non costituiscono una revisione umana indipendente né nuovi test
 del modulo. La disclosure complessiva del team resta da ricostruire correttamente.
@@ -147,7 +147,7 @@ storici non sono risultati sul codice successivo a quel commit.
 **Chiusura attesa:** regressioni sul ramo di verifica, fault injection nelle
 transazioni, concorrenza, migrazione di database esistenti, scoping della proof
 of possession e impossibilità di riesumare grant superati da revoche. Seguire
-la checklist dell'[audit](docs/CRYPTO-MODULE-AUDIT.md). Lo storico locale firmato
+la checklist dell'[audit](../implementation/CRYPTO-MODULE-AUDIT.md). Lo storico locale firmato
 non protegge da solo dal rollback dell'intero database né prova automaticamente
 lo stato di revoca a qualsiasi data passata.
 
@@ -212,7 +212,7 @@ indiscriminata di tutto il materiale.
 **Chiusura attesa:** modello di accesso, cifratura/storage, retention e distribuzione
 agli auditor; analisi del leakage e della linkabilità dei commitment pubblici.
 Non assumere che un hash equivalga ad anonimizzazione o che `C` sia un commitment
-perfettamente hiding. Il dettaglio normativo è in [regulations](docs/regulations.md).
+perfettamente hiding. Il dettaglio normativo è in [regulations](../crypto/regulations.md).
 
 ## OP-10 — Ruolo dell'ibrido e agilità crittografica
 
@@ -247,7 +247,7 @@ La ricerca normativa rende plausibile un supporto ai processi probatori e
 documentali; non certifica il prototipo. Timestamp qualificati, conservazione
 documentale e adempimenti privacy richiedono componenti/processi aggiuntivi.
 Non risolvono OP-00 o OP-01 e non devono assorbire il lavoro prima della verifica
-di fattibilità. Riferimento: [docs/regulations.md](docs/regulations.md).
+di fattibilità. Riferimento: [docs/crypto/regulations.md](../crypto/regulations.md).
 
 ## Punto di ripartenza
 

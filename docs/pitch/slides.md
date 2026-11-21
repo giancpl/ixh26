@@ -1,4 +1,4 @@
-<!-- AGENT CONSTRAINT: This file contains content and visual guidance for ONLY THREE crypto slides, coordinated with docs/pitch.md. All spoken text is in pitch.md: maximum 90 seconds TOTAL, including pauses and slide transitions, not 90 seconds per slide. Target approximately 70 seconds; do not add slides or oral explanations. Formulas are optional visual support and MUST NOT be spoken. Keep elements few and readable; distinguish implemented features, proposals and outstanding validation. Comments are editorial instructions, not projected text. -->
+<!-- AGENT CONSTRAINT: This file contains content and visual guidance for ONLY THREE crypto slides, coordinated with docs/pitch/pitch.md. All spoken text is in pitch.md: maximum 90 seconds TOTAL, including pauses and slide transitions, not 90 seconds per slide. Target approximately 70 seconds; do not add slides or oral explanations. Formulas are optional visual support and MUST NOT be spoken. Keep elements few and readable; distinguish implemented features, proposals and outstanding validation. Comments are editorial instructions, not projected text. -->
 
 # The problem happens before signing
 
@@ -34,7 +34,7 @@ $$
 
 **Anchoring records commitments, not scene truth or capture time.**
 
-<!-- SLIDE 2 - Approximately 15 seconds; third paragraph of pitch.md. This is a flow summary, not the complete dependency graph: C binds both R and the signature. The installation key is protected by hardware Keystore; this does not make it a sensor signature. D means SHA256 over a deterministic CBOR array with domain separation; OTS receives the 32 raw bytes of C and hashes them. Anchoring is verifiable once the OTS proof is completed and checked. The formula is optional: DO NOT read it. See crypto-flow.md and its PNGs for technical detail; do not paste the entire vertical diagram onto this slide. -->
+<!-- SLIDE 2 - Approximately 15 seconds; third paragraph of pitch.md. This is a flow summary, not the complete dependency graph: C binds both R and the signature. The installation key is protected by hardware Keystore; this does not make it a sensor signature. D means SHA256 over a deterministic CBOR array with domain separation; OTS receives the 32 raw bytes of C and hashes them. Anchoring is verifiable once the OTS proof is completed and checked. The formula is optional: DO NOT read it. See ../diagrams/crypto-flow.md and its PNGs for technical detail; do not paste the entire vertical diagram onto this slide. -->
 
 ---
 

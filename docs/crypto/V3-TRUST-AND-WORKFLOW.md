@@ -61,7 +61,7 @@ records are published separately; this function does not capture/calibrate a pho
 Attachment/schema checks and aggregate limits (reserving the longest allowed
 signature) run before signing, so an oversized report does not create an
 unexportable journalled receipt. These latest audit corrections await execution
-testing on the dedicated branch; see `CRYPTO-MODULE-AUDIT.md`.
+testing on the dedicated branch; see `../implementation/CRYPTO-MODULE-AUDIT.md`.
 
 `verify_v3` reconstructs and verifies the signed receipt, re-evaluates both origin
 checks using caller-configured validators/store/reference retrieval, and reports

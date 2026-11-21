@@ -7,25 +7,25 @@ test branch. This handoff does not authorise merge or automatic merge.
 
 ## Read before assessing completeness
 
-The slide-informed [open problems](<../open problems.md>) and
-[Claude task handoff](../task.md) relate the implementation to the actual IXH26
+The slide-informed [review notes](../.notes/review-notes.md) and
+[Claude task handoff](../challenge/task.md) relate the implementation to the actual IXH26
 physical-origin/decentralisation challenge, including the gap between a protected
 installation key and authenticated sensor capture. They add analysis and a plan,
 not completed implementation or new test results.
 
 1. [Implementation audit](CRYPTO-MODULE-AUDIT.md): requirement-to-source map,
    missing code and the scenarios to validate for the latest corrections.
-2. [Current specification](crypto.md): v3 P-256 target, manufacturer/PRNU
+2. [Current specification](../crypto/crypto.md): v3 P-256 target, manufacturer/PRNU
    semantics, independent checks, immutable J, signed E and trust boundaries.
    Its historical appendix describes v1, not v3 behaviour.
 3. [Roadmap](CRYPTO-V3-ROADMAP.md) and [experiment runbook](V3-EXPERIMENT-RUNBOOK.md):
    implemented mechanisms versus empirical stop/go gates and executable commands.
-4. [PRNU experiment](PRNU-EXPERIMENT.md), [v3 formats](EVIDENCE-V3-FORMATS.md)
-   and [trust/workflow](V3-TRUST-AND-WORKFLOW.md): actual algorithm, wire/JSON
+4. [PRNU experiment](../prnu/PRNU-EXPERIMENT.md), [v3 formats](../crypto/EVIDENCE-V3-FORMATS.md)
+   and [trust/workflow](../crypto/V3-TRUST-AND-WORKFLOW.md): actual algorithm, wire/JSON
    bounds, authority records, recovery and retry semantics.
-5. [Hybrid v2](hybrid-v2.md): separate ML-DSA-65 AND Ed25519 experiment. Hardware
+5. [Hybrid v2](../crypto/hybrid-v2.md): separate ML-DSA-65 AND Ed25519 experiment. Hardware
    AES protects software secrets at rest; those secrets enter RAM for signing.
-6. [Regulations](regulations.md): dated official-source mapping and limitations
+6. [Regulations](../crypto/regulations.md): dated official-source mapping and limitations
    on legal/commercial claims, not a compliance certificate.
 
 The [implementation progress](implementation-progress.md) and

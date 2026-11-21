@@ -3,11 +3,11 @@
 Questo schema descrive il profilo **P-256 v3**, separato dall'esperimento ibrido
 v2. Il PRNU produce un risultato statistico; hash e firma legano ai byte esatti
 quel risultato e le evidenze usate. Non trasformano il risultato in una prova
-della verità della scena. Le parti ancora mancanti sono nell'[audit](CRYPTO-MODULE-AUDIT.md).
+della verità della scena. Le parti ancora mancanti sono nell'[audit](../implementation/CRYPTO-MODULE-AUDIT.md).
 
 ## 1. Dal sensore al confronto PRNU
 
-![PRNU: reference e confronto](diagrams/prnu-flow.png)
+![PRNU: reference e confronto](prnu-flow.png)
 
 <details>
 <summary>Sorgente Mermaid del diagramma PRNU</summary>
@@ -57,11 +57,11 @@ PCE = sign(r0) × r0² / media(r_shift² fuori dalla finestra centrale 3×3)
 Energia nulla o area valida insufficiente danno un risultato inconcludente.
 Le soglie di accettazione e rifiuto si abilitano separatamente: senza relativa
 calibrazione approvata non si emette il corrispondente pass/fail. Vedi il
-[metodo PRNU](PRNU-EXPERIMENT.md) per maschere, denoiser e parametri esatti.
+[metodo PRNU](../prnu/PRNU-EXPERIMENT.md) per maschere, denoiser e parametri esatti.
 
 ## 2. Dagli esiti al commitment firmato
 
-![Profilo v3: hash, firma e timestamp](diagrams/crypto-hash-flow.png)
+![Profilo v3: hash, firma e timestamp](crypto-hash-flow.png)
 
 <details>
 <summary>Sorgente Mermaid del diagramma hash e firma</summary>
@@ -156,16 +156,16 @@ firmare una conclusione statistica sbagliata: hash, Keystore e timestamp non
 rilevano automaticamente quella falsificazione. Né il PRNU né il timestamp
 dimostrano la verità della scena.
 
-Riferimenti al codice: [PRNU](../fingerprinto/prnu.py),
-[costruzione v3](../fingerprinto/receipt_v3.py),
-[orchestrazione e verifica](../fingerprinto/workflow_v3.py),
-[ancoraggio OTS](../fingerprinto/anchoring_v3.py).
+Riferimenti al codice: [PRNU](../../fingerprinto/prnu.py),
+[costruzione v3](../../fingerprinto/receipt_v3.py),
+[orchestrazione e verifica](../../fingerprinto/workflow_v3.py),
+[ancoraggio OTS](../../fingerprinto/anchoring_v3.py).
 
 ## Rigenerare i PNG
 
 Le immagini sono renderizzate dai due blocchi Mermaid di questo documento, a
 scala 2 su sfondo bianco. Dopo una modifica ai diagrammi, rigenerare anche i PNG.
-Lo script è [render_crypto_diagrams.py](../scripts/render_crypto_diagrams.py).
+Lo script è [render_crypto_diagrams.py](../../scripts/render_crypto_diagrams.py).
 
 Il rendering usa il bundle standalone `dist/mermaid.min.js` del pacchetto
 `mermaid@12.3.0`, `playwright==1.65.2` e un Chrome/Chromium/Edge già installato:
