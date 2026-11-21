@@ -1,11 +1,11 @@
 % Adapted from claude-pitch.md. All frames below are OUTSIDE the timed pitch.
 \begingroup
-\setbeamertemplate{footline}{\hfill\scriptsize\color{kn-muted}FingerprinTO / Q\&A backup\hspace{0.6cm}\vspace{0.25cm}}
+\setbeamertemplate{footline}{\pitchfooter{Q\&A}}
 
-\begin{frame}[noframenumbering]{The verifier cannot distinguish identical capture transcripts}
+\begin{frame}[noframenumbering]{Identical transcripts hide different histories}
 \begin{pitchcard}
 \textbf{Model}\par
-An adversary controls OS + app and can invoke an enrolled signing key.\par
+Hostile OS + app; enrolled signing-key access.\par
 The verifier sees only $(J,\mathit{receipt},\mathit{bundle})$.
 \end{pitchcard}
 \vspace{0.3cm}
@@ -14,29 +14,28 @@ The verifier sees only $(J,\mathit{receipt},\mathit{bundle})$.
 \mathit{injection\ of\ the\ same}\ J&\longrightarrow\mathit{transcript}\ \tau
 \end{align*}
 \vspace{0.2cm}
-Without an independently authenticated capture observation, the same transcript
-does not identify which history occurred.
+
 \vfill
-\labelsmall{Model-level argument, not a universal impossibility theorem.\par
-This does not let the client forge a vendor credential or pass every independent check.}
+\labelsmall{Model-level argument, not a universal theorem.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{Software evidence binds claims, not physical processes}
+\begin{frame}[noframenumbering]{Signed pixels do not authenticate the lens}
 \renewcommand{\arraystretch}{1.5}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{5.3cm}>{\raggedright\arraybackslash}p{7.5cm}@{}}
-\textbf{Component} & \textbf{What its verification establishes}\\\hline
-Hashes, signatures, reports & Byte binding / signer statement (S)\\
-Keystore attestation & Hardware-rooted key identity, not the frame\\
-Vendor credential & Capture only if its trusted path authenticates it\\
-PRNU & Physical signal hypothesis; software verdict; copyable\\
-Decoded beacon code & Software token validity, not authenticated optical entry\\
-Bitcoin / OTS & Publication/inclusion evidence, not a scene observer\\
+\textbf{Component} & \textbf{Boundary}\\\hline
+Hashes, signatures, reports & Byte binding (S)\\
+Keystore attestation & Key, not frame\\
+Vendor credential & Trusted capture path required\\
+PRNU & Copyable signal; software verdict\\
+Decoded beacon code & Token validity, not optics\\
+Bitcoin / OTS & Inclusion, not observation\\
 \end{tabular}\par
 \vfill
-\textbf{A pixel pattern can be pasted. Its signature does not authenticate the lens.}
+\textbf{A pixel pattern can be pasted. Its signature does not authenticate the lens.}\par\vspace{0.15cm}
+\labelsmall{Not claimed: scene truth / shutter time / AI-content detection.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{The byte contract names every committed component}
+\begin{frame}[noframenumbering]{Every committed component has a name}
 {\small\begin{align*}
 ID_I &= \HH(pk_I)\\
 F_I &= \D(\texttt{install},ID_I,\mathit{pkg},\mathit{versionCode},\mathit{signerDigest})\\
@@ -47,12 +46,12 @@ F_D &= \Node(\Node(\Node(L_0,L_1),\Node(L_2,L_3)),L_4)
 \end{align*}}
 \vspace{0.2cm}
 \labelsmall{$L_0\ldots L_4$: installation ID, manufacturer, model, localTime, sessionChallenge.\par
-Manufacturer/model/time are signed declarations. The certificate chain is validation material, not committed chain bytes.}
+Metadata are declarations; chain bytes are validation material.}
 \vfill
-\muted{Sign the 32 raw bytes of $R$ using SHA256withECDSA, not bare $T$.}
+\labelsmall{Sign raw $R$, not $T$. Preserve DER bytes. $C$ is not hiding; receipts are linkable.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{Missing evidence never upgrades an origin level}
+\begin{frame}[noframenumbering]{Missing evidence never becomes a pass}
 \renewcommand{\arraystretch}{1.5}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{8.6cm}>{\raggedright\arraybackslash}p{4.1cm}@{}}
 \textbf{Condition, in priority order} & \textbf{Result}\\\hline
@@ -64,29 +63,26 @@ Neither passes or fails; mandatory checks valid & No origin verification\\
 \end{tabular}\par
 \vspace{0.3cm}
 \labelsmall{Codes: 0 unavailable / 1 inconclusive / 2 pass / 3 fail.\par
-Both checks are assessed. A calibrated PRNU mismatch blocks even a manufacturer pass.\par
-An uncalibrated low score is not a mismatch. Personal preference never changes the level or $C$.}
+A calibrated mismatch blocks a manufacturer pass; personal preference never upgrades a level.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{PRNU supports statistical compatibility, not sensor proof}
+\begin{frame}[noframenumbering]{PRNU is compatible, not conclusive}
 \begin{align*}
 W_i &= I_i-\mathrm{denoise}(I_i), &
 K[p] &= \frac{\sum_i m_i[p]I_i[p]W_i[p]}{\sum_i m_i[p]I_i[p]^2}\\[0.35cm]
 \mathsf{SPCE} &= \frac{\operatorname{sign}(r_0)r_0^2}
 {\operatorname{mean}_{s\notin\mathcal E}\,r(s)^2}
 \end{align*}
-\labelsmall{$r_0$: normalised correlation of $W$ with $I K$ at fixed zero shift.\par
-$\mathcal E$: pinned central exclusion window. Invalid area/zero energy gives inconclusive.}
+\labelsmall{$r_0$: fixed zero-shift correlation of $W$ with $IK$; $\mathcal E$: exclusion window. Invalid area/zero energy: inconclusive.}
 \vspace{0.25cm}
 \textbf{Match / mismatch:} independently calibrated decision regions.\par
 \textbf{Otherwise:} inconclusive / unavailable.\par
 
 \vfill
-\labelsmall{IMPLEMENTED numerical experiment. Real-sensor error rates: [TBD].\par
-Copyable; no capture date; benign-image thresholds do not measure adaptive forgery.}
+\labelsmall{Implemented numerics; real-sensor rates not yet measured. Copyable; no capture date; adaptive forgery not established.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{The attack matrix includes what remains undetected}
+\begin{frame}[noframenumbering]{Some attacks remain undetected}
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{7.7cm}>{\raggedright\arraybackslash}p{5cm}@{}}
 \textbf{Attack} & \textbf{Result}\\\hline
@@ -97,14 +93,13 @@ Wrong session / future or stale slot & Token failure\\
 Paste valid code into synthetic scene & Not detected\\
 Relay / replay within session-age window & Not detected\\
 PRNU transfer / copying & Not reliably detected\\
-Compromised trusted authority & Not corrected by a ledger\\
+Compromised trusted authority & Not corrected by ledger/quorum\\
 \end{tabular}\par
 \vfill
-\labelsmall{A pre-generated scene with a freshly pasted code can pass token verification.\par
-Recorded-code reuse outside the age window fails; fresh relay remains possible.}
+\labelsmall{Fresh splicing/relay can pass; stale codes fail the age check.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{Publication evidence does not decentralise physical trust}
+\begin{frame}[noframenumbering]{Publication is decentralised. Physical trust is not.}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{0.48\textwidth}
 \begin{pitchcard}
@@ -125,81 +120,53 @@ PRNU thresholds / beacon pins
 \end{column}
 \end{columns}
 \vspace{0.3cm}
-Proposed lasting verification: preserve certificates, manifests, policies and
-authenticated status evidence. An anchor alone does not establish issuer trust.
+Preserve certificates, manifests, policies and signed status. Anchoring does not establish issuer trust.
 \vfill
-\labelsmall{Conditional beacon content window: $[t_{\rm slot},t_{\rm upper}]$ only with honest release/clock\par
-and an independently justified upper bound. Not scene age, shutter time or exact Bitcoin UTC.}
+\labelsmall{$[t_{\rm slot},t_{\rm upper}]$: honest clock/release + justified upper bound. Not scene age or exposure time.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{Strict parsing and profile isolation are part of verification}
+\begin{frame}[noframenumbering]{Strict parsing and hybrid signatures preserve distinct boundaries}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{0.49\textwidth}
 \begin{pitchcard}
-\textbf{Deterministic CBOR}\par
-Definite lengths / shortest integers.\par
-Reject tags, floats, indefinite items,\par
-trailing bytes and wrong type/arity.\par\vspace{0.2cm}
-P-256 SPKI: 91 bytes, on-curve.\par
-ECDSA DER: 8--72 bytes, in-range scalars.
+\textbf{Strict CBOR / isolated profiles}\par\vspace{0.15cm}
+{\small
+Definite lengths; shortest integers.\par
+No tags, floats, indefinite items,\par trailing bytes or wrong type/arity.\par\vspace{0.15cm}
+SPKI: 91 bytes, on-curve.\par
+DER: 8--72 bytes, in-range scalars.\par\vspace{0.15cm}
+Receipt / image: 256 KiB / 128 MiB\par
+Detached / JSON / bundle:\par 16 MiB / 1 MiB each / 160 MiB\par\vspace{0.15cm}
+v1 / hybrid-v2 / evidence-v3.\par\textbf{No fallback.}\par}
 \end{pitchcard}
 \end{column}
 \begin{column}{0.48\textwidth}
 \begin{pitchcard}
-\textbf{Bounds}\par
-Receipt: 256 KiB\par
-Image: 128 MiB\par
-Detached credential: 16 MiB\par
-Each JSON: 1 MiB\par
-Bundle aggregate: 160 MiB
+\textbf{Hybrid v2}\par\vspace{0.2cm}
+{\small\(\mathsf{ML\text{-}DSA\text{-}65}\ \mathbf{AND}\ \mathsf{Ed25519}\)}\par\vspace{0.15cm}
+Both signatures must verify.\par
+Hardware AES-GCM wrapping;\par bound to P-256 identity.\par\vspace{0.2cm}
+Secrets in RAM when signing.\par
+\textbf{Not hardware-native. No RSA.}\par\vspace{0.2cm}
+Classical attestation / authority trust remains.
 \end{pitchcard}
 \end{column}
 \end{columns}
-\vspace{0.4cm}
-\muted{Versioned v1 / hybrid-v2 / evidence-v3. No cross-profile fallback.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{Hybrid signatures do not make the whole trust chain post-quantum}
-\vspace{0.3cm}
-{\Large\(\mathsf{ML\text{-}DSA\text{-}65}\quad\mathbf{AND}\quad\mathsf{Ed25519}\)}\par
-\vspace{0.4cm}
-\begin{pitchcard}
-Both signatures must verify; separate wire version 2.\par
-Software keys wrapped at rest by hardware Keystore AES-GCM.\par
-Bound to the installation's P-256 identity.\par
-Hybrid secrets enter RAM during signing; not hardware-native.
-\end{pitchcard}
-\vfill
-\labelsmall{No RSA. Attestation, P-256 identity and authority trust remain classical dependencies.}
-\end{frame}
-
-\begin{frame}[noframenumbering]{Synthetic tests establish byte behaviour, not physical origin}
+\begin{frame}[noframenumbering]{Synthetic tests are not physical validation}
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{6.8cm}>{\raggedright\arraybackslash}p{5.9cm}@{}}
 \textbf{Available evidence} & \textbf{Scope}\\\hline
 Four legacy v1 signed fixtures & Synthetic interoperability\\
-Four signed v3 golden fixtures & Already implemented, not missing\\
-Beacon transcript / codec / CLI: 10 tests & Passed at \texttt{8fb3b3c}\\
+Four signed v3 golden fixtures & Implemented\\
+Beacon / codec / CLI: 10 tests & Passed at \texttt{8fb3b3c}\\
 Targeted v3 receipt/reducer: 3 + 6 tests & Passed at \texttt{8fb3b3c}\\
-Real-sensor rates / physical beacon trials & [TBD], not established\\
-Production manufacturer validator & Still missing on reviewed branch\\
+Real-sensor rates / physical beacon trials & Not established\\
+Production manufacturer validator & Not implemented\\
 \end{tabular}\par
 \vfill
-\labelsmall{No new crypto tests ran for this slide edit. The draft's reported independent v1 recomputation\par
-was not repeated here. Do not promote targeted regressions to a full audit of later Android integration.}
+\labelsmall{Targeted regressions, not a full audit.}
 \end{frame}
 
-\begin{frame}[noframenumbering]{The team must complete its AI-use disclosure}
-\vspace{0.4cm}
-\begin{pitchcard}
-\textbf{Known assistance}\par\vspace{0.2cm}
-OpenAI Codex: module/documentation/slide work and generated artwork.\par
-Claude: supplied analysis and pitch/slide drafts.\par\vspace{0.3cm}
-\textbf{Team-wide tools / assisted parts: [TBD]}\par
-\textbf{Human review actually performed: [TBD]}
-\end{pitchcard}
-\vfill
-\labelsmall{Incomplete disclosure, not a claim of independent human review.\par
-The team must reconcile its actual contributions before submission/presentation.}
-\end{frame}
 \endgroup

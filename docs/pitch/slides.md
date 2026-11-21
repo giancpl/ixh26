@@ -1,40 +1,46 @@
-<!-- AGENT CONSTRAINT: Adapt claude-pitch.md to the user's 180-second TOTAL pitch, including a 29.4-second recorded demo. Six timed screens only; extended technical slides are a separate Q&A edition and MUST NOT be presented during the pitch. Preserve Lagrange, readable mathematics/tables and sparse prose. Spoken text is in pitch.md; SAY comments are Italian presenter notes. Update source claims to the reviewed repository; no invented device results or universal physical-origin guarantee. -->
+<!-- AGENT CONSTRAINT: Eight sparse main screens, INCLUDING one video and the author's AI disclosure, fit the existing 180-second total. Nine Q&A slides are outside the timed pitch. Keep Lagrange, mathematics and technical cautions; remove projected process notes, placeholders and video-duration/speed labels. The original video targets must remain. The author declares: theory Human; code/slides LLM-generated. Do not infer human code review. -->
+
+# FingerprinTO
+
+Large `assets/to.png` logo, project name, IXH26 Bari.
+
+**A signature is not a sensor.**
+
+<!-- SAY: 0:00-0:10. Apertura essenziale; logo grande. Sulle altre slide, logo piccolo nel footer. -->
+
+---
 
 # A valid signature does not identify the sensor
 
-FingerprinTO: evidence for photo origin, with explicit assurance levels.
+Sensor A -> Photo J -> Phone B signs -> receipt + anchor.
 
-Sensor A -> photo J -> phone B signs -> receipt + anchor.
+Signature matches. Hash matches. Commitment timestamped.
 
-\(\mathrm{Verify}(pk_B,R,\sigma_B)=1\), image hash matches, commitment can be timestamped.
+**B never captured J.**
 
-**The claim that B captured J is still unsupported.**
-
-<!-- SAY: 0:00-0:40. Controesempio, non una dimostrazione che ogni controllo d'origine passa. Un attaccante puo invocare la chiave senza estrarla dal Keystore. -->
+<!-- SAY: 0:10-0:40. Scenario ipotetico: non dire che tutti i controlli indipendenti d'origine passano. -->
 
 ---
 
 # "Authentic" hides five different claims
 
-| Property | Evidence | Boundary |
-|---|---|---|
-| Byte integrity | SHA-256 + signature | Cryptographic |
-| Installation identity | Key attestation + possession | Hardware trust chain |
-| Capture credential | Trusted vendor + asset binding | Vendor capture path |
-| Sensor compatibility | PRNU correlation | Statistical; copyable |
-| Commitment inclusion | Bitcoin / OpenTimestamps | Not exposure time |
+| Claim | Strength / limit |
+|---|---|
+| Byte integrity | Cryptographic binding |
+| Installation identity | Hardware-rooted key |
+| Capture credential | Vendor-path dependent |
+| Sensor compatibility | Statistical; copyable |
+| Commitment inclusion | Not exposure time |
 
 **Software can bind physical evidence. It cannot create it.**
 
-No claim of scene truth, shutter time or AI-content detection. Missing evidence never becomes a pass.
-
-<!-- SAY: 0:40-1:05. Non leggere le cinque righe; distingui integrita, identita e origine. H e un'ipotesi sul processo fisico, non una proprieta autenticata da un pattern decodificato. -->
+<!-- SAY: 0:40-1:05. Non leggere tutta la tabella. Le cautele su scena/tempo/AI detection restano nel backup. -->
 
 ---
 
 # The receipt binds installation, photo and evidence
 
-Draw the binary tree FI / FP -> Node; Node / FD -> T -> R.
+Binary tree: FI / FP -> Node; Node / FD -> T -> R.
 
 \[
 \begin{aligned}
@@ -46,19 +52,17 @@ C &= D(\texttt{receipt},R,\sigma),\qquad h_{\mathrm{OTS}}=H(C).
 \end{aligned}
 \]
 
-\(D(\ell,x_1,\ldots)=H(\mathrm{CBOR}([\ell,x_1,\ldots]))\), \(\mathrm{Node}(a,b)=D(\texttt{node},a,b)\).
+\(H=\mathrm{SHA256}\), \(D(\ell,x_1,\ldots)=H(\mathrm{CBOR}([\ell,x_1,\ldots]))\), \(\mathrm{Node}(a,b)=D(\texttt{node},a,b)\).
 
-E binds check results and reference/policy/report hashes; FI / FD bind installation/device metadata.
+**One 32-byte commitment binds the record.**
 
-**Preserve the exact DER signature. C is not hiding; receipts are linkable.**
-
-<!-- SAY: 1:05-1:30. Le formule sono solo supporto visivo. La firma SHA256withECDSA riceve i 32 byte di R; OTS riceve un file con i 32 byte di C. Non chiamare anonimo un commitment senza hiding. -->
+<!-- SAY: 1:05-1:30. Formule visive, non nuove frasi da pronunciare. DER esatto, non-hiding e linkabilita passano al backup del byte contract; non rimuoverli dal materiale tecnico. -->
 
 ---
 
-# A signed beacon code is not proof of physical presence
+# A valid token is not physical presence
 
-**IMPLEMENTED:** standalone software experiment. **PHYSICAL VALIDATION:** not established.
+Software experiment / physical validation pending.
 
 \[
 \begin{aligned}
@@ -70,64 +74,69 @@ p &= [\texttt{fingerprinto/beacon/1},H(pk_B),\lfloor t/10\rfloor,b]\\
 
 | Checks | Does not detect |
 |---|---|
-| Pinned key, signature, session, slot | Splicing, relay, within-session replay |
+| Key / signature / session / slot | Splicing, relay, within-session replay |
 
-`status=pass` validates the token; `physicalOriginVerified=false`. No v3 level upgrade.
+**Token valid != physically verified. No level upgrade.**
 
-<!-- SAY: 1:30-1:50. Il beacon e implementato, non una semplice proposta. La verifica e di classe S: i pixel possono essere incollati. Il tempo riguarda contenuto con token sotto ipotesi fidate, non l'esposizione. Non rivendicare ingresso attraverso l'ottica o compatibilita con ogni fotocamera. -->
-
----
-
-# Demo recording
-
-**29.4 seconds / 1.5x - supplied PhoTO app walkthrough.**
-
-[Preview](assets/demo-poster.png) / [play video](assets/demo-pitch.mp4).
-
-[Additional supplied recording](assets/video_2026-11-21_11-11-30.mp4): 35.05 seconds, unchanged; optional after the timed pitch.
-
-Capture preparation. Private calibration controls. Device enrollment status.
-
-Missing authority trust stays unavailable. Recorded local demo / Bitcoin regtest.
-Sensor origin is not established.
-
-<!-- SAY: 1:50-2:20. Video fornito invariato rispetto alla versione precedente, non una nuova prova del beacon o di tampering. L'originale e conservato; la copia da pitch e muta a 1.5x. Preaprire il player: il lettore PDF puo bloccare il link. -->
+<!-- SAY: 1:30-1:50. Non confondere il token software con l'ingresso del segnale attraverso l'ottica. -->
 
 ---
 
-# what's next
+# See it run
 
-| Optimistic verification | Capture-bound camera challenges |
+Latest poster at left. Capture preparation / Calibration controls / Submission status.
+
+- [Play latest demo](assets/demo-latest.mp4)
+- [Earlier walkthrough](assets/demo-pitch.mp4)
+- [Camera recording](assets/video_2026-11-21_11-11-30.mp4)
+
+**Recorded app demo. Queued != verified. No sensor claim.**
+
+<!-- SAY: 1:50-2:20. Un solo video durante il pitch. La copia del nuovo originale delle 11:42 e adattata al tempo disponibile; dettagli di durata/velocita solo in pitch.md e nel registro, non sullo schermo. Non cambiare i due vecchi target. Preaprire il player se il lettore PDF blocca il lancio. -->
+
+---
+
+# What's next
+
+| Optimistic verification | Camera challenges |
 |---|---|
-| Richer claims. Independent challenges. | Challenge + image, attested together. |
-| claim -> evidence -> verdict | Fresh c <- {0,1}^256 |
-| Dispute rules and incentives not implemented. | No attested API validated on our capture route. Metadata alone is insufficient. |
+| Richer claims. Open challenges. | Challenge + image, attested together. |
+| claim -> evidence -> verdict | c <- {0,1}^256 |
+| Dispute rules / incentives: pending. | Attested API not validated on our route. |
 
-Next validation: manufacturer adapters and physical PRNU/beacon trials.
-
-Team AI-use disclosure / human review: **[TBD]**.
+Next: manufacturer adapters + physical PRNU/beacon trials.
 
 **Verify what the evidence supports.**
 
-<!-- SAY: 2:20-2:55; 5 secondi di margine. Non inventare ragioni storiche per le API: manca la validazione di un binding attestato sul percorso scelto. Completare la disclosure del team prima della presentazione; non attribuire revisione umana mai confermata. -->
+<!-- SAY: 2:20-2:50. Nessuna pretesa di verificare qualsiasi fatto senza evidenza. Non inventare API o ragioni storiche: manca un binding attestato validato. -->
 
-## Technical backup - outside the timed pitch
+---
 
-Build `presentation/extended.tex`; `main.tex` remains exactly six timed pages.
+# AI-use disclosure
 
-1. Identical capture transcripts: model-level boundary, not universal impossibility.
-2. S/H classification and residual trust, including the optical-token correction.
-3. Full FI/E/FD byte contract.
-4. Reducer priorities, pending checks and calibration gates.
-5. PRNU estimator and signed PCE; real error rates [TBD].
-6. Attack matrix, including successful splicing/relay counterexamples.
-7. Publication versus trust, proposed historical verification and conditional time windows.
-8. Parser limits and profile isolation.
-9. ML-DSA-65 AND Ed25519: software secrets in RAM, classical trust dependencies.
-10. Four v1 and four v3 synthetic fixtures; scoped beacon/v3 results at the recorded SHA.
-11. Known AI assistance and incomplete team/human-review disclosure.
+| | |
+|---|---|
+| Theory | Human |
+| Code | LLM-generated |
+| Slides | LLM-generated |
 
-The supplied [Claude source](claude-pitch.md) remains unchanged. Its outdated
-v3/beacon status and overstrong origin/time claims are corrected in the rendered
-slides, not retroactively attributed to the source. See [adaptation and build
-record](presentation/README.md) for the source-to-deck mapping.
+OpenAI Codex, Claude.
+
+<!-- SAY: 2:50-2:55. Dichiarazione fornita dall'autore. Non aggiungere una revisione umana del codice non dichiarata. Restano cinque secondi di margine. -->
+
+## Nine technical backups - outside the timed pitch
+
+1. Identical transcripts / model boundary.
+2. Software versus physical evidence; pasted pixels do not authenticate optics.
+3. Full FI/E/FD formulas; raw R, exact DER, non-hiding and linkability.
+4. Reducer table / codes / calibrated mismatch blocking.
+5. PRNU estimator and SPCE; copyable, real rates not yet measured.
+6. Attack matrix / explicit not-detected outcomes.
+7. Publication versus physical trust / conditional content-time bound.
+8. Combined parser bounds and hybrid-v2: AND verification, keys in RAM, not hardware-native, no RSA, classical trust dependencies.
+9. Existing v1/v3 fixtures and scoped results at `8fb3b3c`; targeted regressions, not a full audit.
+
+Sources: [original Claude outline](claude-pitch.md) and
+[author-supplied revision](claude-slides-revision.md), preserved unchanged.
+Build/validation provenance belongs in [the work log](presentation/REVISION-LOG.md),
+not on projected pages.

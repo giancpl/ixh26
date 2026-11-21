@@ -264,9 +264,8 @@ or a qualified timestamp service.
 
 ## 12. Disclosure
 
-This README adapts the draft supplied by the team, written with Claude
-(Anthropic), and was revised with OpenAI Codex against repository sources and
-documentation. The specification, handoff and analysis documents also used OpenAI Codex
-assistance. Team-wide disclosure of tools, assisted components and
-human review actually performed remains to be completed against the event's
-requirements.
+The author declares the theory to be human, and the code and slides to be
+LLM-generated. Named tools are OpenAI Codex and Claude. This README adapts the
+team's Claude draft; specification, handoff, documentation and presentation work
+also used OpenAI Codex. The presentation records the author's categorisation
+without asserting a separate human code review.

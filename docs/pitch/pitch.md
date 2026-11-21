@@ -1,4 +1,4 @@
-<!-- AGENT CONSTRAINT: This file proposes the COMPLETE English pitch, including the crypto segment and demo direction. Absolute maximum: 180 seconds TOTAL, including the approximately 30-second demo, narration, pauses and slide transitions. Aim to finish by 175 seconds and reserve the last 5 seconds. The crypto block remains at most 90 seconds / 140 spoken words; its scheduled budget is 70 seconds, so it must NOT be extended to 90 without cutting another block. Keep the complete spoken script within 280 words, including demo narration, targeting a deliberate 110-120 words per minute. Only blockquotes are spoken; headings, tables, commands and operator directions are NOT spoken. Demo narration happens DURING the demo, not after it. Recount words after every edit and rehearse the entire sequence with a stopwatch before presenting; these timings are a plan, not a measured result. Coordinate the THREE crypto slides with slides.md; intro and closing slides below are proposed additions. Do not read formulas, invent product capabilities or present synthetic evidence as a real-device result. Preserve the distinction between implemented offline primitives, proposed workflow and unfinished integration/validation. -->
+<!-- AGENT CONSTRAINT: This file proposes the COMPLETE English pitch, including the crypto segment and demo direction. Absolute maximum: 180 seconds TOTAL, including the approximately 30-second demo, narration, pauses and slide transitions. Aim to finish by 175 seconds and reserve the last 5 seconds. The crypto block remains at most 90 seconds / 140 spoken words; its scheduled budget is 70 seconds, so it must NOT be extended to 90 without cutting another block. Keep the complete spoken script within 280 words, including demo narration, targeting a deliberate 110-120 words per minute. Only blockquotes are spoken; headings, tables, commands and operator directions are NOT spoken. Demo narration happens DURING the demo, not after it. Recount words after every edit and rehearse the entire sequence with a stopwatch before presenting; these timings are a plan, not a measured result. Coordinate all eight main screens with slides.md; nine backup slides are outside the timed pitch. Do not read formulas, invent product capabilities or present synthetic evidence as a real-device result. Preserve the distinction between implemented offline primitives, proposed workflow and unfinished integration/validation. -->
 
 # Complete pitch proposal - three minutes including demo
 
@@ -6,7 +6,7 @@
 
 The external-beacon token experiment is now implemented separately on
 `leomaster`; see [profile](../prnu/BEACON-EXPERIMENT.md) and
-[validation record](../prnu/BEACON-VALIDATION.md). It is discussed on slide 4, but is not what the recorded app demonstration shows: no real display/camera trial or complete beacon-to-v3 workflow has been validated.
+[validation record](../prnu/BEACON-VALIDATION.md). It is discussed on slide 5, but is not what the recorded app demonstration shows: no real display/camera trial or complete beacon-to-v3 workflow has been validated.
 Do not add a second demo or extend the 180-second plan. If replacing the demo
 later, retain the 30-second slot and explicitly show synthetic/token-only status;
 never call successful token decoding sensor origin or physical presence.
@@ -14,94 +14,91 @@ The supplied app recording illustrates a later interface; this branch's old inte
 
 ## Running order
 
-| Clock | Budget | Purpose | Visual / speaker cue |
-|---|---|---|---|
-| 0:00-0:20 | 20 s | Problem: what can we actually trust about a photo? | Proposed slide 1: problem and intended workflow; product speaker |
-| 0:20-0:40 | 20 s | Product: evidence travels with the original | Same slide; product speaker hands over to crypto speaker |
-| 0:40-1:50 | 70 s | Crypto boundary, receipt and lasting verification | Five properties (25 s), receipt (25 s), beacon boundaries (20 s): slides 2-4 |
-| 1:50-2:20 | 30 s | Demo: recorded PhoTO app walkthrough | Supplied recording at 1.5x, 29.4 seconds; demo operator |
-| 2:20-2:45 | 25 s | What exists and what the next experiment must establish | Presentation slide 6: what's next / validation gates |
-| 2:45-2:55 | 10 s | Close with the contribution | Same final slide; product speaker |
-| 2:55-3:00 | 5 s | Safety margin | Finish; no additional content |
+| Clock | Screen | Purpose |
+|---|---|---|
+| 0:00-0:10 | 1 | Logo, FingerprinTO, opening claim |
+| 0:10-0:40 | 2 | Signing phone versus capturing sensor |
+| 0:40-1:05 | 3 | Five separate claims |
+| 1:05-1:30 | 4 | Tree, root, signature and commitment |
+| 1:30-1:50 | 5 | Beacon token and physical-origin limits |
+| 1:50-2:20 | 6 | Latest supplied app recording |
+| 2:20-2:50 | 7 | What's next and closing contribution |
+| 2:50-2:55 | 8 | AI-use disclosure |
+| 2:55-3:00 | - | Buffer |
 
-Use five content slides plus the dedicated demo view (six PDF pages total). With one presenter, omit speaker
-handoffs; with several, include them inside these budgets. Do not add a separate
-team introduction or an extra closing slide unless equivalent time is cut.
+Eight short main screens, including the demo and disclosure. Nine technical
+backup slides are outside the timed pitch. Do not add explanations of the
+formulas or play more than one video in the main slot.
 
-## 0:00-0:20 - Counterexample
+## 0:00-0:10 - Opening
+
+> FingerprinTO reports what the evidence establishes, rather than compressing everything into an authenticity badge.
+
+## 0:10-0:40 - Counterexample
 
 > Imagine one phone captures a photo and another signs it. The hash matches, the signature verifies, and the receipt can be timestamped. None of this proves that the signing phone captured the image.
 
-## 0:20-0:40 - Contribution
-
-> FingerprinTO separates those claims. We report what the evidence establishes, under which assumptions, rather than compressing everything into an authenticity badge.
-
 ## 0:40-1:50 - Crypto
 
-<!-- SAY / SLIDE 2: 0:40-1:05. Le cinque righe separano proprieta diverse. Non leggere la tabella. -->
+<!-- SAY / SLIDE 3: 0:40-1:05. Le cinque righe separano proprieta diverse. Non leggere la tabella. -->
 
 > We distinguish file integrity, installation identity, capture credentials, statistical sensor compatibility, and timestamped publication. Software can bind physical evidence; it cannot create it.
 
-<!-- SAY / SLIDE 3: 1:05-1:30. Tre sottoalberi, una root, firma e commitment. Le formule restano visive. -->
+<!-- SAY / SLIDE 4: 1:05-1:30. Tre sottoalberi, una root, firma e commitment. Le formule restano visive. -->
 
 > Our receipt commits to the image, installation metadata, evidence report and policy. We sign that root, preserve the exact signature bytes, and anchor a commitment through OpenTimestamps on Bitcoin.
 
-<!-- SAY / SLIDE 4: 1:30-1:50. Il beacon e implementato come esperimento S, non prova H. Non rivendicare ingresso attraverso l'ottica. -->
+<!-- SAY / SLIDE 5: 1:30-1:50. Il beacon e implementato come esperimento S, non prova H. Non rivendicare ingresso attraverso l'ottica. -->
 
 > We also implemented an external beacon experiment. A separate device displays a signed code bound to a fresh session challenge and time slot. The verifier checks the token, but splicing and relay remain possible. A valid code is not proof of physical presence, and it does not upgrade the photo's origin level.
 
 ## 1:50-2:20 - Demo
 
-> This recording shows capture preparation, private calibration controls and enrollment status. The authority pin is not configured, so enrollment remains unavailable. We show that state explicitly: the interface does not turn missing trust into verified origin.
+> The app captures a photo and prepares a pin for publication. Here, the pin remains queued. We show that state explicitly: a queued signature is not confirmed publication, and neither proves sensor origin.
 
 ### Operator plan - not spoken
 
-Play [the supplied demo, adapted to 1.5x](assets/demo-pitch.mp4) from slide 5.
-The 44.143-second [original recording](assets/video_2026-11-21_11-05-46.mp4)
-is preserved unchanged. The pitch copy is silent and approximately 29.4 seconds;
-read the narration above during playback. Both the recording and playback speed
-are labelled on the slide. This replaces the earlier proposed synthetic
-original/modified-bundle demonstration; that comparison is not shown in this video.
+Play [the latest pitch copy](assets/demo-latest.mp4) from screen 6. It is derived
+from the [11:42 original](assets/video_2026-11-21_11-42-32.mp4), preserved unchanged.
+The original is approximately 35.17 seconds; the silent pitch copy at 1.2x is
+approximately 29.3 seconds and fits the 30-second slot. Narrate during playback.
+Timing/speed belongs in these notes, not on projected slides, as requested.
 
-Before presenting, open the exported PDF from `docs/pitch` with its `assets`
-folder alongside it. Click the preview or Play demo video button; they launch
-`assets/demo-pitch.mp4` in an external player. Some PDF/browser viewers block
-external launch actions. Open the MP4 in advance and use a direct player/window
-switch if the link is blocked. The slide also links an [additional original recording](assets/video_2026-11-21_11-11-30.mp4)
-(35.05 seconds, normal speed), showing enrollment status and camera capture.
-It is optional material for questions, not a second clip to play in the timed
-pitch; its unavailable trust/not-submitted states remain visible.
+The older links `assets/demo-pitch.mp4` and
+`assets/video_2026-11-21_11-11-30.mp4` remain unchanged on screen 6. They are
+optional recordings, not additional clips to play during the timed pitch.
+No original was trimmed or replaced. The latest poster is from 12 seconds.
 
-Return to slide 6 immediately after playback;
-do not add another live test or repeat the original at normal speed.
+Keep the exported PDF and its assets folder together. PDF/browser viewers may
+block external Launch actions; pre-open the chosen MP4 in a player and switch
+windows if needed. Return to screen 7 after playback. The video shows UI state,
+including queued/unavailable operations, not independent confirmation of
+successful publication, enrollment, mainnet anchoring or sensor provenance.
+User-supplied footage and frame review do not constitute a new device test.
 
-The screen recording shows a local/regtest-labelled interface, not a verified
-mainnet anchor. Its unavailable authority pin and enrollment state must remain
-visible and must not be narrated as successful enrollment or physical origin.
-No claim is made that the entire app/crypto pipeline ran successfully. The video
-was supplied by the user; reviewing its frames is not an independent device test.
-A real-time verifier test can replace this recording in a later rehearsal, but
-is not part of the present 30-second slot.
-
-## 2:20-2:45 - Status and next experiment
+## 2:20-2:40 - Status and next experiment
 
 > The offline crypto core is implemented. Next, we want optimistic verification of richer claims and capture-bound camera challenges. Those need explicit dispute rules and a validated attested API. Real-device calibration remains essential.
 
-## 2:45-2:55 - Close
+## 2:40-2:50 - Close
 
 > We offer a verifiable record of evidence, with a path towards verification that outlasts its vendor.
+
+## 2:50-2:55 - AI-use disclosure
+
+> Human theory, LLM-generated code and slides.
 
 ## Rehearsal and cut rules - not spoken
 
 - Count only the blockquotes as speech, including the demo narration. The crypto segment must remain within 140 words and 90 seconds; the full script must remain within 280 words and 180 seconds including the demo.
 - Run the whole sequence, with actual clicks and handoffs, at least once with a stopwatch. Plan to finish by 2:55; do not infer compliance from word count alone.
-- If running late, omit the contribution paragraph and shorten the status block to its first sentence. Retain the crypto limitations and the recorded app walkthrough. Do not add explanations while waiting for a command.
-- Keep the demo to 30 seconds. Pre-open the supplied recording; if its launch fails, switch to the player. If playback is unavailable, skip it without claiming it was shown.
+- If running late, shorten the opening and keep only the first sentence of the status block. Retain the crypto limitations and the recorded app walkthrough. Do not add explanations while waiting for a command.
+- Keep the demo to 30 seconds. Pre-open the latest pitch copy; if its launch fails, switch to the player. If playback is unavailable, skip it without claiming it was shown.
 - Do not add formulas or extend the 70-second crypto block during questions or transitions; questions follow the timed pitch if the event allows them.
 
 ## Camera challenges and optimistic verification - editorial rationale
 
-The final slide replaces the previous status/closing screen; it does not extend
+The future-work slide occupies the previous status/closing slot; it does not extend
 the 180-second sequence. Optimistic verification means a proposed claim/evidence
 and challenge process, with dispute rules and incentives still to design. It
 does not mean verifying arbitrary statements about the world without evidence.
@@ -125,9 +122,9 @@ record linked above.
 
 ## Claude source adaptation - editorial only
 
-The source is [claude-pitch.md](claude-pitch.md), preserved as supplied. Its
-8-10-minute outline is adapted to the existing three-minute budget: six timed
-screens, including the unchanged supplied video, with technical detail in a
+Sources are [claude-pitch.md](claude-pitch.md) and [the author-supplied revision](claude-slides-revision.md), preserved as supplied. The original
+8-10-minute outline is adapted to the existing three-minute budget: eight timed
+screens, including the latest supplied video, with technical detail in a
 separate Q&A PDF. Do not present the backup during the timed pitch.
 
 Corrections: four synthetic v3 fixtures already exist; beacon software is
@@ -138,4 +135,4 @@ unavailable evidence, not proof that a pre-generated scene was detected.
 Beacon windows require honest release/clock and independently justified anchor
 time bounds; no precise exposure or Bitcoin wall-clock claim is made. The
 draft's reported independent v1 recomputation is not newly verified here.
-Team AI-use disclosure and human review remain [TBD] pending team completion.
+The author has now supplied the disclosure: theory is human, code and slides are LLM-generated. Tools named: OpenAI Codex and Claude. No assertion of human code review is added.
