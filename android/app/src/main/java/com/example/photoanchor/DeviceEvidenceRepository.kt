@@ -181,6 +181,14 @@ class DeviceEvidenceRepository(private val context: Context, private val keys: K
         require(role in setOf("enrollment", "development", "genuine", "impostor"))
         val saved = state(); val identity = saved.getString("calibration_id")
         require(file.length() <= PhotoProtocol.MAX_PHOTO_BYTES)
+        if (role != "impostor") {
+            val route = StrictJson.parseObject(File(file.absolutePath + ".route.json").readBytes())
+            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeFile(file.absolutePath, bounds)
+            val orientation = androidx.exifinterface.media.ExifInterface(file)
+                .getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, 1)
+            FixedCaptureRoute.requireCompatible(route, saved.getJSONObject("geometry"), bounds.outWidth, bounds.outHeight, orientation)
+        }
         val raw = file.readBytes(); val hash = PhotoProtocol.sha256(raw)
         api.authorized(keys, "PUT", "/v1/calibrations/$identity/frames/$role/$hash", raw, binary = true)
         return calibrationStatus()

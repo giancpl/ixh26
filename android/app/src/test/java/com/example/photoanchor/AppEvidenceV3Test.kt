@@ -59,4 +59,18 @@ class AppEvidenceV3Test {
             assertThrows(Exception::class.java) { StrictJson.parseObject(bad.toByteArray()) }
         assertThrows(Exception::class.java) { StrictJson.parseObject("{\"x\":\"\\ud800\"}".toByteArray()) }
     }
+
+    @Test fun calibrationRejectsObservableRouteChanges() {
+        val route = JSONObject().put("fixed",true).put("camera","rear-1").put("mode","fixed/flash-off")
+        val geometry = JSONObject().put("camera","rear-1").put("mode","fixed/flash-off")
+            .put("source_width",4000).put("source_height",3000)
+            .put("decoder","pillow-13.0.0/rgb-green-stored-exif-6/1")
+        FixedCaptureRoute.requireCompatible(route,geometry,4000,3000,6)
+        for ((key,value) in listOf("fixed" to false,"camera" to "front","mode" to "fixed/flash-on")) {
+            val changed = JSONObject(route.toString()).put(key,value)
+            assertThrows(Exception::class.java) { FixedCaptureRoute.requireCompatible(changed,geometry,4000,3000,6) }
+        }
+        assertThrows(Exception::class.java) { FixedCaptureRoute.requireCompatible(route,geometry,3000,4000,6) }
+        assertThrows(Exception::class.java) { FixedCaptureRoute.requireCompatible(route,geometry,4000,3000,1) }
+    }
 }

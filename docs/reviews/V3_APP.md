@@ -32,7 +32,7 @@ require calendar/RPC boundaries. New cases cover auth/replay/ownership, receipt
 substitution, revoked enrollment, expired challenges, DB-write recovery,
 lease fencing, private calibration splits and EXIF decoder identity.
 
-The final Android integration build passed debug APK, **23 JVM tests** and lint
+The final Android integration build passed debug APK, **24 JVM tests** and lint
 with **zero errors and 18 warnings**. Shared app
 vectors verify authority/receipt signatures, attachment binding and Nostr C;
 malformed/duplicate-key JSON and altered inputs are rejected.
