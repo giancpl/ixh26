@@ -1,0 +1,183 @@
+% FingerprinTO pitch. Six screens, 180 seconds INCLUDING a 30-second live test.
+% Mathematical notation is visual support, never extra spoken material.
+% Lagrange theme copied unchanged from Leonardo's Goteborg presentation.
+% No automatic overlays or section pages: PDF page count equals screen count.
+\documentclass[aspectratio=169,t,11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[sfdefault]{cabin}
+\usepackage{sansmathfonts}
+\usepackage[scaled=0.85]{beramono}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,mathtools}
+\usetheme[lagrange]{Lagrange}
+\usetikzlibrary{positioning,arrows.meta,calc}
+\setbeamersize{text margin left=0.65cm,text margin right=0.65cm}
+\hypersetup{pdftitle={FingerprinTO: evidence you can verify},pdfauthor={FingerprinTO team}}
+\title[Evidence you can verify]{FingerprinTO}
+\author[FingerprinTO]{FingerprinTO team}
+\date{IXH26 Bari}
+% The upstream footline has extreme negative vertical skips. Override locally;
+% keep the upstream file byte-identical and preserve its colours/typography.
+\setbeamertemplate{footline}{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.38cm,dp=0.12cm,leftskip=0.65cm,rightskip=0.65cm]{footline}
+  \scriptsize\color{kn-muted}FingerprinTO\hfill IXH26 Bari\hfill
+  \insertframenumber/\inserttotalframenumber
+  \end{beamercolorbox}}
+\newtcolorbox{pitchcard}[1][]{enhanced,colback=kn-block,colframe=kn-rule,
+  boxrule=0.4pt,arc=2mm,left=3mm,right=3mm,top=3mm,bottom=3mm,before upper=\raggedright,#1}
+\newcommand{\muted}[1]{{\color{kn-muted}#1}}
+\newcommand{\D}{\mathsf D}
+\newcommand{\HH}{\mathsf H}
+\newcommand{\Node}{\mathsf{Node}}
+\newcommand{\labelsmall}[1]{{\scriptsize\color{kn-muted}#1}}
+
+\begin{document}
+
+% 0:00--0:40: introduction and proposed workflow, not a separate title slot.
+\begin{frame}{FingerprinTO}
+\vspace{0.12cm}
+\begin{columns}[c,onlytextwidth]
+\begin{column}{0.37\textwidth}
+{\LARGE\bfseries Evidence you\par can verify.\par}
+\vspace{0.5cm}
+{\large Original\par $+$ portable receipt\par $+$ independent verifier\par}
+\vspace{0.45cm}
+\muted{Integrity. Origin evidence.\par A record that lasts.}\par
+\end{column}
+\begin{column}{0.60\textwidth}
+\includegraphics[width=\linewidth]{../assets/fingerprinto-stand.png}
+\end{column}
+\end{columns}
+\vfill
+\labelsmall{A cryptographic evidence prototype, not a universal authenticity badge.}
+\end{frame}
+
+% 0:40--1:15: crypto slide 1. PRNU formula is visible, not spoken.
+\begin{frame}{The problem happens before signing}
+\vspace{0.15cm}
+{\large No cryptographic proof of physical origin\par without a trusted capture path.}
+\vspace{0.5cm}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.315\textwidth}
+\begin{pitchcard}[height=3.0cm]
+\textbf{Capture attestation}\par\vspace{0.35cm}
+Trusted issuer\par + hard asset binding\par\vspace{0.2cm}
+\labelsmall{Where available and verified}
+\end{pitchcard}
+\end{column}
+\begin{column}{0.35\textwidth}
+\begin{pitchcard}[height=3.0cm]
+\textbf{PRNU compatibility}\par\vspace{0.15cm}
+{\small\(K[p]=\dfrac{\sum_i m_i[p]I_i[p]W_i[p]}{\sum_i m_i[p]I_i[p]^2}\)}\par
+\vspace{0.15cm}\labelsmall{$W_i=I_i-\mathrm{denoise}(I_i)$\par Statistical; copyable}
+\end{pitchcard}
+\end{column}
+\begin{column}{0.295\textwidth}
+\begin{pitchcard}[height=3.0cm]
+\textbf{File integrity}\par\vspace{0.4cm}
+\(\HH(J),\ \sigma_I\)\par\vspace{0.3cm}
+\labelsmall{Hashes and signatures}
+\end{pitchcard}
+\end{column}
+\end{columns}
+\vspace{0.28cm}
+\muted{Physical capture $\ne$ truth of the scene.}
+\end{frame}
+
+% 1:15--1:30: crypto slide 2. Exact v3 domains, not a new wire proposal.
+\begin{frame}{A verifiable receipt}
+\vspace{0.08cm}
+\begin{center}
+\begin{tikzpicture}[node distance=0.38cm,box/.style={draw=kn-rule,fill=kn-block,
+rounded corners=2pt,minimum height=0.55cm,inner sep=5pt,font=\small},
+arr/.style={-{Latex[length=1.5mm]},kn-acc,thick}]
+\node[box](a){Image + evidence};
+\node[box,right=of a](b){Root $R$};
+\node[box,right=of b](c){P-256 $\sigma$};
+\node[box,right=of c](d){Commitment $C$};
+\node[box,right=of d](e){OTS / Bitcoin};
+\draw[arr](a)--(b);\draw[arr](b)--(c);\draw[arr](c)--(d);\draw[arr](d)--(e);
+\end{tikzpicture}
+\end{center}
+\vspace{-0.1cm}
+{\small
+\begin{align*}
+ F_P &= \D(\texttt{photo/evidence-v3}, F_I,\HH(J),E)\\
+ R &= \D(\texttt{fingerprinto/evidence-v3},\Node(\Node(F_I,F_P),F_D))\\
+ \sigma &= \mathsf{ECDSA\text{-}P256\text{-}SHA256}(sk_I,R),
+ &C &= \D(\texttt{receipt},R,\sigma)\\
+ h_{\mathrm{OTS}} &= \mathsf{SHA256}(C)
+\end{align*}}
+\labelsmall{$\D$: domain-separated SHA-256 of deterministic CBOR.
+$E$: signed evidence; $F_I,F_D$: installation/device metadata.}
+\vfill
+\muted{Anchoring records commitments, not scene truth or capture time.}
+\end{frame}
+
+% 1:30--1:50: crypto slide 3, proposed historical-verification contribution.
+\begin{frame}{Verification need not disappear with a vendor}
+\vspace{0.3cm}
+{\Large\bfseries Preserve the evidence.\par Preserve the basis for trust.}
+\vspace{0.55cm}
+\begin{pitchcard}
+Certificates \quad Manifests \quad Policies \quad Signed status history
+\end{pitchcard}
+\vspace{0.35cm}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.47\textwidth}
+\textcolor{kn-acc}{\textbf{Implemented}}\par
+Offline crypto core
+\end{column}
+\begin{column}{0.50\textwidth}
+\textbf{Proposed}\par
+Interoperable, lasting verification
+\end{column}
+\end{columns}
+\vfill
+\labelsmall{Remaining: real capture integration, calibration and validation.\quad
+Anchored certificate bytes do not establish issuer trust.}
+\end{frame}
+
+% 1:50--2:20: actually switch to the verifier; this is not a simulated UI.
+\begin{frame}{Live test \hfill\normalfont\small 30 seconds}
+\vspace{0.2cm}
+\begin{pitchcard}[height=3.6cm,colback=kn-bg]
+\centering\vspace{0.65cm}
+{\Large\color{kn-muted}Live verifier / screen share}\par
+\vspace{0.45cm}
+Original \quad$\longrightarrow$\quad change bytes \quad$\longrightarrow$\quad verify again
+\end{pitchcard}
+\vspace{0.15cm}
+\muted{Synthetic signed sample. Sensor origin remains unverified.}
+\vfill
+% Recording/confirmation instructions are in pitch.md, not projected.
+\end{frame}
+
+% 2:20--2:55: replaces the old status/closing slot, never extra time.
+\begin{frame}{what's next}
+\vspace{0.2cm}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\begin{pitchcard}[height=3.8cm]
+\textcolor{kn-acc}{\textbf{Optimistic verification}}\par\vspace{0.25cm}
+Richer claims. Independent challenges.\par\vspace{0.25cm}
+\(\text{claim}\ \longrightarrow\ \text{evidence}\ \longrightarrow\ \text{verdict}\)\par
+\vspace{0.3cm}\labelsmall{Not implemented: dispute rules and incentives.}
+\end{pitchcard}
+\end{column}
+\begin{column}{0.49\textwidth}
+\begin{pitchcard}[height=3.8cm]
+\textcolor{kn-acc}{\textbf{Capture-bound camera challenges}}\par\vspace{0.25cm}
+\(c\gets\{0,1\}^{256}\)\par
+\vspace{0.15cm}Challenge + image, attested together.\par
+\vspace{0.3cm}\labelsmall{No attested API validated on our capture route. Metadata alone is insufficient.}
+\end{pitchcard}
+\end{column}
+\end{columns}
+\vspace{0.2cm}
+\labelsmall{Next validation: manufacturer adapters and physical PRNU/beacon trials.}
+\vfill
+\textbf{Verify what the evidence supports.}
+\end{frame}
+\end{document}

@@ -23,11 +23,11 @@ of those subsequent changes.
 | 0:20-0:40 | 20 s | Product: evidence travels with the original | Same slide; product speaker hands over to crypto speaker |
 | 0:40-1:50 | 70 s | Crypto boundary, receipt and lasting verification | Existing three crypto slides become presentation slides 2-4 |
 | 1:50-2:20 | 30 s | Demo: original evidence versus changed bytes | Prepared offline terminal / short screen recording; demo operator |
-| 2:20-2:45 | 25 s | What exists and what the next experiment must establish | Proposed slide 5: implemented core / validation gates |
-| 2:45-2:55 | 10 s | Close with the contribution | Same slide; product speaker |
+| 2:20-2:45 | 25 s | What exists and what the next experiment must establish | Presentation slide 6: what's next / validation gates |
+| 2:45-2:55 | 10 s | Close with the contribution | Same final slide; product speaker |
 | 2:55-3:00 | 5 s | Safety margin | Finish; no additional content |
 
-Use at most five slides plus the demo view. With one presenter, omit speaker
+Use five content slides plus the dedicated demo view (six PDF pages total). With one presenter, omit speaker
 handoffs; with several, include them inside these budgets. Do not add a separate
 team introduction or an extra closing slide unless equivalent time is cut.
 
@@ -99,7 +99,7 @@ claim instant confirmation for the photo shown live.
 
 ## 2:20-2:45 - Status and next experiment
 
-> The offline crypto core is implemented. We still need real manufacturer validation, Android capture integration and sensor calibration. Our next milestone is a controlled trial across devices, including forged fingerprints, to establish which assurance each capture can actually support.
+> The offline crypto core is implemented. Next, we want optimistic verification of richer claims and capture-bound camera challenges. Those need explicit dispute rules and a validated attested API. Real-device calibration remains essential.
 
 ## 2:45-2:55 - Close
 
@@ -112,3 +112,27 @@ claim instant confirmation for the photo shown live.
 - If running late, omit the second product sentence and shorten the status block to its first sentence. Retain the crypto limitations and the original/modified comparison. Do not add explanations while waiting for a command.
 - Keep the demo to 30 seconds. On failure, switch immediately to the labelled recording; if unavailable, skip the demo and describe the intended comparison without claiming it ran successfully.
 - Do not add formulas or extend the 70-second crypto block during questions or transitions; questions follow the timed pitch if the event allows them.
+
+## Camera challenges and optimistic verification - editorial rationale
+
+The final slide replaces the previous status/closing screen; it does not extend
+the 180-second sequence. Optimistic verification means a proposed claim/evidence
+and challenge process, with dispute rules and incentives still to design. It
+does not mean verifying arbitrary statements about the world without evidence.
+
+A useful camera challenge must be bound to the resulting image by a trusted
+capture path. Standard request metadata is insufficient: Android documents
+[`CaptureRequest.Builder.setTag`](https://developer.android.com/reference/android/hardware/camera2/CaptureRequest.Builder#setTag(java.lang.Object))
+as an application correlation tag that is not used by the camera device.
+[`ACTION_IMAGE_CAPTURE`](https://developer.android.com/guide/components/intents-common#Camera)
+specifies image capture/output, not an attested nonce-to-image contract. These
+documented APIs do not by themselves supply the required guarantee. We have
+not validated a vendor-specific attested API on our target route; compatibility
+and trust-policy checks therefore precede this integration. This is an explicit
+engineering/security dependency, not a claim that no such vendor API can exist
+or an invented explanation of work already attempted.
+
+For current experimental slots, the separately implemented external beacon is
+not a substitute: its signed code can still be pasted or relayed. Its token
+validity never proves physical presence. See the beacon profile and validation
+record linked above.
