@@ -262,3 +262,14 @@ documentation. The specification, handoff and analysis documents also used OpenA
 assistance. Team-wide disclosure of tools, assisted components and
 human review actually performed remains to be completed against the event's
 requirements.
+
+## External optical-token experiment
+
+The [beacon profile](../prnu/BEACON-EXPERIMENT.md) adds independently pinned
+P-256 session/slot tokens, a fixed-grid optical codec and an offline CLI.
+Valid token verification is software evidence, not physical presence:
+splicing, relay and same-session reuse remain undetected. Receipt v3 and its
+origin reducer are unchanged. See the [recorded synthetic checks](../prnu/BEACON-VALIDATION.md).
+
+The author declares the theory Human, code/slides LLM-generated (OpenAI Codex
+and Claude), without a separate human-code-review assertion.

@@ -1,5 +1,8 @@
 # FingerprinTO implementation progress
 
+**Current merged integration:** the [Pixel 9 Pro/GrapheneOS acceptance report](../reviews/PIXEL9_PRO_2026-11-21.md) records real enrollment, capture, signing and regtest proof checks. The dated source notes below do not negate those results. Manufacturer validation, empirical PRNU calibration, two-phone acceptance and physical beacon trials remain separate gates.
+
+
 Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
 The source-branch status statements below predate this application integration;
 real hardware/manufacturer/empirical calibration gates remain open.
@@ -8,6 +11,24 @@ Integration status: this source-branch document predates the
 [executed integration review](../reviews/LEOMAIN_PR9.md). Statements below about
 awaiting execution describe that earlier snapshot. Hardware/camera acceptance
 remains open; see the [PhoTO documentation map](../README.md).
+
+## External beacon save point - leomaster
+
+Code commit `8fb3b3c` implements the independent beacon transcript, image
+renderer/decoder and CLI. Documentation commit `aa15704` records the supplied
+proposal, corrected security interpretation and synthetic execution results.
+See the [profile](../prnu/BEACON-EXPERIMENT.md) and
+[validation record](../prnu/BEACON-VALIDATION.md): 10 beacon tests and 9 targeted
+v3 regressions passed on Windows Python 3.11.9, cryptography 46.0.7 and Pillow 13.0.0.
+
+This is evidence of software token verification, not optical presence. The
+splicing/reuse counterexamples pass token verification, with physical origin
+explicitly false. No v3 wire, reducer or origin label changed. Actual beacon
+hardware/display capture, trusted release clock, key/session services,
+error-correcting optics and attachment to v3 reports remain unimplemented or
+unvalidated. The earlier progress entries below are historical snapshots.
+
+
 
 **Latest audit:** [CRYPTO-MODULE-AUDIT.md](CRYPTO-MODULE-AUDIT.md) distinguishes
 implemented primitives, source corrections awaiting the test branch, missing

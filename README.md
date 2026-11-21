@@ -58,7 +58,7 @@ For Android deployment and the Alice/Bob flow on two USB-connected phones:
 
 The [local app guide](docs/social/README.md) covers ports, USB forwarding,
 configuration, logs, persistence and shutdown. No public relay is preconfigured.
-Phone acceptance is still deferred; builds and headless demos do not replace it.
+Two-phone acceptance remains pending. The single-device Pixel run is recorded below; builds alone do not replace device acceptance.
 
 ## Where to start
 
@@ -93,3 +93,17 @@ product/UI names retained in historical reports. `fingerprinto` is the crypto
 module, `settlement` the timestamp engine and `upp_protocol` the Nostr adapter.
 Existing package names, commands (`photoanchor-bundle`, `upp-settlement`),
 `PHOTOANCHOR_*` settings, application ID and protocol identifiers remain stable.
+
+## Crypto research and pitch
+
+The [external-beacon experiment](docs/prnu/BEACON-EXPERIMENT.md) verifies a
+session-bound software token, not physical presence; it does not upgrade v3
+origin levels. The [pitch deck](docs/pitch/fingerprinto-pitch.pdf),
+[technical backup](docs/pitch/fingerprinto-pitch-technical.pdf) and
+[portable video bundle](docs/pitch/fingerprinto-pitch-presentation.zip) preserve
+the reviewed presentation and supplied recordings.
+
+## AI-use disclosure
+
+The author declares the theory Human and the code/slides LLM-generated.
+Named tools are OpenAI Codex and Claude; no separate human code review is asserted.

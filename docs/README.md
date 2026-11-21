@@ -50,8 +50,7 @@ Read the [crypto flow diagrams](diagrams/crypto-flow.md), [implementation audit]
 The [integration review](reviews/LEOMAIN_PR9.md) records subsequent validation
 of the source audit's corrections. The [native app integration](V3-APP-INTEGRATION.md)
 now connects the v3 workflow; [its software validation](reviews/V3_APP.md) is recorded
-separately. A real manufacturer validator, actual device attestation and independently
-trusted, measured camera-reference calibration remain open. The hybrid-v2 experiment is
+separately. The [single-device Pixel acceptance](reviews/PIXEL9_PRO_2026-11-21.md) records actual attestation/capture/signing checks. A real manufacturer validator and independently trusted, measured camera-reference calibration remain open. The hybrid-v2 experiment is
 separate from the P-256 v3 profile and from the Nostr app identity.
 
 [Legal positioning](crypto/regulations.md) describes dated research and service limits;
@@ -61,7 +60,7 @@ it is not a certification of PhoTO or its timestamps.
 
 The [technical crypto guide](crypto/README.md) explains the threat model and
 receipt construction without replacing the product overview or setup guides.
-The [three-minute pitch](pitch/pitch.md) and [three crypto slides](pitch/slides.md)
+The [three-minute pitch](pitch/pitch.md) and [eight-screen deck and backup](pitch/slides.md)
 separate implemented software from real-device and calibration gates. The
 [challenge handoff](challenge/task.md) and [review notes](.notes/review-notes.md)
 are archived source-branch context, not current execution instructions.
@@ -76,3 +75,10 @@ are archived source-branch context, not current execution instructions.
 Use **PhoTO** in new product documentation. Keep historical commit/branch names,
 code/package identifiers, `PHOTOANCHOR_*` environment variables, APK filenames,
 signed events and wire-format domains unchanged for compatibility.
+
+## External optical-token research
+
+[Beacon specification and limits](prnu/BEACON-EXPERIMENT.md),
+[execution provenance](prnu/BEACON-VALIDATION.md), and
+[reviewed Lagrange pitch](pitch/presentation/README.md) are separate from the
+implemented native-app acceptance. Optical token validity never upgrades origin.

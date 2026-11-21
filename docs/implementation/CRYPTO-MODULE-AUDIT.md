@@ -1,5 +1,8 @@
 # Crypto module implementation audit
 
+**Current merged integration:** the [Pixel 9 Pro/GrapheneOS acceptance report](../reviews/PIXEL9_PRO_2026-11-21.md) records real enrollment, capture, signing and regtest proof checks. The dated source notes below do not negate those results. Manufacturer validation, empirical PRNU calibration, two-phone acceptance and physical beacon trials remain separate gates.
+
+
 Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
 The source-branch status statements below predate this application integration;
 real hardware/manufacturer/empirical calibration gates remain open.
@@ -8,6 +11,29 @@ Integration status: this source-branch document predates the
 [executed integration review](../reviews/LEOMAIN_PR9.md). Statements below about
 awaiting execution describe that earlier snapshot. Hardware/camera acceptance
 remains open; see the [PhoTO documentation map](../README.md).
+
+## Scoped addendum: external optical token
+
+The earlier audit below remains a dated source review. On `leomaster`,
+`fingerprinto/beacon.py` adds an isolated token experiment; see the
+[specification](../prnu/BEACON-EXPERIMENT.md) and
+[tested SHA/results](../prnu/BEACON-VALIDATION.md). This addendum is not a
+new end-to-end audit or physical-camera validation.
+
+| Added capability | Boundary |
+|---|---|
+| P-256 code signed by an external beacon, bound to verifier challenge and installation | Verifies token authenticity/session, not emission through optics |
+| Fixed optical grid and bounded PNG/JPEG ROI decoder | Pinned Pillow baseline; no localisation, perspective correction or error correction |
+| Verifier-owned pinned SPKI and slot/age checks | No deployment registry/revocation or atomic one-use session service |
+| Standalone JSON report / CLI | Class S, no physical-origin pass; v3 wire/reducer unchanged |
+
+Ten beacon tests and nine targeted v3 regressions passed at `8fb3b3c`.
+Splicing and same-session reuse intentionally pass token checks while preserving
+`physicalOriginVerified=false`. These are documented counterexamples to a
+physical-origin claim. No real device, Android build or OTS verification ran.
+This does not close the implementation/calibration gaps listed below.
+
+
 
 Review entry point: [CRYPTO-REVIEW-HANDOFF.md](CRYPTO-REVIEW-HANDOFF.md), including
 the required reading order and the distinction between historical results and
