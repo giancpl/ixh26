@@ -19,6 +19,7 @@ data class PhotoAnchorState(
     val captured: File? = null, val preview: Bitmap? = null,
     val selected: PhotoPost? = null, val verification: Verification? = null,
     val copyResult: String? = null,
+    val demoMode: Boolean = false, val lastPublishedId: String? = null,
     val deviceStatus: String = "Device enrollment not checked", val calibrationStatus: String = "No calibration session",
     val calibrationGuide: CalibrationGuide? = null,
     val privacy: String = "", val draftCaption: String = "", val originalCapture: File? = null
@@ -26,7 +27,8 @@ data class PhotoAnchorState(
 
 class PhotoAnchorModel(application: Application) : AndroidViewModel(application) {
     private val repository = SocialRepository(application)
-    private val mutable = MutableStateFlow(PhotoAnchorState())
+    private val demoPreferences = application.getSharedPreferences("photo-demo", android.content.Context.MODE_PRIVATE)
+    private val mutable = MutableStateFlow(PhotoAnchorState(demoMode = BuildConfig.DEBUG && demoPreferences.getBoolean("simulation", false)))
     val state = mutable.asStateFlow()
     private var refreshing = false
     private val draftLock = Any()
@@ -93,10 +95,17 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
         mutable.value = mutable.value.copy(name = name.trim(), queued = repository.pendingCount())
     }
 
-    fun captured(file: File) = action("JPEG finalized. Add a caption and publish when ready.") {
+    fun setDemoMode(enabled: Boolean) {
+        if (!BuildConfig.DEBUG || mutable.value.busy) return
+        demoPreferences.edit().putBoolean("simulation", enabled).apply()
+        mutable.value = mutable.value.copy(demoMode = enabled)
+    }
+
+    fun captured(file: File) = action(if (mutable.value.demoMode) "Demo photo signed and queued; verification runs automatically." else "JPEG finalized. Add a caption and publish when ready.") {
         val (prepared, bitmap) = repository.preparePhoto(file)
         mutable.value = mutable.value.copy(captured = prepared, preview = bitmap, privacy = repository.privacy(prepared), originalCapture = prepared, draftCaption = "")
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+        if (mutable.value.demoMode) publishCurrent("DEMO · automatic capture · simulated origin walkthrough #Bitcoin", false)
     }
 
     fun discard() {
@@ -110,16 +119,24 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
     fun publishEvidence(caption: String) = publishMode(caption, true)
 
     private fun publishMode(caption: String, evidence: Boolean) = action("Signed post saved. Publication and timestamp progress independently.") {
-        var photo = mutable.value.captured ?: return@action
+        publishCurrent(caption, evidence)
+    }
+
+    private suspend fun publishCurrent(caption: String, evidence: Boolean) {
+        var photo = mutable.value.captured ?: return
         if (!evidence && !photo.name.startsWith("cleaned-")) {
             photo = repository.cleanedCopy(photo)
             val (_, preview) = repository.preparePhoto(photo)
             mutable.value = mutable.value.copy(captured = photo, preview = preview, privacy = repository.privacy(photo))
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
         }
-        repository.publishPhoto(photo, caption, withEvidence = evidence)
-        mutable.value = mutable.value.copy(captured = null, preview = null, queued = repository.pendingCount(), originalCapture = null, draftCaption = "")
+        val preview = mutable.value.preview
+        val post = repository.publishPhoto(photo, caption, withEvidence = evidence)
+        mutable.value = mutable.value.copy(captured = null, preview = null, queued = repository.pendingCount(), originalCapture = null, draftCaption = "",
+            feed = listOf(FeedEntry(post, mutable.value.name, preview)) + mutable.value.feed.filterNot { it.post.id == post.id },
+            lastPublishedId = post.id)
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+        select(post)
     }
 
     fun renewPreparation() = action("New v3 preparation requested; previous evidence preserved") {

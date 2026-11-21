@@ -52,7 +52,7 @@ internal fun PinDetailDialog(
     val title = selected.caption.ifBlank { "Untitled Pin" }
     val dateLabel = formatShortDate(selected.createdAt)
     val boardTag = boardForCaption(selected.caption)
-    var showProofDetails by remember { mutableStateOf(false) }
+    var showProofDetails by remember(selected.id) { mutableStateOf(!state.demoMode) }
     var zapBurstKey by remember { mutableIntStateOf(0) }
 
     val timestamp = timestampBadge(state.verification?.timestamp)
@@ -91,6 +91,7 @@ internal fun PinDetailDialog(
                     Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (state.demoMode) DemoWalkthrough(selected.id)
                     // Top creator bar + Save button
                     Row(
                         Modifier.fillMaxWidth(),

@@ -207,3 +207,30 @@ USB/camera UI, real attestation roots or physical-camera attribution. The
 [single-Pixel device report](reviews/PIXEL9_PRO_2026-11-21.md) records the real
 checks actually performed. Run the remaining two-phone acceptance and held-out
 Pixel/GrapheneOS measurements before claiming the corresponding guarantees.
+
+
+## Automatic debug presentation mode
+
+The debug-only **Automatic demo simulation** switch is off by default and
+persists per installation. When enabled, the header identifies SIMULATED DEMO
+and warns that shutter capture publishes automatically to the configured local
+Docker backend. Each new capture preserves its original and publishes a
+cleaned copy as an ordinary signed Nostr demo post. The durable event queue,
+actual relay publication and OTS worker are reused. Existing drafts are not
+silently published when the switch is enabled.
+
+After successful signing/queuing, the app opens the post and starts actual
+verification automatically in every publication mode. While selected, its real
+results continue to refresh. Debug presentation mode additionally plays a
+labelled capture/sign/origin/timestamp/verification animation, including when
+services cannot provide evidence. On an upload failure, the retained draft can
+show the same labelled walkthrough; its actual error and retry controls remain.
+
+The animation never constructs a verification result, receipt, evidence tag,
+proof, trust association or exported file. It is explicitly a simulated
+walkthrough, not successful physical-camera attribution or a Bitcoin
+confirmation. Inspect exposes actual statuses, and bundles contain actual
+proofs only. Real regtest confirmations still require explicit operator mining;
+no continuous miner or simulated-success fallback is installed in the backend.
+Disable the switch for the ordinary capture/preview/publication flow. The
+installation/Nostr keys and previously signed posts are unchanged.

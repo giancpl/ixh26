@@ -217,6 +217,10 @@ internal fun PhotoAnchorApp(
         if (state.ready && state.name.isBlank()) tab = "Profile"
     }
 
+    LaunchedEffect(state.lastPublishedId) {
+        if (state.lastPublishedId != null) tab = "Feed"
+    }
+
     val saveBundle = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) model.export(uri)
     }
@@ -446,6 +450,16 @@ internal fun PhotoAnchorApp(
                 .background(p.bg)
                 .padding(padding),
         ) {
+            if (BuildConfig.DEBUG) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (state.demoMode) "SIMULATED DEMO · auto-publish on capture" else "Automatic demo · off", color = p.ink, fontSize = 11.sp,
+                        modifier = Modifier.weight(1f))
+                    Switch(checked = state.demoMode, onCheckedChange = model::setDemoMode, enabled = !state.busy,
+                        modifier = Modifier.semantics { contentDescription = "Automatic demo simulation" })
+                }
+            }
             Text("Local demo · Bitcoin regtest", color = p.mu, fontSize = 11.sp,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp))
             Text(state.message, color = p.ink, fontSize = 12.sp,
@@ -490,7 +504,7 @@ internal fun PhotoAnchorApp(
                             model = model,
                         )
                     } else {
-                        CameraScreen(state.busy, model::captured, model::cameraError, state.calibrationGuide)
+                        CameraScreen(state.busy, model::captured, model::cameraError, if (state.demoMode) null else state.calibrationGuide, state.demoMode)
                     }
                     else -> FeedScreen(
                         state = state,

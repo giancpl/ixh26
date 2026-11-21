@@ -151,7 +151,8 @@ internal fun PublishScreen(
                     )
                 }
 
-                GuidedCalibrationCapture(state, model)
+                if (state.demoMode) DemoWalkthrough(state.captured?.absolutePath.orEmpty())
+                else GuidedCalibrationCapture(state, model)
                 state.preview?.let {
                     Box(
                         Modifier
@@ -261,7 +262,7 @@ internal fun PublishScreen(
 
 @Composable
 @androidx.annotation.OptIn(markerClass = [androidx.camera.camera2.interop.ExperimentalCamera2Interop::class])
-internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () -> Unit, calibration: CalibrationGuide? = null) {
+internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () -> Unit, calibration: CalibrationGuide? = null, demoMode: Boolean = false) {
     val p = LocalPalette.current
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
@@ -390,7 +391,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BitPolitoBadge("Camera-Only Pin", kind = "solid", icon = DeckIcon.Camera)
+                BitPolitoBadge(if (demoMode) "DEMO · capture & publish" else "Camera-Only Pin", kind = "solid", icon = DeckIcon.Camera)
                 BitPolitoBadge(
                     text = if (routeInfo.optBoolean("fixed")) "Fixed Camera Route" else "Standard Lens",
                     kind = if (routeInfo.optBoolean("fixed")) "ok" else "default",
@@ -399,6 +400,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
             }
         }
 
+        if (demoMode) Text("One tap captures a real JPEG, publishes a cleaned copy to local Docker and opens verification. Origin/timestamp walkthrough results are labelled SIMULATED; actual checks remain separate.", color = p.mu, fontSize = 11.sp)
         SurfCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp) {
             Row(
                 Modifier.fillMaxWidth(),
