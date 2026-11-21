@@ -16,6 +16,7 @@ from .prnu import score
 from .prnu_image import decode_green
 from .prnu_records import REFERENCE_LIMIT, json_bytes, read_reference
 from .receipt_v3 import Evidence, ReceiptV3, RESULTS, json_object
+from .enrollment_requests import instant
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,7 @@ def _enrollment(fields, store, now):
 def assess(fields, asset, credential, placement, policy, ref_hash, *, now, store=None,
            reference_loader=None, manufacturer_validator=None):
     """All configuration/dependencies are owned by the caller, never the bundle."""
+    instant(now)
     policy_object = json_object(policy)
     record, enrollment, enrollment_reason = _enrollment(fields, store, now)
     # Even with unconfigured validators, check visible evidence selection first.
@@ -206,7 +208,12 @@ def issue_v3(fields: Receipt, asset: bytes, *, placement: int, credential: bytes
                          "referenceHash": reference_hash.hex() if reference_hash else None, "policyHash": digest(policy).hex()})
     evidence = Evidence(placement, digest(credential) if credential is not None else None,
                         RESULTS.index(m.status.value), RESULTS.index(p.status.value), reference_hash, digest(policy), digest(report))
+    # Reject report schema/size disagreement before invoking the signing key or
+    # committing a journal record that could never be exported.
+    evidence.attachments(policy, report)
     draft = ReceiptV3(fields, evidence)
+    EvidenceBundle(draft.with_signature(b"\0" * 72).to_bytes(), asset, credential, profile="evidence-v3",
+                   policy=policy, report=report).files()
     root = draft.roots(asset, credential)["R"]
     def produce():
         signed = draft.with_signature(sign_root(root))

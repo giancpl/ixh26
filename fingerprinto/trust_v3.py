@@ -83,6 +83,13 @@ class TrustStore:
             raise ValueError("Persistent verifier-owned trust database required")
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("CREATE TABLE IF NOT EXISTS enrollment_v3 (installation TEXT PRIMARY KEY, sequence INTEGER NOT NULL, record BLOB NOT NULL)")
+            db.execute("""CREATE TABLE IF NOT EXISTS enrollment_v3_history (
+                installation TEXT NOT NULL, sequence INTEGER NOT NULL, record BLOB NOT NULL,
+                PRIMARY KEY (installation,sequence))""")
+            # Upgrade existing stores by retaining their authenticated current
+            # records. Earlier overwritten versions cannot be reconstructed.
+            for identity, sequence, record in db.execute("SELECT installation,sequence,record FROM enrollment_v3").fetchall():
+                self._archive(db, identity, sequence, record)
 
     def authenticate(self, record):
         envelope = json_object(record)
@@ -93,23 +100,62 @@ class TrustStore:
         verify_installation_signature(self.authority, bytes.fromhex(envelope["signature"]), domain("enrollment-v3/1", digest(raw)))
         return body
 
+    def _archive(self, db, identity, sequence, record):
+        body = self.authenticate(record)
+        if body["installation"] != identity or body["sequence"] != sequence:
+            raise ValueError("Enrollment index/signed record mismatch")
+        old = db.execute("SELECT record FROM enrollment_v3_history WHERE installation=? AND sequence=?",
+                         (identity, sequence)).fetchone()
+        if old is not None and old[0] != record:
+            raise ValueError("Conflicting authenticated enrollment history")
+        db.execute("INSERT OR IGNORE INTO enrollment_v3_history VALUES (?,?,?)", (identity, sequence, record))
+
     def retain(self, record):
         body = self.authenticate(record)
         with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
             db.execute("PRAGMA synchronous=FULL")
             db.execute("BEGIN IMMEDIATE")
             old = db.execute("SELECT sequence,record FROM enrollment_v3 WHERE installation=?", (body["installation"],)).fetchone()
+            latest = db.execute("SELECT sequence,record FROM enrollment_v3_history WHERE installation=? ORDER BY sequence DESC LIMIT 1",
+                                (body["installation"],)).fetchone()
+            if latest is not None and old != latest:
+                raise ValueError("Enrollment current/history mismatch")
             if old is not None:
+                self._archive(db, body["installation"], old[0], old[1])
                 if old[1] == record:
                     return
                 if body["sequence"] <= old[0]:
                     raise ValueError("Stale/conflicting enrollment update")
+            self._archive(db, body["installation"], body["sequence"], record)
             db.execute("INSERT OR REPLACE INTO enrollment_v3 VALUES (?,?,?)", (body["installation"], body["sequence"], record))
+
+    def history(self, installation_id: bytes):
+        """Return original signed updates, authenticated and ordered by sequence.
+
+        This is retained history, not proof of status at an arbitrary past date;
+        whole-database rollback remains outside this local mechanism.
+        """
+        if type(installation_id) is not bytes or len(installation_id) != 32:
+            raise ValueError("Expected installation ID")
+        identity = installation_id.hex()
+        with closing(sqlite3.connect(self.path)) as db:
+            rows = db.execute("SELECT sequence,record FROM enrollment_v3_history WHERE installation=? ORDER BY sequence",
+                              (identity,)).fetchall()
+        for sequence, record in rows:
+            body = self.authenticate(record)
+            if body["installation"] != identity or body["sequence"] != sequence:
+                raise ValueError("Corrupt enrollment history index")
+        return tuple(record for _, record in rows)
 
     def lookup(self, fields, *, now: datetime):
         at = instant(now)
         with closing(sqlite3.connect(self.path)) as db:
+            db.execute("BEGIN")
             row = db.execute("SELECT sequence,record FROM enrollment_v3 WHERE installation=?", (digest(fields.pk_I).hex(),)).fetchone()
+            latest = db.execute("SELECT sequence,record FROM enrollment_v3_history WHERE installation=? ORDER BY sequence DESC LIMIT 1",
+                                (digest(fields.pk_I).hex(),)).fetchone()
+        if row != latest:
+            raise ValueError("Enrollment current/history mismatch")
         if row is None:
             return None, "enrollment_record_missing"
         body = self.authenticate(row[1])

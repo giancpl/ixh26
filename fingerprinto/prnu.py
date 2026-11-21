@@ -12,6 +12,15 @@ import struct
 METHOD = "fingerprinto/prnu-haar-green/1"
 
 
+def _ordered_sum(values):
+    # Python 3.12 changed sum(float)'s algorithm. Keep the binary64 operation
+    # order of the Java implementation and the original method-1 contract.
+    total = 0.0
+    for value in values:
+        total += value
+    return total
+
+
 @dataclass(frozen=True)
 class Geometry:
     camera: str
@@ -52,12 +61,12 @@ def center(values, mask, width, height):
     out = list(values)
     for y in range(height):
         ids = [y * width + x for x in range(width) if mask[y * width + x]]
-        mean = sum(out[p] for p in ids) / len(ids) if ids else 0.0
+        mean = _ordered_sum(out[p] for p in ids) / len(ids) if ids else 0.0
         for p in ids:
             out[p] -= mean
     for x in range(width):
         ids = [y * width + x for y in range(height) if mask[y * width + x]]
-        mean = sum(out[p] for p in ids) / len(ids) if ids else 0.0
+        mean = _ordered_sum(out[p] for p in ids) / len(ids) if ids else 0.0
         for p in ids:
             out[p] -= mean
     return tuple(out[p] if mask[p] else 0.0 for p in range(len(out)))
@@ -176,7 +185,7 @@ def score(values, geometry, reference, *, asset_digest: bytes):
             lowest = min(lowest, fraction)
             if fraction < 0.75:
                 return Score(None, "insufficient_valid_area", lowest)
-            ma, mb = sum(a) / len(a), sum(b) / len(b)
+            ma, mb = _ordered_sum(a) / len(a), _ordered_sum(b) / len(b)
             cross, aa, bb = 0.0, 0.0, 0.0
             for av, bv in zip(a, b):
                 av, bv = av - ma, bv - mb
@@ -186,7 +195,7 @@ def score(values, geometry, reference, *, asset_digest: bytes):
             surface.append((dy, dx, cross / math.sqrt(aa * bb)))
     r0 = next(r for dy, dx, r in surface if dy == dx == 0)
     off = [r * r for dy, dx, r in surface if abs(dy) > 1 or abs(dx) > 1]
-    energy = sum(off) / len(off)
+    energy = _ordered_sum(off) / len(off)
     if energy <= 0:
         return Score(None, "zero_off_peak_energy", lowest, r0)
     value = math.copysign(r0 * r0 / energy, r0)

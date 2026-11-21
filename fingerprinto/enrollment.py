@@ -19,7 +19,7 @@ from cryptography.x509.oid import ObjectIdentifier, ExtensionOID
 
 from . import android_attestation as der
 from .enrollment_requests import EnrollmentRequests, instant
-from .verification import Check, _certificate, load_installation_key
+from .verification import Check, _certificate, load_installation_key, verify_installation_signature
 
 ATTESTATION = ObjectIdentifier("1.3.6.1.4.1.11129.2.1.17")
 PROVISIONING = ObjectIdentifier("1.3.6.1.4.1.11129.2.1.30")
@@ -151,6 +151,7 @@ def verify_enrollment(
     public_key: bytes, chain: tuple[bytes, ...], *, policy: EnrollmentPolicy | None,
     requests: EnrollmentRequests | None, revocations: RevocationSnapshot | None,
     now: datetime,
+    possession_proof: tuple[bytes, bytes] | None = None,
 ) -> EnrollmentResult:
     """Verify and atomically consume a fresh challenge only on full acceptance.
 
@@ -167,6 +168,12 @@ def verify_enrollment(
         return result("indeterminate", "enrollment_policy_unconfigured", "Verifier trust policy is required.")
     try:
         load_installation_key(public_key)
+        if possession_proof is not None:
+            if type(possession_proof) is not tuple or len(possession_proof) != 2:
+                raise ValueError("Invalid possession proof")
+            root, signature = possession_proof
+            verify_installation_signature(public_key, signature, root)
+            details.update(possession_root=root.hex(), possession_signature=signature.hex())
         certs = _path(chain, policy, now)
         indexes = [i for i in reversed(range(len(certs))) if _extension(certs[i], ATTESTATION)]
         if not indexes:
@@ -229,9 +236,13 @@ def verify_enrollment(
         details["revocation_evidence_sha256"] = revocations.evidence_sha256.hex()
         if requests is None:
             return result("indeterminate", "challenge_registry_missing", "Verifier-owned issuance and consumption state is required.")
-        if not requests.consume(att.challenge, policy.digest, identity, now=now):
+        accepted = result("accepted", "enrollment_accepted", "Attestation policy and fresh one-use enrollment challenge passed.")
+        accepted_bytes = json.dumps(accepted.to_dict(), sort_keys=True, separators=(",", ":"),
+                                    allow_nan=False).encode("utf-8")
+        if not requests.consume(att.challenge, policy.digest, identity, now=now,
+                                accepted_result=accepted_bytes):
             raise _Rejected("enrollment_challenge_unavailable")
-        return result("accepted", "enrollment_accepted", "Attestation policy and fresh one-use enrollment challenge passed.")
+        return accepted
     except _Unsupported as exc:
         return result("indeterminate", str(exc), "Attestation or path uses an unsupported verification profile.")
     except _Rejected as exc:
