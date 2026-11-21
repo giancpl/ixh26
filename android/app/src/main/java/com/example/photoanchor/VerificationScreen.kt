@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,9 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,7 +37,9 @@ internal fun PinDetailDialog(
     entry: FeedEntry?,
     state: PhotoAnchorState,
     isSaved: Boolean,
+    zapSats: Int = 21,
     onToggleSave: () -> Unit,
+    onZap: () -> Unit = {},
     onVerifyAgain: () -> Unit,
     onDismiss: () -> Unit,
     onCheckCopy: () -> Unit,
@@ -45,9 +48,12 @@ internal fun PinDetailDialog(
 ) {
     val p = LocalPalette.current
     val creatorName = entry?.name?.ifBlank { "Creator" } ?: "Creator"
+    val handle = handleOf(creatorName, selected.pubkey)
     val title = selected.caption.ifBlank { "Untitled Pin" }
     val dateLabel = formatShortDate(selected.createdAt)
+    val boardTag = boardForCaption(selected.caption)
     var showProofDetails by remember { mutableStateOf(false) }
+    var zapBurstKey by remember { mutableIntStateOf(0) }
 
     val timestamp = timestampBadge(state.verification?.timestamp)
 
@@ -57,8 +63,6 @@ internal fun PinDetailDialog(
     ) {
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
         SideEffect {
-            // Android 17 can retain platform fitting despite decorFits=false.
-            // Let Compose handle system insets once, inside the full window.
             if (android.os.Build.VERSION.SDK_INT >= 30 && dialogWindow != null) {
                 val attributes = dialogWindow.attributes
                 val cutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
@@ -69,11 +73,11 @@ internal fun PinDetailDialog(
                 }
             }
         }
-        // Bound the scrolling card to the usable window. A wrap-content dialog
-        // can otherwise place its final actions beneath gesture navigation.
         Box(
-            modifier = Modifier.fillMaxSize().safeDrawingPadding()
-                .padding(horizontal = 14.dp, vertical = 20.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .padding(horizontal = 14.dp, vertical = 18.dp),
             contentAlignment = Alignment.Center,
         ) {
             SurfCard(
@@ -85,7 +89,7 @@ internal fun PinDetailDialog(
             ) {
                 Column(
                     Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     // Top creator bar + Save button
                     Row(
@@ -100,7 +104,7 @@ internal fun PinDetailDialog(
                         ) {
                             Box(
                                 Modifier
-                                    .size(38.dp)
+                                    .size(40.dp)
                                     .clip(CircleShape)
                                     .background(p.fg),
                                 contentAlignment = Alignment.Center,
@@ -113,21 +117,25 @@ internal fun PinDetailDialog(
                                 )
                             }
                             Column {
-                                Text(
-                                    text = creatorName,
-                                    color = p.ink,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 15.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                if (dateLabel.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                ) {
                                     Text(
-                                        text = "Posted $dateLabel (declared) · ${selected.width}×${selected.height}",
-                                        color = p.mu,
-                                        fontSize = 11.5.sp,
+                                        text = creatorName,
+                                        color = p.ink,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 15.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
+                                    PixelIcon(DeckIcon.Shield, size = 13.dp, tint = p.fg)
                                 }
+                                Text(
+                                    text = if (dateLabel.isNotEmpty()) "$handle · $dateLabel" else handle,
+                                    color = p.mu,
+                                    fontSize = 11.5.sp,
+                                )
                             }
                         }
 
@@ -138,14 +146,22 @@ internal fun PinDetailDialog(
                         )
                     }
 
-                    // Large Pin Image
+                    // Large Pin Image (Double-tap to Zap +21 sats with Lightning animation)
                     entry?.preview?.let { bitmap ->
                         Box(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(18.dp))
                                 .background(Color(0xFF0D1124))
-                                .border(1.dp, p.bd, RoundedCornerShape(18.dp)),
+                                .border(1.dp, p.bd, RoundedCornerShape(18.dp))
+                                .pointerInput(selected.id) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            zapBurstKey++
+                                            onZap()
+                                        },
+                                    )
+                                },
                             contentAlignment = Alignment.Center,
                         ) {
                             Image(
@@ -153,103 +169,194 @@ internal fun PinDetailDialog(
                                 contentDescription = title,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 380.dp),
+                                    .heightIn(max = 360.dp),
                                 contentScale = ContentScale.Fit,
                             )
+
+                            LightningZapBurstOverlay(burstTrigger = zapBurstKey)
+
+                            Box(
+                                Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(10.dp)
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .background(Color.Black.copy(alpha = 0.62f))
+                                    .padding(horizontal = 9.dp, vertical = 4.dp),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    PixelIcon(DeckIcon.Lightning, size = 10.dp, tint = Color(0xFFFCD34D))
+                                    Text(
+                                        text = "Double-tap to Zap",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    // Pin title & status badge
+                    // Pin title
                     Text(
                         text = title,
                         color = p.ink,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 19.sp,
-                        lineHeight = 24.sp,
+                        fontSize = 18.sp,
+                        lineHeight = 23.sp,
                     )
 
+                    // Interactive Engagement & Status Row
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        Surface(
+                            shape = RoundedCornerShape(99.dp),
+                            color = p.ambBg,
+                            border = BorderStroke(1.dp, p.ambBd),
+                            modifier = Modifier.clickable {
+                                zapBurstKey++
+                                onZap()
+                            },
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                PixelIcon(DeckIcon.Lightning, size = 13.dp, tint = p.amb)
+                                Text(
+                                    text = "Zap $zapSats sats",
+                                    color = p.ambText,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                            }
+                        }
+
+                        BitPolitoBadge(
+                            text = "#$boardTag",
+                            kind = "default",
+                            icon = DeckIcon.Bookmark,
+                        )
+
                         BitPolitoBadge(
                             text = timestamp.label,
                             kind = timestamp.tone.badgeKind,
                             icon = DeckIcon.Bitcoin,
                         )
-                        Text(
-                            text = if (showProofDetails) "Hide proof details" else "Proof & Actions",
-                            color = p.fg,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable { showProofDetails = !showProofDetails },
+                    }
+
+                    // Quick Proof Actions Row (Always easy to reach, zero clutter)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        BitPolitoOutlinedButton(
+                            text = "Compare Photo",
+                            icon = DeckIcon.Camera,
+                            onClick = onCheckCopy,
+                            enabled = !state.busy,
+                            modifier = Modifier.weight(1f),
+                        )
+                        BitPolitoOutlinedButton(
+                            text = "Export Proof",
+                            icon = DeckIcon.Bookmark,
+                            onClick = onExportBundle,
+                            enabled = !state.busy,
+                            modifier = Modifier.weight(1f),
                         )
                     }
 
-                    VerificationCard(
-                        icon = DeckIcon.Shield,
-                        title = "Event ID and Schnorr signature · on this device",
-                        value = state.verification?.event ?: "Checking event…",
-                    )
-                    VerificationCard(
-                        icon = DeckIcon.Camera,
-                        title = "Original JPEG integrity · on this device",
-                        value = state.verification?.integrity ?: "Checking original bytes…",
-                    )
-                    VerificationCard(
-                        icon = DeckIcon.Bitcoin,
-                        title = "Timestamp · configured local node · regtest",
-                        value = state.verification?.timestamp ?: "Requesting a fresh local node check…",
-                    )
-                    VerificationCard(icon = DeckIcon.Shield, title = "P-256 v3 receipt · on this device", value = state.verification?.receipt ?: "Not checked")
-                    VerificationCard(icon = DeckIcon.Shield, title = "Device enrollment · local authority", value = state.verification?.device ?: "Not checked")
-                    VerificationCard(icon = DeckIcon.Camera, title = "Origin · local server analysis", value = state.verification?.origin ?: "Origin not verified")
-                    VerificationCard(icon = DeckIcon.Bitcoin, title = "v3 timestamp · local node · regtest", value = state.verification?.evidenceTimestamp ?: "No v3 timestamp")
-                    VerificationCard(
-                        icon = DeckIcon.Globe,
-                        title = "Relay publication · independent of timestamp",
-                        value = state.verification?.publication ?: "Unknown",
-                    )
-                    Text(
-                        "Regtest is a local development blockchain, not a mainnet anchor. Names, captions " +
-                            "and posted times are author declarations. Signatures and timestamps do not " +
-                            "establish scene authenticity or capture time.",
-                        color = p.mu, fontSize = 12.sp,
-                    )
-                    SelectionContainer {
-                        Text("Signer: ${selected.pubkey}\nEvent: ${selected.id}", color = p.ink, fontSize = 12.sp)
-                    }
                     if (selected.evidenceCommitment != null) {
-                        BitPolitoOutlinedButton(text = "Export v3 evidence separately", onClick = onExportEvidence, enabled = !state.busy)
+                        BitPolitoOutlinedButton(
+                            text = "Export v3 Evidence Bundle",
+                            icon = DeckIcon.Shield,
+                            onClick = onExportEvidence,
+                            enabled = !state.busy,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
+
+                    state.copyResult?.let { copyMsg ->
+                        val copyOk = verificationTone(copyMsg) == VerificationTone.SUCCESS
+                        BitPolitoBadge(
+                            text = copyMsg,
+                            kind = verificationTone(copyMsg).badgeKind,
+                            icon = if (copyOk) DeckIcon.Star else DeckIcon.Warning,
+                        )
+                    }
+
+                    // Expandable Technical Verification Details (Hidden by default so the UI stays clean)
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { showProofDetails = !showProofDetails }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            PixelIcon(DeckIcon.Shield, size = 14.dp, tint = p.fg)
+                            Text(
+                                text = "Cryptographic Verification Details",
+                                color = p.ink,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                            )
+                        }
+                        Text(
+                            text = if (showProofDetails) "Hide" else "Inspect",
+                            color = p.fg,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
+
                     AnimatedVisibility(visible = showProofDetails) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                BitPolitoOutlinedButton(
-                                    text = "Compare Photo",
-                                    icon = DeckIcon.Camera,
-                                    onClick = onCheckCopy,
-                                    enabled = !state.busy,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                BitPolitoOutlinedButton(
-                                    text = "Export Proof",
-                                    icon = DeckIcon.Bookmark,
-                                    onClick = onExportBundle,
-                                    enabled = !state.busy,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            state.copyResult?.let { copyMsg ->
-                                val copyOk = verificationTone(copyMsg) == VerificationTone.SUCCESS
-                                BitPolitoBadge(
-                                    text = copyMsg,
-                                    kind = verificationTone(copyMsg).badgeKind,
-                                    icon = if (copyOk) DeckIcon.Star else DeckIcon.Warning,
+                            VerificationCard(
+                                icon = DeckIcon.Shield,
+                                title = "Nostr Schnorr Signature",
+                                value = state.verification?.event ?: "Checking event…",
+                            )
+                            VerificationCard(
+                                icon = DeckIcon.Camera,
+                                title = "Original JPEG Integrity",
+                                value = state.verification?.integrity ?: "Checking original bytes…",
+                            )
+                            VerificationCard(
+                                icon = DeckIcon.Bitcoin,
+                                title = "Bitcoin Timestamp",
+                                value = state.verification?.timestamp ?: "Checking node…",
+                            )
+                            VerificationCard(
+                                icon = DeckIcon.Shield,
+                                title = "v3 Receipt & Device",
+                                value = "${state.verification?.receipt ?: "Not checked"} · ${state.verification?.device ?: ""}",
+                            )
+                            VerificationCard(
+                                icon = DeckIcon.Camera,
+                                title = "Sensor Origin Analysis",
+                                value = state.verification?.origin ?: "Origin not verified",
+                            )
+                            VerificationCard(
+                                icon = DeckIcon.Globe,
+                                title = "Relay Status",
+                                value = state.verification?.publication ?: "Unknown",
+                            )
+                            SelectionContainer {
+                                Text(
+                                    text = "Signer: ${selected.pubkey.take(24)}…\nEvent: ${selected.id.take(24)}…",
+                                    color = p.mu,
+                                    fontSize = 11.sp,
                                 )
                             }
                         }
@@ -267,7 +374,7 @@ internal fun PinDetailDialog(
                             modifier = Modifier.weight(1f),
                         )
                         BitPolitoPrimaryButton(
-                            text = "Refresh Status",
+                            text = "Refresh Proof",
                             icon = DeckIcon.Lightning,
                             onClick = onVerifyAgain,
                             modifier = Modifier.weight(1f),
@@ -294,15 +401,15 @@ internal fun VerificationCard(icon: DeckIcon, title: String, value: String) {
         color = bg,
         border = BorderStroke(1.dp, bd),
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                PixelIcon(icon, size = 13.dp, tint = accent)
-                Text(title, color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                PixelIcon(icon, size = 12.dp, tint = accent)
+                Text(title, color = accent, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
             }
-            Text(value, color = p.ink, fontSize = 11.5.sp, lineHeight = 15.sp)
+            Text(value, color = p.ink, fontSize = 11.sp, lineHeight = 14.sp)
         }
     }
 }

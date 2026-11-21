@@ -14,6 +14,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,7 +83,7 @@ internal fun OnboardingNameCard(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    "Choose your creator name before snapping your first Pin.",
+                    "Choose your creator name to start snapping Pins.",
                     color = p.mu,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
@@ -91,13 +91,13 @@ internal fun OnboardingNameCard(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { if (it.length <= 80) name = it },
-                    label = { Text("Display name (declared)") },
+                    label = { Text("Creator name") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 BitPolitoPrimaryButton(
-                    text = "Continue to Camera",
+                    text = "Open Camera",
                     icon = DeckIcon.Camera,
                     enabled = state.ready && !state.busy && name.isNotBlank(),
                     onClick = { onSaveName(name) },
@@ -117,6 +117,10 @@ internal fun PublishScreen(
 ) {
     val p = LocalPalette.current
     val caption = state.draftCaption
+    val boards = remember { listOf("Inspiration", "Bitcoin", "Street", "Architecture", "Nature") }
+    var chosenBoard by remember { mutableStateOf("Inspiration") }
+    var useV3Proof by remember { mutableStateOf(false) }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -126,21 +130,25 @@ internal fun PublishScreen(
     ) {
         SurfCard(
             modifier = Modifier.fillMaxWidth().widthIn(max = 500.dp),
-            padding = 20.dp,
+            padding = 18.dp,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Create Pin",
+                        "New Pin",
                         color = p.ink,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 20.sp,
                     )
-                    BitPolitoBadge("Not submitted", icon = DeckIcon.Hourglass)
+                    BitPolitoBadge(
+                        text = if (useV3Proof) "v3 Sensor Proof" else "Signed Nostr Pin",
+                        kind = if (useV3Proof) "ok" else "default",
+                        icon = DeckIcon.Shield,
+                    )
                 }
 
                 state.preview?.let {
@@ -157,29 +165,69 @@ internal fun PublishScreen(
                             contentDescription = "Captured Pin",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 320.dp),
+                                .heightIn(max = 260.dp),
                             contentScale = ContentScale.Fit,
                         )
                     }
                 }
 
-                CaptureEvidenceControls(state, model, caption)
                 OutlinedTextField(
                     value = caption,
                     onValueChange = model::setCaption,
                     enabled = !state.busy,
-                    label = { Text("Title or description") },
-                    placeholder = { Text("Tell everyone what your Pin is about…") },
+                    label = { Text("Add a title or #tags") },
+                    placeholder = { Text("e.g. Golden hour in Turin #Street #Bitcoin") },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                 )
 
-                Text(
-                    "This exact JPEG is hashed and its post signed once. Publication and timestamp " +
-                        "progress independently; regtest confirmation requires explicit operator mining.",
-                    color = p.mu, fontSize = 12.sp,
-                )
+                // Pinterest Board selector pills
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Pin to Board", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        boards.forEach { b ->
+                            FilterChipPill(
+                                label = b,
+                                selected = chosenBoard == b,
+                                icon = DeckIcon.Bookmark,
+                                onClick = {
+                                    chosenBoard = b
+                                    if (!caption.contains("#$b", ignoreCase = true)) {
+                                        val nextCap = if (caption.isBlank()) "#$b" else "$caption #$b"
+                                        model.setCaption(nextCap)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+
+                // Clean 2-pill Mode Selector + Collapsible Lab tools
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilterChipPill(
+                        label = "Standard Pin",
+                        selected = !useV3Proof,
+                        icon = DeckIcon.Lightning,
+                        onClick = { useV3Proof = false },
+                    )
+                    FilterChipPill(
+                        label = "v3 Evidence Proof",
+                        selected = useV3Proof,
+                        icon = DeckIcon.Shield,
+                        onClick = { useV3Proof = true },
+                    )
+                }
+
+                CaptureEvidenceControls(state, model, caption)
+
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -192,9 +240,15 @@ internal fun PublishScreen(
                         modifier = Modifier.weight(1f),
                     )
                     BitPolitoPrimaryButton(
-                        text = if (state.busy) "Publishing…" else "Publish cleaned copy without origin evidence",
-                        icon = DeckIcon.Star,
-                        onClick = { publish(caption) },
+                        text = if (state.busy) "Posting…" else "Post Pin",
+                        icon = DeckIcon.Lightning,
+                        onClick = {
+                            if (useV3Proof) {
+                                model.publishEvidence(caption)
+                            } else {
+                                publish(caption)
+                            }
+                        },
                         enabled = !state.busy,
                         modifier = Modifier.weight(1.3f),
                     )
@@ -252,7 +306,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        "Allow camera access to take a photo and publish a signed post.",
+                        "Allow camera access to snap authentic Pins directly from the camera.",
                         color = p.mu,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
@@ -299,7 +353,6 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                     routeReady = true
                 }
                 if (route == null) bind(false) else {
-                    // Unsupported physical stream combinations must not break ordinary capture.
                     runCatching { bind(true) }.getOrElse { bind(false) }
                 }
             }.onFailure { onError() }
@@ -307,9 +360,6 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
         onDispose { disposed = true; routeReady = false; provider?.unbindAll() }
     }
     capture.flashMode = if (flash) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
-    val routeMessage = if (!routeReady) "Opening camera…" else if (routeInfo.optBoolean("fixed"))
-        "Fixed camera route selected · physical identity still requires independent enrollment"
-        else "PRNU unavailable on this route · ordinary photo capture remains available"
 
     Column(
         Modifier
@@ -317,7 +367,6 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(routeMessage, color = p.mu, fontSize = 12.sp)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -335,11 +384,11 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BitPolitoBadge("New Pin", kind = "solid", icon = DeckIcon.Camera)
+                BitPolitoBadge("Camera-Only Pin", kind = "solid", icon = DeckIcon.Camera)
                 BitPolitoBadge(
-                    text = if (flash) "Flash On" else "Flash Off",
-                    kind = if (flash) "pending" else "default",
-                    icon = DeckIcon.Lightning,
+                    text = if (routeInfo.optBoolean("fixed")) "Sensor Verified Route" else "Standard Lens",
+                    kind = if (routeInfo.optBoolean("fixed")) "ok" else "default",
+                    icon = DeckIcon.Shield,
                 )
             }
         }

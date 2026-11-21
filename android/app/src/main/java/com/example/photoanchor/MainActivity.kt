@@ -10,9 +10,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -26,14 +29,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.json.JSONObject
+import java.util.UUID
+
+internal data class ActivityNotification(
+    val id: String,
+    val kind: String, // "zap" | "social" | "system"
+    val icon: DeckIcon,
+    val title: String,
+    val subtitle: String,
+    val time: String,
+    val postId: String? = null,
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,14 +110,104 @@ internal fun PhotoAnchorApp(
     var tab by rememberSaveable { mutableStateOf("Feed") }
     var search by rememberSaveable { mutableStateOf("") }
     var filterMode by rememberSaveable { mutableStateOf("all") } // "all" | "saved" | "mine"
+    var showNotifications by remember { mutableStateOf(false) }
+
     var savedIds by remember {
         mutableStateOf(prefs.getStringSet("saved_pins", emptySet())?.toSet() ?: emptySet())
     }
+    var zapsByPost by remember {
+        mutableStateOf<Map<String, Int>>(
+            runCatching {
+                val raw = JSONObject(prefs.getString("zaps_map", "{}") ?: "{}")
+                raw.keys().asSequence().associateWith { raw.optInt(it, 0) }
+            }.getOrDefault(emptyMap()),
+        )
+    }
+    var userNotifications by remember { mutableStateOf<List<ActivityNotification>>(emptyList()) }
+    var readNotifIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    fun pushNotification(kind: String, icon: DeckIcon, title: String, subtitle: String, postId: String? = null) {
+        val item = ActivityNotification(
+            id = UUID.randomUUID().toString(),
+            kind = kind,
+            icon = icon,
+            title = title,
+            subtitle = subtitle,
+            time = "now",
+            postId = postId,
+        )
+        userNotifications = (listOf(item) + userNotifications).take(30)
+    }
 
     fun toggleSavePin(id: String) {
-        val next = if (id in savedIds) savedIds - id else savedIds + id
+        val wasSaved = id in savedIds
+        val next = if (wasSaved) savedIds - id else savedIds + id
         savedIds = next
         prefs.edit().putStringSet("saved_pins", next).apply()
+        if (!wasSaved) {
+            val entry = state.feed.find { it.post.id == id }
+            pushNotification(
+                kind = "social",
+                icon = DeckIcon.Heart,
+                title = "Saved Pin to your collection",
+                subtitle = entry?.post?.caption?.ifBlank { "Signed Pin" } ?: "Saved Pin",
+                postId = id,
+            )
+        }
+    }
+
+    fun zapPost(id: String, amount: Int = 21) {
+        val nextCount = (zapsByPost[id] ?: 0) + amount
+        val nextMap = zapsByPost + (id to nextCount)
+        zapsByPost = nextMap
+        val json = JSONObject()
+        nextMap.forEach { (k, v) -> json.put(k, v) }
+        prefs.edit().putString("zaps_map", json.toString()).apply()
+        val entry = state.feed.find { it.post.id == id }
+        val creator = entry?.name?.ifBlank { "Creator" } ?: "Creator"
+        pushNotification(
+            kind = "zap",
+            icon = DeckIcon.Lightning,
+            title = "Zapped +$amount sats to $creator",
+            subtitle = entry?.post?.caption?.ifBlank { "Authentic Pin" } ?: "Pin on Nostr",
+            postId = id,
+        )
+    }
+
+    val allNotifications = remember(userNotifications, state.feed, state.queued, state.message) {
+        val systemList = buildList {
+            if (state.queued > 0) {
+                add(
+                    ActivityNotification(
+                        id = "sys-queue-${state.queued}",
+                        kind = "system",
+                        icon = DeckIcon.Hourglass,
+                        title = "${state.queued} signed Pin(s) queued",
+                        subtitle = "Waiting for local relay sync · signatures preserved",
+                        time = "live",
+                    ),
+                )
+            }
+            state.feed.take(6).forEach { entry ->
+                val creator = entry.name.ifBlank { "Creator" }
+                add(
+                    ActivityNotification(
+                        id = "feed-${entry.post.id}",
+                        kind = "system",
+                        icon = DeckIcon.Bitcoin,
+                        title = "Signed Pin by $creator",
+                        subtitle = entry.post.caption.ifBlank { "Tap to inspect Bitcoin proof" },
+                        time = formatShortDate(entry.post.createdAt).ifEmpty { "recent" },
+                        postId = entry.post.id,
+                    ),
+                )
+            }
+        }
+        userNotifications + systemList
+    }
+
+    val unreadCount = remember(allNotifications, readNotifIds) {
+        allNotifications.count { it.id !in readNotifIds }
     }
 
     LaunchedEffect(state.ready) {
@@ -132,7 +238,7 @@ internal fun PhotoAnchorApp(
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(9.dp),
                 ) {
                     // Brand logo
                     Row(
@@ -160,7 +266,7 @@ internal fun PhotoAnchorApp(
                         )
                     }
 
-                    // Pinterest-style rounded search bar
+                    // Search Bar
                     Surface(
                         modifier = Modifier.weight(1f).height(38.dp),
                         shape = RoundedCornerShape(99.dp),
@@ -178,7 +284,7 @@ internal fun PhotoAnchorApp(
                             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                 if (search.isEmpty()) {
                                     Text(
-                                        text = "Search pins, creators…",
+                                        text = "Search pins, #tags…",
                                         color = p.mu,
                                         fontSize = 12.5.sp,
                                         maxLines = 1,
@@ -213,6 +319,39 @@ internal fun PhotoAnchorApp(
                     }
 
                     BitPolitoThemeSwitch(isDark = isDark, onToggle = onToggleTheme)
+
+                    // Notification Bell with Unread Dot
+                    Box(
+                        Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(p.soft)
+                            .border(1.dp, p.bd, CircleShape)
+                            .semantics { contentDescription = "Notifications" }
+                            .clickable(role = Role.Button) { showNotifications = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        PixelIcon(DeckIcon.Bell, size = 15.dp, tint = p.fg)
+                        if (unreadCount > 0) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-2).dp, y = 2.dp)
+                                    .size(13.dp)
+                                    .clip(CircleShape)
+                                    .background(p.amb)
+                                    .border(1.5.dp, p.surf, CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = if (unreadCount > 9) "9+" else "$unreadCount",
+                                    color = Color(0xFF451A03),
+                                    fontSize = 7.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                            }
+                        }
+                    }
 
                     // Profile Avatar
                     Box(
@@ -304,28 +443,6 @@ internal fun PhotoAnchorApp(
                 .background(p.bg)
                 .padding(padding),
         ) {
-            Text(
-                text = "Local demo · Bitcoin regtest",
-                color = p.fg,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
-            )
-            Text(
-                text = state.message,
-                color = p.ink,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-            )
-            if (state.queued > 0) {
-                Text(
-                    text = "${state.queued} signed event(s) queued · retries preserve the signature",
-                    color = p.mu,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
-                )
-            }
             if (state.busy) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth().height(3.dp),
@@ -339,7 +456,9 @@ internal fun PhotoAnchorApp(
                     "Profile" -> ProfileScreen(
                         state = state,
                         savedIds = savedIds,
+                        zapsByPost = zapsByPost,
                         onToggleSave = ::toggleSavePin,
+                        onZap = ::zapPost,
                         saveProfile = model::saveProfile,
                         onSelectPin = model::select,
                         onOpenCamera = { tab = "Camera" },
@@ -355,7 +474,10 @@ internal fun PhotoAnchorApp(
                     } else if (state.captured != null) {
                         PublishScreen(
                             state = state,
-                            publish = model::publish,
+                            publish = { caption ->
+                                model.publish(caption)
+                                tab = "Feed"
+                            },
                             discard = model::discard,
                             model = model,
                         )
@@ -368,7 +490,9 @@ internal fun PhotoAnchorApp(
                         filterMode = filterMode,
                         onFilterChange = { filterMode = it },
                         savedIds = savedIds,
+                        zapsByPost = zapsByPost,
                         onToggleSave = ::toggleSavePin,
+                        onZap = ::zapPost,
                         refresh = model::refresh,
                         select = model::select,
                         onOpenCamera = { tab = "Camera" },
@@ -385,12 +509,199 @@ internal fun PhotoAnchorApp(
             entry = selectedEntry,
             state = state,
             isSaved = selected.id in savedIds,
+            zapSats = (zapsByPost[selected.id] ?: 0) + 21,
             onToggleSave = { toggleSavePin(selected.id) },
+            onZap = { zapPost(selected.id, 21) },
             onVerifyAgain = model::verify,
             onDismiss = model::dismiss,
             onCheckCopy = { checkCopy.launch(arrayOf("image/jpeg")) },
             onExportBundle = { saveBundle.launch("bitpin-${selected.id.take(12)}.zip") },
             onExportEvidence = { saveEvidence.launch("photo-v3-evidence.zip") },
         )
+    }
+
+    if (showNotifications) {
+        NotificationsDialog(
+            notifications = allNotifications,
+            readIds = readNotifIds,
+            statusMessage = state.message,
+            onMarkAllRead = { readNotifIds = readNotifIds + allNotifications.map { it.id } },
+            onSelectNotification = { notif ->
+                readNotifIds = readNotifIds + notif.id
+                val target = notif.postId?.let { pid -> state.feed.find { it.post.id == pid }?.post }
+                showNotifications = false
+                if (target != null) model.select(target)
+            },
+            onDismiss = { showNotifications = false },
+        )
+    }
+}
+
+@Composable
+private fun NotificationsDialog(
+    notifications: List<ActivityNotification>,
+    readIds: Set<String>,
+    statusMessage: String,
+    onMarkAllRead: () -> Unit,
+    onSelectNotification: (ActivityNotification) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val p = LocalPalette.current
+    var filter by remember { mutableStateOf("all") }
+    val filtered = remember(notifications, filter) {
+        if (filter == "all") notifications else notifications.filter { it.kind == filter }
+    }
+    val unreadTotal = remember(notifications, readIds) {
+        notifications.count { it.id !in readIds }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        SurfCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 20.dp)
+                .widthIn(max = 500.dp),
+            padding = 18.dp,
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column(
+                modifier = Modifier.heightIn(max = 580.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(p.fg),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            PixelIcon(DeckIcon.Bell, size = 16.dp, tint = p.primaryFg)
+                        }
+                        Column {
+                            Text("Activity & Notifications", color = p.ink, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                            Text(
+                                text = if (unreadTotal > 0) "$unreadTotal new updates" else "All caught up",
+                                color = p.mu,
+                                fontSize = 11.5.sp,
+                            )
+                        }
+                    }
+                    if (unreadTotal > 0) {
+                        Text(
+                            text = "Mark read",
+                            color = p.fg,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable(onClick = onMarkAllRead),
+                        )
+                    }
+                }
+
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    FilterChipPill("All", filter == "all", { filter = "all" }, DeckIcon.Bell)
+                    FilterChipPill("Zaps", filter == "zap", { filter = "zap" }, DeckIcon.Lightning)
+                    FilterChipPill("Social", filter == "social", { filter = "social" }, DeckIcon.Heart)
+                    FilterChipPill("Bitcoin", filter == "system", { filter = "system" }, DeckIcon.Bitcoin)
+                }
+
+                if (statusMessage.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = p.soft,
+                        border = BorderStroke(1.dp, p.bd),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            PixelIcon(DeckIcon.Bitcoin, size = 14.dp, tint = p.fg)
+                            Text(statusMessage, color = p.ink, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+
+                if (filtered.isEmpty()) {
+                    Box(
+                        Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            PixelIcon(DeckIcon.Bell, size = 26.dp, tint = p.mu)
+                            Text("No notifications yet", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                "Double-tap any photo to Zap +21 sats or save Pins to your collection.",
+                                color = p.mu,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(filtered, key = { it.id }) { notif ->
+                            val isUnread = notif.id !in readIds
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isUnread) p.soft else p.surf,
+                                border = BorderStroke(1.dp, if (isUnread) p.fg else p.bd),
+                                modifier = Modifier.fillMaxWidth().clickable { onSelectNotification(notif) },
+                            ) {
+                                Row(
+                                    Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(if (notif.kind == "zap") p.ambBg else p.surf)
+                                            .border(1.dp, p.bd, CircleShape),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        PixelIcon(
+                                            notif.icon,
+                                            size = 15.dp,
+                                            tint = if (notif.kind == "zap") p.amb else p.fg,
+                                        )
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(notif.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(notif.subtitle, color = p.mu, fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    Text(notif.time, color = p.mu, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                BitPolitoPrimaryButton(
+                    text = "Done",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
