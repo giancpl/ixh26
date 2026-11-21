@@ -302,3 +302,13 @@ endpoint, no-overwrite proof handling, offline tests and real Docker evidence.
 The legacy manual-proof construction and digest-membership fallback are removed;
 automatic mining is opt-in and regtest-only. The native `/v1` package and worker
 keep their existing explicit-mining behavior. No web/Android UI is changed.
+
+## Pietro native UI review
+
+`integration/pietro-mobile-review` starts from main `be33627` and preserves the
+source history of `feature-mobileApp` through `d6c2213`. The remaining source
+diff is a native Compose redesign, distinct from the old WebView work reviewed
+in PR #6. The source branch is not changed. See
+[PIETRO_ANDROID.md](reviews/PIETRO_ANDROID.md) for scope, findings, corrections,
+validation and remaining device-acceptance gates. No settlement, backend,
+contracts, signed-event payload or identity-storage migration is included.
