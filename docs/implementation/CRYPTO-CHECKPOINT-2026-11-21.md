@@ -3,7 +3,7 @@
 This is a restore/handover point, **not a production-readiness declaration**.
 The user requested this checkpoint before a substantial change of direction.
 Do not automatically continue the old backlog. The user has now supplied a new
-v3 manufacturer/PRNU proposal in `docs/crypto.md`; read it and the next user
+v3 manufacturer/PRNU proposal in `docs/crypto/crypto.md`; read it and the next user
 instructions before deciding which old assumptions/modules survive.
 
 Branch: `leomain`. Implementation save commit: **`db5a857` (`ADD: partial 1`)**,
@@ -14,7 +14,7 @@ to implement, not evidence that its code exists. A subsequent documentation-only
 correction makes that split explicit. Find this document's history with:
 
 ```sh
-git log --oneline -- docs/CRYPTO-CHECKPOINT-2026-11-21.md
+git log --oneline -- docs/implementation/CRYPTO-CHECKPOINT-2026-11-21.md
 ```
 
 ## Scope and instructions that were in force at the save point
@@ -38,11 +38,11 @@ git log --oneline -- docs/CRYPTO-CHECKPOINT-2026-11-21.md
 
 | File | Role |
 |---|---|
-| `docs/crypto.md` | **New v3 P-256 manufacturer/PRNU proposal first**; original v1 and its vectors survive in a historical appendix |
-| `docs/hybrid-v2.md` | Experimental v2 suite, byte contracts, wrapping boundary, APIs/CLI |
-| `docs/enrollment-verifier.md` | Restricted attestation intake, caller-owned trust/status inputs and limits |
-| `docs/capture-feasibility.md` | Real-capture experiment and unsigned diagnostic ZIP |
-| `docs/implementation-progress.md` | Historical step-by-step implementation and test record |
+| `docs/crypto/crypto.md` | **New v3 P-256 manufacturer/PRNU proposal first**; original v1 and its vectors survive in a historical appendix |
+| `docs/crypto/hybrid-v2.md` | Experimental v2 suite, byte contracts, wrapping boundary, APIs/CLI |
+| `docs/crypto/enrollment-verifier.md` | Restricted attestation intake, caller-owned trust/status inputs and limits |
+| `docs/implementation/capture-feasibility.md` | Real-capture experiment and unsigned diagnostic ZIP |
+| `docs/implementation/implementation-progress.md` | Historical step-by-step implementation and test record |
 | `android/README.md` | Java/Kotlin module map and deferred build/device status |
 
 ## Implemented code and its actual limits
@@ -66,7 +66,7 @@ of the new signed-receipt commitment.
 
 ## New direction already supplied: v3 delta, not implemented
 
-At `db5a857`, `docs/crypto.md` targets wire version **3**, with manufacturer and
+At `db5a857`, `docs/crypto/crypto.md` targets wire version **3**, with manufacturer and
 PRNU checks on the same immutable photo. There is no v3 codec, PRNU engine,
 reference enrollment or evidence-level reducer in the saved implementation.
 No v1/v2 test result below validates v3. Keep the legacy vectors unchanged.

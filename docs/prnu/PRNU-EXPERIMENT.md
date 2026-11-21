@@ -1,6 +1,6 @@
 # PRNU experimental profile and stop/go evaluation
 
-Visual overview: [PRNU, hashes and signature](crypto-flow.md), with diagrams of
+Visual overview: [PRNU, hashes and signature](../diagrams/crypto-flow.md), with diagrams of
 the reference/PCE path and the v3 signed commitment. The diagram is in Italian.
 
 Method `fingerprinto/prnu-haar-green/1` is an intentionally small numeric

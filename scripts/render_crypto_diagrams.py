@@ -1,4 +1,4 @@
-"""Render the two Mermaid blocks in docs/crypto-flow.md to local PNG files.
+"""Render the two Mermaid blocks in docs/diagrams/crypto-flow.md to local PNG files.
 
 Optional documentation tooling only: requires Playwright, an existing Chromium
 browser and the standalone Mermaid bundle. Does not install/download a browser,
@@ -38,7 +38,7 @@ def main():
     if browser is None or not browser.is_file():
         parser.error("Select an existing Chromium browser with --browser")
     blocks = re.findall(r"^```mermaid[^\S\n]*\n(.*?)^```[^\S\n]*(?:\n|\Z)",
-                        (ROOT / "docs/crypto-flow.md").read_text(encoding="utf-8"), re.S | re.M)
+                        (ROOT / "docs/diagrams/crypto-flow.md").read_text(encoding="utf-8"), re.S | re.M)
     if len(blocks) != len(OUTPUTS):
         parser.error("Expected exactly two Mermaid diagrams in crypto-flow.md")
     from playwright.sync_api import sync_playwright

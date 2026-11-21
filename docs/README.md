@@ -18,7 +18,7 @@ locally and requests fresh timestamp verification from the API's Bitcoin node.
 | `contracts/`, `upp_protocol/` | Shared API/fixtures, kind-20 validation, signed-event payload and bundle CLI | [Contracts](../contracts/README.md) |
 | `social/` | FastAPI, SQLite/media storage and durable relay/OTS jobs | [Local app and Docker](social/README.md) |
 | `settlement/` | Opaque-byte OTS stamp/upgrade/Bitcoin verification; mainnet by default | [Settlement](SETTLEMENT.md) |
-| `fingerprinto/`, native v3 workflow | Optional device enrollment/receipts, private server PRNU and independent proof | [App v3 setup](V3-APP-INTEGRATION.md), [crypto specification](crypto.md) |
+| `fingerprinto/`, native v3 workflow | Optional device enrollment/receipts, private server PRNU and independent proof | [App v3 setup](V3-APP-INTEGRATION.md), [crypto specification](crypto/crypto.md) |
 | `server/`, `web/` | Separate legacy image-byte API and web UI | [Legacy regtest guide](REGTEST_SERVER.md) |
 
 `compose.social.yml` overlays the standalone regtest environment. The normal
@@ -45,8 +45,8 @@ use of a key, while PRNU is statistical camera attribution. Neither establishes
 that the depicted scene is true. Installation attestation does not authenticate
 the pixels, and no sensor signature is assumed available on Pixel/GrapheneOS.
 
-Read the [crypto flow diagrams](crypto-flow.md), [implementation audit](CRYPTO-MODULE-AUDIT.md),
-[roadmap](CRYPTO-V3-ROADMAP.md) and [PRNU method](PRNU-EXPERIMENT.md).
+Read the [crypto flow diagrams](diagrams/crypto-flow.md), [implementation audit](implementation/CRYPTO-MODULE-AUDIT.md),
+[roadmap](implementation/CRYPTO-V3-ROADMAP.md) and [PRNU method](prnu/PRNU-EXPERIMENT.md).
 The [integration review](reviews/LEOMAIN_PR9.md) records subsequent validation
 of the source audit's corrections. The [native app integration](V3-APP-INTEGRATION.md)
 now connects the v3 workflow; [its software validation](reviews/V3_APP.md) is recorded
@@ -54,16 +54,24 @@ separately. A real manufacturer validator, actual device attestation and indepen
 trusted, measured camera-reference calibration remain open. The hybrid-v2 experiment is
 separate from the P-256 v3 profile and from the Nostr app identity.
 
-[Legal positioning](regulations.md) describes dated research and service limits;
+[Legal positioning](crypto/regulations.md) describes dated research and service limits;
 it is not a certification of PhoTO or its timestamps.
 
 ## Validation and historical records
 
+The [technical crypto guide](crypto/README.md) explains the threat model and
+receipt construction without replacing the product overview or setup guides.
+The [three-minute pitch](pitch/pitch.md) and [three crypto slides](pitch/slides.md)
+separate implemented software from real-device and calibration gates. The
+[challenge handoff](challenge/task.md) and [review notes](.notes/review-notes.md)
+are archived source-branch context, not current execution instructions.
+
 - [Native v3 app validation](reviews/V3_APP.md): current integration checks and remaining phone acceptance.
+- [PR #13 documentation review](reviews/PLASMASTARK_PR13.md): crypto-guide reorganisation reconciled with the current application.
 - [Crypto-module integration validation](reviews/LEOMAIN_PR9.md): earlier source reconciliation and real Docker lifecycles.
 - [Two-phone checklist](social/CHECKLIST.md#actual-two-phone-acceptance--deferred-by-the-user): still pending; earlier agent handoffs above it are historical.
 - [Consolidation log](CONSOLIDATION.md): staged PR/branch history, not current setup instructions.
-- [Earlier MVP validation](social/VALIDATION.md), [crypto checkpoint](CRYPTO-CHECKPOINT-2026-11-21.md) and [source handoff](CRYPTO-REVIEW-HANDOFF.md): dated snapshots, not current branch status.
+- [Earlier MVP validation](social/VALIDATION.md), [crypto checkpoint](implementation/CRYPTO-CHECKPOINT-2026-11-21.md) and [source handoff](implementation/CRYPTO-REVIEW-HANDOFF.md): dated snapshots, not current branch status.
 
 Use **PhoTO** in new product documentation. Keep historical commit/branch names,
 code/package identifiers, `PHOTOANCHOR_*` environment variables, APK filenames,

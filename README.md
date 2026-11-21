@@ -67,7 +67,8 @@ Phone acceptance is still deferred; builds and headless demos do not replace it.
 - [Android app](android/README.md): identity, capture, feed, verification and build.
 - [Protocol and API contracts](contracts/README.md): signed events, exact OTS payload and independent bundle verification.
 - [Settlement guide](docs/SETTLEMENT.md): Python API, CLI, mainnet/pruned Core, regtest, statuses and exit codes.
-- [Crypto experiment](docs/crypto.md): P-256 v3, enrollment and PRNU; [integration review](docs/reviews/LEOMAIN_PR9.md) records executed checks and remaining gates.
+- [Crypto technical guide](docs/crypto/README.md): threat model, exact P-256 v3 construction, enrollment and statistical PRNU limits.
+- [Crypto specification](docs/crypto/crypto.md): profile details; [integration review](docs/reviews/LEOMAIN_PR9.md) records executed checks and remaining gates.
 
 ## Development and validation
 
