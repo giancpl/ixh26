@@ -1,17 +1,17 @@
 # v3 roadmap: test whether the exercise is reasonably solvable
 
-Native app follow-up: [connected v3 workflow](V3-APP-INTEGRATION.md).
+Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
 The source-branch status statements below predate this application integration;
 real hardware/manufacturer/empirical calibration gates remain open.
 
 Baseline: `db5a857` saves v1/v2 code; `c3ca43c` clarifies the checkpoint.
-Specification: the current `crypto.md`, targeting P-256 evidence-v3. Hybrid v2
+Specification: the current `../crypto/crypto.md`, targeting P-256 evidence-v3. Hybrid v2
 remains an independent experiment. Preserve its tests/bytes and legacy v1.
 
 ## Objective and feasibility gates
 
 Commercial/legal research is tracked separately in
-[regulations.md](regulations.md). It identifies
+[../crypto/regulations.md](../crypto/regulations.md). It identifies
 possible evidential/document-workflow support and a future qualified-timestamp
 option; it does not certify this prototype or change the technical acceptance
 gates below.
@@ -99,7 +99,7 @@ merely unexecuted tests.
 - Stage 2 byte mechanisms implemented: strict Python v3 decode, signed
   attachments and transport; Java streaming construction. Four shared signed
   golden vectors cover the three levels and pass/pass. Tamper/schema/JSON tests
-  pass in 65 Python methods; see `EVIDENCE-V3-FORMATS.md` for the exact boundary.
+  pass in 65 Python methods; see `../crypto/EVIDENCE-V3-FORMATS.md` for the exact boundary.
   Java now also strictly decodes/verifies v3 CBOR and shares the enrollment
   possession-proof root. JSON attachment/current trust evaluation remains in
   the independent Python verifier.
@@ -108,7 +108,7 @@ merely unexecuted tests.
   optional JPEG adapter, exact-byte reference records and atomic publication.
   1,028 cross-language numeric comparisons pass; 69 Python methods pass.
   Decoder interoperability on Android and trusted physical provisioning remain
-  separate requirements; see `PRNU-EXPERIMENT.md`.
+  separate requirements; see `../prnu/PRNU-EXPERIMENT.md`.
   Java also emits portable canonical reference records, independently imported
   and checked by Python; floating-point estimates are compared within tolerance.
 - Stage 5 tooling checks disjoint sets and emits per-device/mode empirical
@@ -117,7 +117,7 @@ merely unexecuted tests.
   authenticated updates/revocation, separately approved reference thresholds,
   both validators, enrolled-key issuance, verified sign-once retries and
   independent verification of current findings versus signed claims. 73 Python
-  methods pass. See `V3-TRUST-AND-WORKFLOW.md` for administrative boundaries.
+  methods pass. See `../crypto/V3-TRUST-AND-WORKFLOW.md` for administrative boundaries.
 - Stage 6 has an injectable manufacturer adapter and conservative default
   presence inspection only. A qualifying production issuer/credential validator
   is still required before any real manufacturer pass is available.
@@ -144,5 +144,5 @@ Digital Imaging Sensor Identification (Further Study)](https://ws2.binghamton.ed
 derives reference estimation/detection under a simplified sensor model and
 discusses preprocessing and error estimation. It does not validate a particular
 modern handset/app route or establish a universal 30-frame threshold. The
-smartphone-processing paper linked in crypto.md could not be fetched in this
+smartphone-processing paper linked in ../crypto/crypto.md could not be fetched in this
 session (HTTP 403); no claim here rests on having reviewed its contents.

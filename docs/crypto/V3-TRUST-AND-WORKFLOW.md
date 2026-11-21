@@ -1,9 +1,9 @@
 # v3 authority records and offline workflow
 
 Integration status: this source-branch document predates the
-[executed integration review](reviews/LEOMAIN_PR9.md). Statements below about
+[executed integration review](../reviews/LEOMAIN_PR9.md). Statements below about
 awaiting execution describe that earlier snapshot. Hardware/camera acceptance
-remains open; see the [PhoTO documentation map](README.md).
+remains open; see the [PhoTO documentation map](../README.md).
 
 `trust_v3.TrustStore` retains P-256 authority-signed enrollment records in a
 verifier-owned SQLite database. Pin the authority SPKI through deployment,
@@ -66,7 +66,7 @@ records are published separately; this function does not capture/calibrate a pho
 Attachment/schema checks and aggregate limits (reserving the longest allowed
 signature) run before signing, so an oversized report does not create an
 unexportable journalled receipt. These latest audit corrections await execution
-testing on the dedicated branch; see `CRYPTO-MODULE-AUDIT.md`.
+testing on the dedicated branch; see `../implementation/CRYPTO-MODULE-AUDIT.md`.
 
 `verify_v3` reconstructs and verifies the signed receipt, re-evaluates both origin
 checks using caller-configured validators/store/reference retrieval, and reports

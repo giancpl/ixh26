@@ -1,13 +1,13 @@
 # Crypto module implementation audit
 
-Native app follow-up: [connected v3 workflow](V3-APP-INTEGRATION.md).
+Native app follow-up: [connected v3 workflow](../V3-APP-INTEGRATION.md).
 The source-branch status statements below predate this application integration;
 real hardware/manufacturer/empirical calibration gates remain open.
 
 Integration status: this source-branch document predates the
-[executed integration review](reviews/LEOMAIN_PR9.md). Statements below about
+[executed integration review](../reviews/LEOMAIN_PR9.md). Statements below about
 awaiting execution describe that earlier snapshot. Hardware/camera acceptance
-remains open; see the [PhoTO documentation map](README.md).
+remains open; see the [PhoTO documentation map](../README.md).
 
 Review entry point: [CRYPTO-REVIEW-HANDOFF.md](CRYPTO-REVIEW-HANDOFF.md), including
 the required reading order and the distinction between historical results and
@@ -30,7 +30,7 @@ there is still missing integration/validator code, not merely testing to do.
 Do not label this branch as a complete capture application or a calibrated
 camera-attribution product. The empirical exercise remains an open stop/go gate.
 
-The review covers the current `crypto.md` requirements, the v3 roadmap and the
+The review covers the current `../crypto/crypto.md` requirements, the v3 roadmap and the
 preserved v1/v2 implementations. UI, app compilation/SDK licence acceptance,
 upload-server integration and XRPL remain outside the agreed branch scope.
 No RSA device keys or RSA enrollment issuer paths were found in the module;
@@ -117,5 +117,5 @@ threshold, trusted boolean or an inferred device identity from EXIF.
 Only source inspection, syntax/static checks and diff checks were performed
 for this audit. Execute the above on the separate branch before claiming that
 the new corrections pass. Regulatory relevance is documented separately in
-[regulations.md](regulations.md); there is no new certification or qualified
+[../crypto/regulations.md](../crypto/regulations.md); there is no new certification or qualified
 timestamp implementation in this audit.
