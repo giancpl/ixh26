@@ -91,14 +91,19 @@ synthetic trust material for reproduction; it is not production configuration.
 - [x] Local signature/integrity checks and fresh server/node verification.
 - [x] Separate portable exports and independent combined CLI verification.
 - [x] Offline Python suites, portable crypto checks, APK/JVM/lint and real Docker lifecycle.
-- [ ] Real Pixel/GrapheneOS enrollment and camera acceptance.
+- [x] Real Pixel 9 Pro/GrapheneOS enrollment, camera capture and v3 signing
+  ([2026-11-21 device report](PIXEL9_PRO_2026-11-21.md)).
 - [ ] Held-out physical PRNU calibration and operator-approved association/regions.
-- [ ] Two-phone USB acceptance and actual process-death/restart UI checks.
+- [x] One-Pixel process-death/restart and APK-update persistence checks.
+- [ ] Two-phone USB acceptance.
 
 ## Remaining device acceptance
 
-Actual Android Keystore/attestation, USB deployment/camera UI, physical-camera
-route stability and held-out same-model PRNU measurements are deferred as agreed.
+The initial delivery deferred all device acceptance. Actual Android
+Keystore/attestation, USB deployment/camera UI and both OTS proofs have since
+been exercised on one Pixel 9 Pro; see the dated report above. Physical-camera
+route stability, held-out same-model PRNU measurements and the second handset
+remain outstanding.
 No real manufacturer credential validator or sensor signature is supplied.
 A passing software build or synthetic authority grant is not hardware evidence.
 

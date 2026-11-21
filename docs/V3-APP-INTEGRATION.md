@@ -3,8 +3,10 @@
 PhoTO now connects its native Nostr app to the evidence-v3 mechanisms. Device
 enrollment, local-server analysis, device signing, publication and the two OTS
 proofs are separate operations with separate results. This is a local debug
-integration; actual Pixel/GrapheneOS hardware and empirical PRNU acceptance
-remain outstanding. No sensor signature or manufacturer validator is invented.
+integration. Real Pixel 9 Pro/GrapheneOS enrollment, capture and v3 signing were
+tested on [2026-11-21](reviews/PIXEL9_PRO_2026-11-21.md); empirical PRNU and
+two-phone acceptance remain outstanding. No sensor signature or manufacturer
+validator is invented.
 
 ## Start, configure trust and build
 
@@ -192,7 +194,8 @@ Explicit `./scripts/social-compose.sh --profile tools down --volumes` deletes
 this project's authority, blockchain, private enrollment/reference data and
 proofs. Keep all required trust/chain material together for later verification.
 
-The software suite and build do not validate actual hardware Keystore behavior,
-USB/camera UI, real attestation roots or physical-camera attribution. Run the
-deferred two-phone acceptance and held-out Pixel/GrapheneOS measurements before
-claiming these device-level guarantees.
+The software suite and build alone do not validate hardware Keystore behavior,
+USB/camera UI, real attestation roots or physical-camera attribution. The
+[single-Pixel device report](reviews/PIXEL9_PRO_2026-11-21.md) records the real
+checks actually performed. Run the remaining two-phone acceptance and held-out
+Pixel/GrapheneOS measurements before claiming the corresponding guarantees.
