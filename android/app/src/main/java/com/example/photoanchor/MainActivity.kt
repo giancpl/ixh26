@@ -14,6 +14,7 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -23,12 +24,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,7 +45,6 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +59,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executors
 
@@ -170,15 +174,10 @@ private enum class DeckIcon(val vw: Float, val vh: Float, val pathData: String) 
         1400f,
         "M840 0H140V140H0V980H140V1120H280V1260H420V1400H560V1260H700V1120H840V980H980V140H840V0ZM490 630V140H140V630H490ZM700 1120V980H840V630H490V1120H700Z",
     ),
-    Key(
-        1540f,
-        700f,
-        "M140 0H560V140H700V280H1400V420H1260V560H1120V420H980V560H840V420H700V560H560V700H140V560H0V140H140V0ZM700 560H840V700H700V560ZM980 560H1120V700H980V560ZM1400 560H1540V420H1400V560ZM1400 560H1260V700H1400V560ZM280 420V280H140V420H280Z",
-    ),
-    Lock(
+    Bookmark(
         980f,
-        1400f,
-        "M280 0H700V140H280V0ZM840 1260V1400H140V1260H0V560H140V140H280V560H700V140H840V560H980V1260H840ZM700 840H420V1120H560V980H700V840Z",
+        1120f,
+        "M0 0H980V1120H840V980H700V840H560V700H420V840H280V980H140L140 1120H0V0Z",
     ),
     Hourglass(
         1120f,
@@ -220,6 +219,11 @@ private enum class DeckIcon(val vw: Float, val vh: Float, val pathData: String) 
         1540f,
         "M840 0H140V140H0V1400H140V1540H840V1400H980V140H840V0ZM840 280H140V1120H840V280ZM420 1400V1260H560V1400H420Z",
     ),
+    Wrench(
+        700f,
+        1680f,
+        "M560 0V140H700V560H560V1540H420V1400H280V560H420V280H0V140H140V0H560ZM280 560H0V420H280V560ZM420 1540V1680H280V1540H420Z",
+    ),
 }
 
 @Composable
@@ -253,12 +257,13 @@ private fun PixelIcon(
 private fun SurfCard(
     modifier: Modifier = Modifier,
     padding: Dp = 18.dp,
+    shape: RoundedCornerShape = RoundedCornerShape(18.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPalette.current
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = shape,
         color = p.surf,
         border = BorderStroke(1.dp, p.bd),
         shadowElevation = 2.dp,
@@ -273,14 +278,15 @@ private fun BitPolitoPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    pill: Boolean = true,
     icon: DeckIcon? = null,
 ) {
     val p = LocalPalette.current
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.heightIn(min = 46.dp),
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.heightIn(min = 44.dp),
+        shape = RoundedCornerShape(if (pill) 99.dp else 12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = p.fg,
             contentColor = p.primaryFg,
@@ -290,8 +296,8 @@ private fun BitPolitoPrimaryButton(
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
     ) {
         if (icon != null) {
-            PixelIcon(icon, size = 16.dp, tint = p.primaryFg)
-            Spacer(Modifier.width(8.dp))
+            PixelIcon(icon, size = 15.dp, tint = p.primaryFg)
+            Spacer(Modifier.width(7.dp))
         }
         Text(text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
     }
@@ -303,14 +309,15 @@ private fun BitPolitoOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    pill: Boolean = true,
     icon: DeckIcon? = null,
 ) {
     val p = LocalPalette.current
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.heightIn(min = 44.dp),
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.heightIn(min = 42.dp),
+        shape = RoundedCornerShape(if (pill) 99.dp else 12.dp),
         border = BorderStroke(1.5.dp, p.bd),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = p.surf,
@@ -318,11 +325,11 @@ private fun BitPolitoOutlinedButton(
             disabledContainerColor = p.surf.copy(alpha = 0.5f),
             disabledContentColor = p.mu.copy(alpha = 0.5f),
         ),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     ) {
         if (icon != null) {
-            PixelIcon(icon, size = 15.dp, tint = p.fg)
-            Spacer(Modifier.width(8.dp))
+            PixelIcon(icon, size = 14.dp, tint = p.fg)
+            Spacer(Modifier.width(6.dp))
         }
         Text(text, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
     }
@@ -353,7 +360,7 @@ private fun BitPolitoBadge(
             horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             if (icon != null) {
-                PixelIcon(icon, size = 12.dp, tint = fg)
+                PixelIcon(icon, size = 11.dp, tint = fg)
             }
             Text(
                 text = text,
@@ -367,14 +374,46 @@ private fun BitPolitoBadge(
     }
 }
 
+@Composable
+private fun FilterChipPill(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: DeckIcon? = null,
+) {
+    val p = LocalPalette.current
+    Surface(
+        shape = RoundedCornerShape(99.dp),
+        color = if (selected) p.fg else p.surf,
+        border = BorderStroke(1.dp, if (selected) p.fg else p.bd),
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            if (icon != null) {
+                PixelIcon(icon, size = 12.dp, tint = if (selected) p.primaryFg else p.fg)
+            }
+            Text(
+                text = label,
+                color = if (selected) p.primaryFg else p.ink,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
 /** Theme toggle switch matching #theme in design/bitcoin-network-lab/style.css */
 @Composable
 private fun BitPolitoThemeSwitch(isDark: Boolean, onToggle: () -> Unit) {
     val p = LocalPalette.current
-    val knobOffset by animateDpAsState(if (isDark) 24.dp else 0.dp, label = "themeKnob")
+    val knobOffset by animateDpAsState(if (isDark) 22.dp else 0.dp, label = "themeKnob")
     Box(
         Modifier
-            .width(56.dp)
+            .width(54.dp)
             .height(32.dp)
             .clip(RoundedCornerShape(99.dp))
             .background(p.surf)
@@ -410,6 +449,11 @@ private fun initialsOf(name: String): String =
         .take(2)
         .joinToString("") { it.first().uppercase() }
         .ifEmpty { "BP" }
+
+private fun formatShortDate(epochSeconds: Long): String =
+    runCatching {
+        SimpleDateFormat("MMM d", Locale.ENGLISH).format(Date(epochSeconds * 1000L))
+    }.getOrDefault("")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -464,9 +508,26 @@ private fun PhotoAnchorApp(
     model: PhotoAnchorModel = viewModel(),
 ) {
     val p = LocalPalette.current
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("bitpolito_ui", Context.MODE_PRIVATE) }
     val state by model.state.collectAsStateWithLifecycle()
     var tab by remember { mutableStateOf("Feed") }
-    LaunchedEffect(state.ready) { if (state.ready && state.name.isBlank()) tab = "Profile" }
+    var search by remember { mutableStateOf("") }
+    var filterMode by remember { mutableStateOf("all") } // "all" | "saved" | "mine"
+    var savedIds by remember {
+        mutableStateOf(prefs.getStringSet("saved_pins", emptySet())?.toSet() ?: emptySet())
+    }
+
+    fun toggleSavePin(id: String) {
+        val next = if (id in savedIds) savedIds - id else savedIds + id
+        savedIds = next
+        prefs.edit().putStringSet("saved_pins", next).apply()
+    }
+
+    LaunchedEffect(state.ready) {
+        if (state.ready && state.name.isBlank()) tab = "Profile"
+    }
+
     val saveBundle = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) model.export(uri)
     }
@@ -486,82 +547,108 @@ private fun PhotoAnchorApp(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    // Brand link (.brand from design/bitcoin-network-lab)
+                    // Brand logo
                     Row(
-                        modifier = Modifier
-                            .weight(1f, fill = false)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { if (state.ready) tab = "Feed" },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(p.soft)
-                                .border(1.dp, p.bd, RoundedCornerShape(11.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            PixelIcon(DeckIcon.CowHead, size = 22.dp, tint = p.fg)
-                        }
-                        Column {
-                            Text(
-                                text = "BitPin · PhotoAnchor",
-                                color = p.fg,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 16.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                text = "BitPolito · Nostr & Bitcoin regtest",
-                                color = p.mu,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-
-                    // Right actions: queued badge + theme switch + avatar chip
-                    Row(
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { if (state.ready) tab = "Feed" },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        if (state.queued > 0) {
-                            BitPolitoBadge(
-                                text = "${state.queued} in coda",
-                                kind = "pending",
-                                icon = DeckIcon.Hourglass,
-                            )
-                        }
-                        BitPolitoThemeSwitch(isDark = isDark, onToggle = onToggleTheme)
                         Box(
                             Modifier
-                                .size(34.dp)
+                                .size(36.dp)
                                 .clip(CircleShape)
-                                .background(p.fg)
-                                .clickable(enabled = state.ready) { tab = "Profile" },
+                                .background(p.fg),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (state.name.isNotBlank()) {
-                                Text(
-                                    text = initialsOf(state.name),
-                                    color = p.primaryFg,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 12.sp,
+                            PixelIcon(DeckIcon.CowHead, size = 19.dp, tint = p.primaryFg)
+                        }
+                        Text(
+                            text = "BitPin",
+                            color = p.fg,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp,
+                        )
+                    }
+
+                    // Pinterest-style rounded search bar
+                    Surface(
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        shape = RoundedCornerShape(99.dp),
+                        color = p.soft,
+                        border = BorderStroke(1.dp, p.bd),
+                    ) {
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            PixelIcon(DeckIcon.Globe, size = 13.dp, tint = p.mu)
+                            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                                if (search.isEmpty()) {
+                                    Text(
+                                        text = "Search pins, creators…",
+                                        color = p.mu,
+                                        fontSize = 12.5.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                androidx.compose.foundation.text.BasicTextField(
+                                    value = search,
+                                    onValueChange = {
+                                        search = it
+                                        if (tab != "Feed") tab = "Feed"
+                                    },
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        color = p.ink,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
-                            } else {
-                                PixelIcon(DeckIcon.User, size = 16.dp, tint = p.primaryFg)
                             }
+                            if (search.isNotEmpty()) {
+                                Text(
+                                    text = "Clear",
+                                    color = p.fg,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable { search = "" },
+                                )
+                            }
+                        }
+                    }
+
+                    BitPolitoThemeSwitch(isDark = isDark, onToggle = onToggleTheme)
+
+                    // Profile Avatar
+                    Box(
+                        Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(p.fg)
+                            .clickable(enabled = state.ready) { tab = "Profile" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (state.name.isNotBlank()) {
+                            Text(
+                                text = initialsOf(state.name),
+                                color = p.primaryFg,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 12.sp,
+                            )
+                        } else {
+                            PixelIcon(DeckIcon.User, size = 16.dp, tint = p.primaryFg)
                         }
                     }
                 }
@@ -579,14 +666,14 @@ private fun PhotoAnchorApp(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val items = listOf(
-                        Triple("Feed", "Esplora", DeckIcon.Globe),
-                        Triple("Camera", "Scatta", DeckIcon.Camera),
-                        Triple("Profile", "Profilo", DeckIcon.User),
+                        Triple("Feed", "Explore", DeckIcon.Globe),
+                        Triple("Camera", "Create", DeckIcon.Camera),
+                        Triple("Profile", "Profile", DeckIcon.User),
                     )
                     items.forEach { (key, label, icon) ->
                         val selected = tab == key
@@ -595,12 +682,12 @@ private fun PhotoAnchorApp(
                         Box(
                             Modifier
                                 .weight(1f)
-                                .height(52.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .height(50.dp)
+                                .clip(RoundedCornerShape(99.dp))
                                 .background(bg)
                                 .then(
                                     if (!selected && key == "Camera") {
-                                        Modifier.border(1.dp, p.bd, RoundedCornerShape(12.dp))
+                                        Modifier.border(1.dp, p.bd, RoundedCornerShape(99.dp))
                                     } else {
                                         Modifier
                                     },
@@ -608,16 +695,15 @@ private fun PhotoAnchorApp(
                                 .clickable(enabled = state.ready) { tab = key },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                PixelIcon(icon, size = 18.dp, tint = fg)
-                                Spacer(Modifier.height(3.dp))
+                                PixelIcon(icon, size = 16.dp, tint = fg)
                                 Text(
                                     text = label,
                                     color = fg,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                 )
@@ -642,103 +728,42 @@ private fun PhotoAnchorApp(
                 )
             }
 
-            // Status bar pill (.chip from design/bitcoin-network-lab)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                val isUnavailable = state.message.contains("unavailable", ignoreCase = true)
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isUnavailable) p.ambBg else p.soft,
-                    border = BorderStroke(1.dp, if (isUnavailable) p.ambBd else p.bd),
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        PixelIcon(
-                            icon = if (isUnavailable) DeckIcon.Warning else DeckIcon.Bitcoin,
-                            size = 14.dp,
-                            tint = if (isUnavailable) p.ambText else p.fg,
-                        )
-                        Text(
-                            text = if (state.queued > 0) {
-                                "${state.message} · ${state.queued} evento/i firmato/i in coda"
-                            } else {
-                                state.message
-                            },
-                            color = if (isUnavailable) p.ambText else p.ink,
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-            }
-
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when (tab) {
-                    "Profile" -> ProfileScreen(state, model::saveProfile)
+                    "Profile" -> ProfileScreen(
+                        state = state,
+                        savedIds = savedIds,
+                        onToggleSave = ::toggleSavePin,
+                        saveProfile = model::saveProfile,
+                        onSelectPin = model::select,
+                        onOpenCamera = { tab = "Camera" },
+                    )
                     "Camera" -> if (state.name.isBlank()) {
-                        Column(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(20.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            SurfCard(
-                                modifier = Modifier.fillMaxWidth().widthIn(max = 460.dp),
-                                padding = 24.dp,
-                            ) {
-                                Column(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .size(56.dp)
-                                            .clip(CircleShape)
-                                            .background(p.soft)
-                                            .border(1.dp, p.bd, CircleShape),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        PixelIcon(DeckIcon.User, size = 26.dp, tint = p.fg)
-                                    }
-                                    Text(
-                                        "Completa prima il tuo profilo",
-                                        color = p.ink,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 18.sp,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                    Text(
-                                        "Imposta un nome visualizzato per firmare e pubblicare i tuoi scatti Nostr certificati su Bitcoin.",
-                                        color = p.mu,
-                                        fontSize = 13.sp,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                    BitPolitoPrimaryButton(
-                                        text = "Vai al Profilo",
-                                        icon = DeckIcon.User,
-                                        onClick = { tab = "Profile" },
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                            }
-                        }
+                        OnboardingNameCard(
+                            state = state,
+                            onSaveName = { newName ->
+                                model.saveProfile(newName)
+                            },
+                        )
                     } else if (state.captured != null) {
-                        PublishScreen(state, model::publish, model::discard)
+                        PublishScreen(
+                            state = state,
+                            publish = { caption ->
+                                model.publish(caption)
+                                tab = "Feed"
+                            },
+                            discard = model::discard,
+                        )
                     } else {
                         CameraScreen(state.busy, model::captured, model::cameraError)
                     }
                     else -> FeedScreen(
                         state = state,
+                        search = search,
+                        filterMode = filterMode,
+                        onFilterChange = { filterMode = it },
+                        savedIds = savedIds,
+                        onToggleSave = ::toggleSavePin,
                         refresh = model::refresh,
                         select = model::select,
                         onOpenCamera = { tab = "Camera" },
@@ -749,374 +774,105 @@ private fun PhotoAnchorApp(
     }
 
     state.selected?.let { selected ->
-        VerifyPhotoDialog(
+        val selectedEntry = state.feed.find { it.post.id == selected.id }
+        PinDetailDialog(
             selected = selected,
+            entry = selectedEntry,
             state = state,
+            isSaved = selected.id in savedIds,
+            onToggleSave = { toggleSavePin(selected.id) },
             onVerifyAgain = model::verify,
             onDismiss = model::dismiss,
             onCheckCopy = { checkCopy.launch(arrayOf("image/jpeg")) },
-            onExportBundle = { saveBundle.launch("photoanchor-${selected.id.take(12)}.zip") },
+            onExportBundle = { saveBundle.launch("bitpin-${selected.id.take(12)}.zip") },
         )
     }
 }
 
-@Composable
-private fun VerifyPhotoDialog(
-    selected: PhotoPost,
-    state: PhotoAnchorState,
-    onVerifyAgain: () -> Unit,
-    onDismiss: () -> Unit,
-    onCheckCopy: () -> Unit,
-    onExportBundle: () -> Unit,
-) {
-    val p = LocalPalette.current
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        SurfCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 24.dp)
-                .widthIn(max = 520.dp),
-            padding = 20.dp,
-        ) {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        PixelIcon(DeckIcon.Shield, size = 20.dp, tint = p.fg)
-                        Text(
-                            "Verifica Crittografica",
-                            color = p.ink,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
-                        )
-                    }
-                    BitPolitoBadge("Kind 20 · OTS", kind = "solid", icon = DeckIcon.Bitcoin)
-                }
-
-                VerificationCard(
-                    icon = DeckIcon.Lock,
-                    title = "Firma Schnorr & ID Evento",
-                    value = state.verification?.event ?: "Checking on this device…",
-                )
-                VerificationCard(
-                    icon = DeckIcon.Camera,
-                    title = "Integrità JPEG (SHA-256)",
-                    value = state.verification?.integrity ?: "Checking original bytes…",
-                )
-                VerificationCard(
-                    icon = DeckIcon.Bitcoin,
-                    title = "Timestamp Bitcoin (OpenTimestamps)",
-                    value = state.verification?.timestamp ?: "Requesting a fresh local node check…",
-                )
-                VerificationCard(
-                    icon = DeckIcon.Globe,
-                    title = "Pubblicazione Relay Nostr",
-                    value = state.verification?.publication ?: "Unknown",
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = p.soft,
-                    border = BorderStroke(1.dp, p.bd),
-                ) {
-                    SelectionContainer {
-                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "Signer: ${selected.pubkey}",
-                                color = p.ink,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                            )
-                            Text(
-                                "Event:  ${selected.id}",
-                                color = p.ink,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                            )
-                            Text(
-                                "SHA256: ${selected.photoHash}",
-                                color = p.mu,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                            )
-                        }
-                    }
-                }
-
-                Text(
-                    "Il timestamp è verificato dal nodo Bitcoin locale configurato (regtest). Nome, didascalia e orario sono dichiarazioni firmate dall'autore.",
-                    color = p.mu,
-                    fontSize = 11.5.sp,
-                    lineHeight = 16.sp,
-                )
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    BitPolitoOutlinedButton(
-                        text = "Verifica copia JPEG",
-                        icon = DeckIcon.Camera,
-                        onClick = onCheckCopy,
-                        enabled = !state.busy,
-                        modifier = Modifier.weight(1f),
-                    )
-                    BitPolitoOutlinedButton(
-                        text = "Esporta .zip",
-                        icon = DeckIcon.Key,
-                        onClick = onExportBundle,
-                        enabled = !state.busy,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-
-                state.copyResult?.let { copyMsg ->
-                    val copyOk = copyMsg.startsWith("VALID")
-                    BitPolitoBadge(
-                        text = copyMsg,
-                        kind = if (copyOk) "ok" else "err",
-                        icon = if (copyOk) DeckIcon.Star else DeckIcon.Warning,
-                    )
-                }
-
-                HorizontalDivider(thickness = 1.dp, color = p.bd)
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    BitPolitoOutlinedButton(
-                        text = "Chiudi",
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                    )
-                    BitPolitoPrimaryButton(
-                        text = "Ricontrolla",
-                        icon = DeckIcon.Lightning,
-                        onClick = onVerifyAgain,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VerificationCard(icon: DeckIcon, title: String, value: String) {
-    val p = LocalPalette.current
-    val upper = value.uppercase()
-    val (bg, bd, accent) = when {
-        upper.startsWith("VALID") || upper.startsWith("CONFIRMED") || upper == "PUBLISHED" ->
-            Triple(p.okBg, p.okBd, p.ok)
-        upper.startsWith("INVALID") || upper.startsWith("ERROR") ->
-            Triple(p.rdBg, p.rdBd, p.rd)
-        else ->
-            Triple(p.soft, p.bd, p.fg)
-    }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = bg,
-        border = BorderStroke(1.dp, bd),
-    ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                PixelIcon(icon, size = 14.dp, tint = accent)
-                Text(title, color = accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-            }
-            Text(value, color = p.ink, fontSize = 12.sp, lineHeight = 16.sp)
-        }
-    }
-}
-
-@Composable
-private fun ProfileScreen(state: PhotoAnchorState, save: (String) -> Unit) {
-    val p = LocalPalette.current
-    var name by remember(state.name) { mutableStateOf(state.name) }
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        // Hero Profile Card (.surf .hero from design/bitcoin-network-lab)
-        SurfCard(modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp), padding = 22.dp) {
-            Column(
-                Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(p.fg),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (name.isNotBlank()) {
-                        Text(
-                            text = initialsOf(name),
-                            color = p.primaryFg,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 24.sp,
-                        )
-                    } else {
-                        PixelIcon(DeckIcon.CowHead, size = 34.dp, tint = p.primaryFg)
-                    }
-                }
-
-                BitPolitoBadge(
-                    text = "IDENTITÀ NOSTR · ANDROID KEYSTORE",
-                    kind = "default",
-                    icon = DeckIcon.Key,
-                )
-
-                Text(
-                    text = name.ifBlank { "Il tuo profilo locale" },
-                    color = p.ink,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 22.sp,
-                    textAlign = TextAlign.Center,
-                )
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { if (it.length <= 80) name = it },
-                    label = { Text("Nome visualizzato (dichiarato)") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                BitPolitoPrimaryButton(
-                    text = "Salva e pubblica profilo",
-                    icon = DeckIcon.Star,
-                    onClick = { save(name) },
-                    enabled = state.ready && !state.busy && name.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        // Public Key & Security Card
-        SurfCard(modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp), padding = 20.dp) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    PixelIcon(DeckIcon.Lock, size = 18.dp, tint = p.fg)
-                    Text(
-                        "Chiave pubblica di firma (Schnorr)",
-                        color = p.ink,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = p.soft,
-                    border = BorderStroke(1.dp, p.bd),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    SelectionContainer {
-                        Text(
-                            text = state.pubkey.ifBlank { "Generazione chiave in corso…" },
-                            modifier = Modifier.padding(12.dp),
-                            color = p.fg,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                        )
-                    }
-                }
-
-                Text(
-                    "La chiave privata è generata sul dispositivo, cifrata con Android Keystore (AES-GCM) ed esclusa dai backup. Puoi cambiare nome in qualsiasi momento: le firme delle foto restano vincolate a questa chiave pubblica.",
-                    color = p.mu,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp,
-                )
-            }
-        }
-
-        // BitPolito signature footer (from design/bitcoin-network-lab)
-        Row(
-            Modifier.padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            PixelIcon(DeckIcon.Bull, size = 20.dp, tint = p.fg)
-            Text("Fatto con", color = p.mu, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            PixelIcon(DeckIcon.Heart, size = 13.dp, tint = p.fg)
-            Text("da BitPolito · IXH26", color = p.mu, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
+/* ============================================================================
+ * Explore / Pinterest Masonry Feed
+ * ============================================================================ */
 
 @Composable
 private fun FeedScreen(
     state: PhotoAnchorState,
+    search: String,
+    filterMode: String,
+    onFilterChange: (String) -> Unit,
+    savedIds: Set<String>,
+    onToggleSave: (String) -> Unit,
     refresh: () -> Unit,
     select: (PhotoPost) -> Unit,
     onOpenCamera: () -> Unit,
 ) {
     val p = LocalPalette.current
+    val filtered = remember(state.feed, search, filterMode, savedIds, state.pubkey) {
+        state.feed.filter { entry ->
+            val matchesFilter = when (filterMode) {
+                "saved" -> entry.post.id in savedIds
+                "mine" -> entry.post.pubkey == state.pubkey
+                else -> true
+            }
+            if (!matchesFilter) return@filter false
+            val q = search.trim().lowercase()
+            if (q.isEmpty()) return@filter true
+            entry.post.caption.lowercase().contains(q) ||
+                entry.name.lowercase().contains(q)
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
-        // Section header bar
+        // Pinterest Filter Chips Bar
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                PixelIcon(DeckIcon.Globe, size = 18.dp, tint = p.fg)
-                Text(
-                    "Feed Fotografico (${state.feed.size})",
-                    color = p.ink,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 17.sp,
-                )
-            }
-            BitPolitoOutlinedButton(
-                text = "Aggiorna",
-                icon = DeckIcon.Lightning,
-                onClick = refresh,
+            FilterChipPill(
+                label = "All Pins",
+                selected = filterMode == "all",
+                onClick = { onFilterChange("all") },
             )
+            FilterChipPill(
+                label = "Saved (${savedIds.size})",
+                selected = filterMode == "saved",
+                icon = DeckIcon.Heart,
+                onClick = { onFilterChange("saved") },
+            )
+            FilterChipPill(
+                label = "My Pins",
+                selected = filterMode == "mine",
+                onClick = { onFilterChange("mine") },
+            )
+            Spacer(Modifier.weight(1f))
+            Surface(
+                shape = RoundedCornerShape(99.dp),
+                color = p.soft,
+                border = BorderStroke(1.dp, p.bd),
+                modifier = Modifier.clickable(onClick = refresh),
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    PixelIcon(DeckIcon.Lightning, size = 12.dp, tint = p.fg)
+                    Text("Sync", color = p.fg, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
 
-        if (state.feed.isEmpty()) {
+        if (filtered.isEmpty()) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(20.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 SurfCard(
-                    modifier = Modifier.fillMaxWidth().widthIn(max = 460.dp),
+                    modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
                     padding = 28.dp,
                 ) {
                     Column(
@@ -1127,22 +883,29 @@ private fun FeedScreen(
                         Box(
                             Modifier
                                 .size(64.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(CircleShape)
                                 .background(p.soft)
-                                .border(1.dp, p.bd, RoundedCornerShape(16.dp)),
+                                .border(1.dp, p.bd, CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
-                            PixelIcon(DeckIcon.CowHead, size = 34.dp, tint = p.fg)
+                            PixelIcon(DeckIcon.CowHead, size = 32.dp, tint = p.fg)
                         }
                         Text(
-                            "Il feed è pronto per i tuoi scatti",
+                            text = when (filterMode) {
+                                "saved" -> "No saved Pins yet"
+                                "mine" -> "You haven't created any Pins yet"
+                                else -> "Your inspiration feed is ready"
+                            },
                             color = p.ink,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 19.sp,
                             textAlign = TextAlign.Center,
                         )
                         Text(
-                            "Scatta una foto dalla scheda Scatta: il JPEG originale viene firmato con Nostr (kind 20) e ancorato su Bitcoin con OpenTimestamps.",
+                            text = when (filterMode) {
+                                "saved" -> "Tap the heart on any Pin to save it to your collection."
+                                else -> "Snap a photo to create a Pin anchored on Bitcoin and shared with the community."
+                            },
                             color = p.mu,
                             fontSize = 13.sp,
                             textAlign = TextAlign.Center,
@@ -1150,136 +913,30 @@ private fun FeedScreen(
                         )
                         Spacer(Modifier.height(4.dp))
                         BitPolitoPrimaryButton(
-                            text = "Scatta una foto",
-                            icon = DeckIcon.Camera,
-                            onClick = onOpenCamera,
-                            modifier = Modifier.fillMaxWidth(),
+                            text = if (filterMode == "saved") "Explore Pins" else "Create a Pin",
+                            icon = if (filterMode == "saved") DeckIcon.Globe else DeckIcon.Camera,
+                            onClick = {
+                                if (filterMode == "saved") onFilterChange("all") else onOpenCamera()
+                            },
                         )
                     }
                 }
             }
         } else {
-            LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalItemSpacing = 12.dp,
             ) {
-                items(state.feed, key = { it.post.id }) { entry ->
-                    val authorLabel = entry.name.ifBlank { entry.post.pubkey.take(14) + "…" }
-                    SurfCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            // Author header
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(p.fg),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            text = initialsOf(authorLabel),
-                                            color = p.primaryFg,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 12.sp,
-                                        )
-                                    }
-                                    Column {
-                                        Text(
-                                            text = authorLabel,
-                                            color = p.ink,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.5.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        Text(
-                                            text = "signer ${entry.post.pubkey.take(12)}… · ${entry.post.width}×${entry.post.height}",
-                                            color = p.mu,
-                                            fontSize = 11.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                        )
-                                    }
-                                }
-                                BitPolitoBadge(
-                                    text = "Kind 20",
-                                    kind = "default",
-                                    icon = DeckIcon.Bitcoin,
-                                )
-                            }
-
-                            // Photo preview frame
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF0D1124))
-                                    .border(1.dp, p.bd, RoundedCornerShape(12.dp))
-                                    .clickable { select(entry.post) },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                entry.preview?.let { image ->
-                                    Image(
-                                        bitmap = image.asImageBitmap(),
-                                        contentDescription = "Photo preview",
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(max = 360.dp),
-                                        contentScale = ContentScale.Fit,
-                                    )
-                                } ?: Box(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(160.dp)
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        "Anteprima non in cache · tocca Verifica per controllare i byte originali",
-                                        color = Color.White,
-                                        fontSize = 12.sp,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                }
-                            }
-
-                            if (entry.post.caption.isNotEmpty()) {
-                                Text(
-                                    text = entry.post.caption,
-                                    color = p.ink,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                            }
-
-                            // Card footer
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                BitPolitoBadge(
-                                    text = "SHA-256 ${entry.post.photoHash.take(10)}…",
-                                    kind = "ok",
-                                    icon = DeckIcon.Lock,
-                                )
-                                BitPolitoPrimaryButton(
-                                    text = "Verifica prova",
-                                    icon = DeckIcon.Shield,
-                                    onClick = { select(entry.post) },
-                                )
-                            }
-                        }
-                    }
+                items(filtered, key = { it.post.id }) { entry ->
+                    PinterestPinCard(
+                        entry = entry,
+                        isSaved = entry.post.id in savedIds,
+                        onToggleSave = { onToggleSave(entry.post.id) },
+                        onOpen = { select(entry.post) },
+                    )
                 }
             }
         }
@@ -1287,7 +944,460 @@ private fun FeedScreen(
 }
 
 @Composable
-private fun PublishScreen(state: PhotoAnchorState, publish: (String) -> Unit, discard: () -> Unit) {
+private fun PinterestPinCard(
+    entry: FeedEntry,
+    isSaved: Boolean,
+    onToggleSave: () -> Unit,
+    onOpen: () -> Unit,
+) {
+    val p = LocalPalette.current
+    val creatorName = entry.name.ifBlank { "Creator" }
+    val title = entry.post.caption.ifBlank { "Untitled Pin" }
+    val ratio = remember(entry.post.width, entry.post.height) {
+        if (entry.post.width > 0 && entry.post.height > 0) {
+            (entry.post.width.toFloat() / entry.post.height.toFloat()).coerceIn(0.65f, 1.45f)
+        } else {
+            0.85f
+        }
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpen),
+        shape = RoundedCornerShape(18.dp),
+        color = p.surf,
+        border = BorderStroke(1.dp, p.bd),
+        shadowElevation = 2.dp,
+    ) {
+        Column {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(ratio)
+                    .background(p.soft),
+            ) {
+                entry.preview?.let { bitmap ->
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } ?: Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PixelIcon(DeckIcon.Camera, size = 28.dp, tint = p.mu)
+                }
+
+                // Top-left Bitcoin badge
+                Box(Modifier.align(Alignment.TopStart).padding(8.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = Color.Black.copy(alpha = 0.58f),
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            PixelIcon(DeckIcon.Bitcoin, size = 10.dp, tint = Color(0xFFFCD34D))
+                            Text(
+                                text = "Pinned",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
+
+                // Top-right Save/Heart button
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(if (isSaved) p.fg else Color.Black.copy(alpha = 0.52f))
+                        .clickable(onClick = onToggleSave),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PixelIcon(
+                        icon = DeckIcon.Heart,
+                        size = 13.dp,
+                        tint = if (isSaved) p.primaryFg else Color.White,
+                    )
+                }
+            }
+
+            Column(
+                Modifier.padding(horizontal = 11.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = title,
+                    color = p.ink,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 16.sp,
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(p.fg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = initialsOf(creatorName),
+                            color = p.primaryFg,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 9.sp,
+                        )
+                    }
+                    Text(
+                        text = creatorName,
+                        color = p.mu,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/* ============================================================================
+ * Pinterest Profile Screen (Creator Header + Boards/Pins Grid)
+ * ============================================================================ */
+
+@Composable
+private fun ProfileScreen(
+    state: PhotoAnchorState,
+    savedIds: Set<String>,
+    onToggleSave: (String) -> Unit,
+    saveProfile: (String) -> Unit,
+    onSelectPin: (PhotoPost) -> Unit,
+    onOpenCamera: () -> Unit,
+) {
+    val p = LocalPalette.current
+    var name by remember(state.name) { mutableStateOf(state.name) }
+    var editing by remember(state.name) { mutableStateOf(state.name.isBlank()) }
+    var profileTab by remember { mutableStateOf("created") } // "created" | "saved"
+
+    val myPins = remember(state.feed, state.pubkey) {
+        state.feed.filter { it.post.pubkey == state.pubkey }
+    }
+    val savedPins = remember(state.feed, savedIds) {
+        state.feed.filter { it.post.id in savedIds }
+    }
+    val shownPins = if (profileTab == "saved") savedPins else myPins
+
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalItemSpacing = 12.dp,
+    ) {
+        item(span = StaggeredGridItemSpan.FullLine) {
+            SurfCard(modifier = Modifier.fillMaxWidth(), padding = 22.dp) {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(p.fg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (state.name.isNotBlank()) {
+                            Text(
+                                text = initialsOf(state.name),
+                                color = p.primaryFg,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 28.sp,
+                            )
+                        } else {
+                            PixelIcon(DeckIcon.CowHead, size = 36.dp, tint = p.primaryFg)
+                        }
+                    }
+
+                    Text(
+                        text = state.name.ifBlank { "Set up your profile" },
+                        color = p.ink,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 22.sp,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    // Pinterest profile stats row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ProfileStatItem(count = "${myPins.size}", label = "Created")
+                        ProfileStatItem(count = "${savedPins.size}", label = "Saved")
+                        ProfileStatItem(count = "${state.feed.size}", label = "Feed")
+                    }
+
+                    AnimatedVisibility(visible = editing) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(top = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { if (it.length <= 80) name = it },
+                                label = { Text("Display name") },
+                                placeholder = { Text("e.g. Alex · Street Photography") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                if (state.name.isNotBlank()) {
+                                    BitPolitoOutlinedButton(
+                                        text = "Cancel",
+                                        onClick = {
+                                            name = state.name
+                                            editing = false
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                BitPolitoPrimaryButton(
+                                    text = "Save Profile",
+                                    icon = DeckIcon.Star,
+                                    enabled = state.ready && !state.busy && name.isNotBlank(),
+                                    onClick = {
+                                        saveProfile(name)
+                                        editing = false
+                                    },
+                                    modifier = Modifier.weight(1.3f),
+                                )
+                            }
+                        }
+                    }
+
+                    if (!editing) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            BitPolitoOutlinedButton(
+                                text = "Edit Profile",
+                                icon = DeckIcon.Wrench,
+                                onClick = { editing = true },
+                            )
+                            BitPolitoPrimaryButton(
+                                text = "Create Pin",
+                                icon = DeckIcon.Camera,
+                                onClick = onOpenCamera,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Created / Saved Segmented Tabs
+        item(span = StaggeredGridItemSpan.FullLine) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FilterChipPill(
+                    label = "Created (${myPins.size})",
+                    selected = profileTab == "created",
+                    icon = DeckIcon.Camera,
+                    onClick = { profileTab = "created" },
+                )
+                Spacer(Modifier.width(8.dp))
+                FilterChipPill(
+                    label = "Saved (${savedPins.size})",
+                    selected = profileTab == "saved",
+                    icon = DeckIcon.Heart,
+                    onClick = { profileTab = "saved" },
+                )
+            }
+        }
+
+        if (shownPins.isEmpty()) {
+            item(span = StaggeredGridItemSpan.FullLine) {
+                SurfCard(modifier = Modifier.fillMaxWidth(), padding = 26.dp) {
+                    Column(
+                        Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        PixelIcon(
+                            icon = if (profileTab == "saved") DeckIcon.Heart else DeckIcon.Camera,
+                            size = 28.dp,
+                            tint = p.fg,
+                        )
+                        Text(
+                            text = if (profileTab == "saved") "No saved Pins yet" else "No created Pins yet",
+                            color = p.ink,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                        )
+                        Text(
+                            text = if (profileTab == "saved") {
+                                "Tap the heart icon on any Pin in Explore to save it here."
+                            } else {
+                                "Capture your first photo to share it on your profile."
+                            },
+                            color = p.mu,
+                            fontSize = 12.5.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                        if (profileTab == "created") {
+                            BitPolitoPrimaryButton(
+                                text = "Create your first Pin",
+                                icon = DeckIcon.Camera,
+                                onClick = onOpenCamera,
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            items(shownPins, key = { it.post.id }) { entry ->
+                PinterestPinCard(
+                    entry = entry,
+                    isSaved = entry.post.id in savedIds,
+                    onToggleSave = { onToggleSave(entry.post.id) },
+                    onOpen = { onSelectPin(entry.post) },
+                )
+            }
+        }
+
+        item(span = StaggeredGridItemSpan.FullLine) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PixelIcon(DeckIcon.Bull, size = 18.dp, tint = p.fg)
+                Spacer(Modifier.width(6.dp))
+                Text("Made with", color = p.mu, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(4.dp))
+                PixelIcon(DeckIcon.Heart, size = 12.dp, tint = p.fg)
+                Spacer(Modifier.width(4.dp))
+                Text("by BitPolito", color = p.mu, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileStatItem(count: String, label: String) {
+    val p = LocalPalette.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(count, color = p.fg, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+        Text(label, color = p.mu, fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp)
+    }
+}
+
+/* ============================================================================
+ * Create Pin Flow (Onboarding, Camera, Publish)
+ * ============================================================================ */
+
+@Composable
+private fun OnboardingNameCard(
+    state: PhotoAnchorState,
+    onSaveName: (String) -> Unit,
+) {
+    val p = LocalPalette.current
+    var name by remember { mutableStateOf("") }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        SurfCard(
+            modifier = Modifier.fillMaxWidth().widthIn(max = 440.dp),
+            padding = 24.dp,
+        ) {
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(p.soft)
+                        .border(1.dp, p.bd, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PixelIcon(DeckIcon.CowHead, size = 28.dp, tint = p.fg)
+                }
+                Text(
+                    "Welcome to BitPin",
+                    color = p.ink,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    "Choose your creator name before snapping your first Pin.",
+                    color = p.mu,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { if (it.length <= 80) name = it },
+                    label = { Text("Your display name") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                BitPolitoPrimaryButton(
+                    text = "Continue to Camera",
+                    icon = DeckIcon.Camera,
+                    enabled = state.ready && !state.busy && name.isNotBlank(),
+                    onClick = { onSaveName(name) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PublishScreen(
+    state: PhotoAnchorState,
+    publish: (String) -> Unit,
+    discard: () -> Unit,
+) {
     val p = LocalPalette.current
     var caption by remember(state.captured) { mutableStateOf("") }
     Column(
@@ -1298,45 +1408,39 @@ private fun PublishScreen(state: PhotoAnchorState, publish: (String) -> Unit, di
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         SurfCard(
-            modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
+            modifier = Modifier.fillMaxWidth().widthIn(max = 500.dp),
             padding = 20.dp,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                // Step pills (.steps from design/bitcoin-network-lab)
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    BitPolitoBadge("1 · Scatto completato", kind = "ok", icon = DeckIcon.Camera)
-                    Spacer(Modifier.width(8.dp))
-                    BitPolitoBadge("2 · Firma & Pubblica", kind = "solid", icon = DeckIcon.Bitcoin)
+                    Text(
+                        "Create Pin",
+                        color = p.ink,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 20.sp,
+                    )
+                    BitPolitoBadge("Bitcoin Anchored", kind = "ok", icon = DeckIcon.Bitcoin)
                 }
-
-                Text(
-                    "Pubblica JPEG Originale",
-                    color = p.ink,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
 
                 state.preview?.let {
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .background(Color(0xFF0D1124))
-                            .border(1.dp, p.bd, RoundedCornerShape(14.dp)),
+                            .border(1.dp, p.bd, RoundedCornerShape(16.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Image(
                             bitmap = it.asImageBitmap(),
-                            contentDescription = "Captured photo",
+                            contentDescription = "Captured Pin",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 300.dp),
+                                .heightIn(max = 320.dp),
                             contentScale = ContentScale.Fit,
                         )
                     }
@@ -1345,46 +1449,27 @@ private fun PublishScreen(state: PhotoAnchorState, publish: (String) -> Unit, di
                 OutlinedTextField(
                     value = caption,
                     onValueChange = { if (it.length <= 1000) caption = it },
-                    label = { Text("Didascalia / Titolo (opzionale)") },
+                    label = { Text("Title or description") },
+                    placeholder = { Text("Tell everyone what your Pin is about…") },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                 )
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = p.soft,
-                    border = BorderStroke(1.dp, p.bd),
-                ) {
-                    Row(
-                        Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        PixelIcon(DeckIcon.Bitcoin, size = 18.dp, tint = p.fg)
-                        Text(
-                            "I metadati EXIF sensibili sono stati rimossi. Questo esatto JPEG verrà sottoposto a hash SHA-256, firmato con Schnorr e ancorato su Bitcoin.",
-                            color = p.mu,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                        )
-                    }
-                }
 
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     BitPolitoOutlinedButton(
-                        text = "Riscatta",
+                        text = "Retake",
                         icon = DeckIcon.Camera,
                         onClick = discard,
                         enabled = !state.busy,
                         modifier = Modifier.weight(1f),
                     )
                     BitPolitoPrimaryButton(
-                        text = "Firma e pubblica",
-                        icon = DeckIcon.Lock,
+                        text = if (state.busy) "Publishing…" else "Publish Pin",
+                        icon = DeckIcon.Star,
                         onClick = { publish(caption) },
                         enabled = !state.busy,
                         modifier = Modifier.weight(1.3f),
@@ -1423,7 +1508,7 @@ private fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () 
             contentAlignment = Alignment.Center,
         ) {
             SurfCard(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 440.dp),
+                modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
                 padding = 24.dp,
             ) {
                 Column(
@@ -1433,20 +1518,20 @@ private fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () 
                 ) {
                     PixelIcon(DeckIcon.Camera, size = 32.dp, tint = p.fg)
                     Text(
-                        "Permesso Fotocamera Richiesto",
+                        "Camera Access Needed",
                         color = p.ink,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        "PhotoAnchor certifica solo foto autentiche scattate direttamente dalla fotocamera.",
+                        "Allow camera access to snap and publish authentic Pins.",
                         color = p.mu,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                     )
                     BitPolitoPrimaryButton(
-                        text = "Consenti Fotocamera",
+                        text = "Allow Camera",
                         icon = DeckIcon.Camera,
                         onClick = { permission.launch(Manifest.permission.CAMERA) },
                         modifier = Modifier.fillMaxWidth(),
@@ -1481,21 +1566,19 @@ private fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () 
     Column(
         Modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Viewfinder card
         Box(
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFF05070E))
-                .border(2.dp, p.bd, RoundedCornerShape(22.dp)),
+                .border(2.dp, p.bd, RoundedCornerShape(24.dp)),
         ) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
 
-            // Top overlay badges
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -1503,16 +1586,15 @@ private fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () 
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BitPolitoBadge("PhotoAnchor Camera", kind = "solid", icon = DeckIcon.Camera)
+                BitPolitoBadge("New Pin", kind = "solid", icon = DeckIcon.Camera)
                 BitPolitoBadge(
-                    text = if (flash) "Flash ON" else "Flash OFF",
+                    text = if (flash) "Flash On" else "Flash Off",
                     kind = if (flash) "pending" else "default",
                     icon = DeckIcon.Lightning,
                 )
             }
         }
 
-        // Camera controls bar (.surf)
         SurfCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -1520,16 +1602,15 @@ private fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BitPolitoOutlinedButton(
-                    text = "Gira",
+                    text = "Flip",
                     icon = DeckIcon.Smartphone,
                     onClick = { back = !back },
                     enabled = !capturing && !busy,
                 )
 
-                // Circular Shutter Button
                 Box(
                     Modifier
-                        .size(72.dp)
+                        .size(74.dp)
                         .clip(CircleShape)
                         .border(4.dp, p.fg, CircleShape)
                         .clickable(enabled = !capturing && !busy) {
@@ -1569,12 +1650,254 @@ private fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () 
                 }
 
                 BitPolitoOutlinedButton(
-                    text = if (flash) "Flash ON" else "Flash",
+                    text = if (flash) "Flash On" else "Flash",
                     icon = DeckIcon.Lightning,
                     onClick = { flash = !flash },
                     enabled = !capturing && !busy,
                 )
             }
+        }
+    }
+}
+
+/* ============================================================================
+ * Pinterest Pin Lightbox Detail Dialog
+ * ============================================================================ */
+
+@Composable
+private fun PinDetailDialog(
+    selected: PhotoPost,
+    entry: FeedEntry?,
+    state: PhotoAnchorState,
+    isSaved: Boolean,
+    onToggleSave: () -> Unit,
+    onVerifyAgain: () -> Unit,
+    onDismiss: () -> Unit,
+    onCheckCopy: () -> Unit,
+    onExportBundle: () -> Unit,
+) {
+    val p = LocalPalette.current
+    val creatorName = entry?.name?.ifBlank { "Creator" } ?: "Creator"
+    val title = selected.caption.ifBlank { "Untitled Pin" }
+    val dateLabel = formatShortDate(selected.createdAt)
+    var showProofDetails by remember { mutableStateOf(false) }
+
+    val tsUpper = (state.verification?.timestamp ?: "").uppercase()
+    val (anchorLabel, anchorKind) = when {
+        tsUpper.startsWith("CONFIRMED") -> "Anchored on Bitcoin" to "ok"
+        tsUpper.startsWith("PENDING") -> "Bitcoin Anchor Pending" to "pending"
+        tsUpper.startsWith("INVALID") -> "Invalid Proof" to "err"
+        else -> "Verified Pin" to "default"
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        SurfCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 20.dp)
+                .widthIn(max = 520.dp),
+            padding = 18.dp,
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                // Top creator bar + Save button
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(p.fg),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = initialsOf(creatorName),
+                                color = p.primaryFg,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 13.sp,
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = creatorName,
+                                color = p.ink,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 15.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (dateLabel.isNotEmpty()) {
+                                Text(
+                                    text = "$dateLabel · ${selected.width}×${selected.height}",
+                                    color = p.mu,
+                                    fontSize = 11.5.sp,
+                                )
+                            }
+                        }
+                    }
+
+                    BitPolitoPrimaryButton(
+                        text = if (isSaved) "Saved" else "Save",
+                        icon = DeckIcon.Heart,
+                        onClick = onToggleSave,
+                    )
+                }
+
+                // Large Pin Image
+                entry?.preview?.let { bitmap ->
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color(0xFF0D1124))
+                            .border(1.dp, p.bd, RoundedCornerShape(18.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 380.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
+                }
+
+                // Pin title & status badge
+                Text(
+                    text = title,
+                    color = p.ink,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 19.sp,
+                    lineHeight = 24.sp,
+                )
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BitPolitoBadge(
+                        text = anchorLabel,
+                        kind = anchorKind,
+                        icon = DeckIcon.Bitcoin,
+                    )
+                    Text(
+                        text = if (showProofDetails) "Hide proof details" else "Proof & Actions",
+                        color = p.fg,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { showProofDetails = !showProofDetails },
+                    )
+                }
+
+                AnimatedVisibility(visible = showProofDetails) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        VerificationCard(
+                            icon = DeckIcon.Shield,
+                            title = "Authentic Capture",
+                            value = state.verification?.integrity ?: "Verifying photo…",
+                        )
+                        VerificationCard(
+                            icon = DeckIcon.Bitcoin,
+                            title = "Bitcoin Timestamp",
+                            value = state.verification?.timestamp ?: "Checking Bitcoin status…",
+                        )
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            BitPolitoOutlinedButton(
+                                text = "Compare Photo",
+                                icon = DeckIcon.Camera,
+                                onClick = onCheckCopy,
+                                enabled = !state.busy,
+                                modifier = Modifier.weight(1f),
+                            )
+                            BitPolitoOutlinedButton(
+                                text = "Export Proof",
+                                icon = DeckIcon.Bookmark,
+                                onClick = onExportBundle,
+                                enabled = !state.busy,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        state.copyResult?.let { copyMsg ->
+                            val copyOk = copyMsg.startsWith("VALID")
+                            BitPolitoBadge(
+                                text = if (copyOk) "Photo matches original Pin" else "Photo does not match",
+                                kind = if (copyOk) "ok" else "err",
+                                icon = if (copyOk) DeckIcon.Star else DeckIcon.Warning,
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(thickness = 1.dp, color = p.bd)
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    BitPolitoOutlinedButton(
+                        text = "Close",
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                    )
+                    BitPolitoPrimaryButton(
+                        text = "Refresh Status",
+                        icon = DeckIcon.Lightning,
+                        onClick = onVerifyAgain,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VerificationCard(icon: DeckIcon, title: String, value: String) {
+    val p = LocalPalette.current
+    val upper = value.uppercase()
+    val (bg, bd, accent) = when {
+        upper.startsWith("VALID") || upper.startsWith("CONFIRMED") || upper == "PUBLISHED" ->
+            Triple(p.okBg, p.okBd, p.ok)
+        upper.startsWith("INVALID") || upper.startsWith("ERROR") ->
+            Triple(p.rdBg, p.rdBd, p.rd)
+        else ->
+            Triple(p.soft, p.bd, p.fg)
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = bg,
+        border = BorderStroke(1.dp, bd),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                PixelIcon(icon, size = 13.dp, tint = accent)
+                Text(title, color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            Text(value, color = p.ink, fontSize = 11.5.sp, lineHeight = 15.sp)
         }
     }
 }
