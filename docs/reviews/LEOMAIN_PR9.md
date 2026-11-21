@@ -1,8 +1,8 @@
 # FingerprinTO / PR #9 integration and validation
 
 The integration branch `integration/leomain-pr9` starts from main `814cb8e` and
-merges the source history through `leomain@42b8162`. Runtime review and fixes
-use `f3bd1ef`; the later source commit adds diagrams only. The original `leomain`,
+merges the source history through `leomain@686a4ce`. Runtime review and fixes
+use `f3bd1ef`; the later source commits add diagrams and their renderer only. The original `leomain`,
 `feature-mobileApp` and default branch are not rewritten. This reconciles the
 experimental crypto module with the native Nostr MVP; it is not completion of
 the manufacturer/PRNU capture product described in the source roadmap.
@@ -49,6 +49,14 @@ offline gate now includes these tests rather than excluding them. TypeScript
 production compilation is validated separately.
 
 ## Executed validation, 2026-11-21
+
+The additional source commit `686a4ce` was reviewed as documentation/tooling only.
+Both PNGs were inspected and successfully regenerated from the Mermaid blocks
+using Mermaid 12.3.0, Playwright 1.65.2 and the existing local Chromium browser.
+Rendering dependencies were installed in a temporary environment, not added to
+application runtime dependencies. Browser/font differences can affect the PNG
+bytes; the regeneration instructions now state this limitation. The runtime
+directories remain identical to the previously validated integration.
 
 | Check | Result |
 |---|---|
