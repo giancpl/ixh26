@@ -1,25 +1,27 @@
-<!-- VINCOLO PER GLI AGENTI: Questo file contiene SOLO contenuti e indicazioni visive per le TRE slide della parte crypto, da coordinare con docs/pitch.md. Il parlato è esclusivamente in pitch.md: massimo 90 secondi TOTALI, comprese pause e cambi slide, non 90 secondi per slide. Obiettivo circa 70 secondi; non aggiungere slide o spiegazioni orali. Le formule sono supporto visivo facoltativo: NON devono essere pronunciate. Mantenere pochi elementi leggibili e distinguere funzionalità implementate, obiettivi e validazioni mancanti. I commenti sono istruzioni editoriali, non testo da proiettare. -->
+<!-- AGENT CONSTRAINT: This file contains content and visual guidance for ONLY THREE crypto slides, coordinated with docs/pitch.md. All spoken text is in pitch.md: maximum 90 seconds TOTAL, including pauses and slide transitions, not 90 seconds per slide. Target approximately 70 seconds; do not add slides or oral explanations. Formulas are optional visual support and MUST NOT be spoken. Keep elements few and readable; distinguish implemented features, proposals and outstanding validation. Comments are editorial instructions, not projected text. -->
 
-# Una firma protegge i byte. L’origine richiede evidenze.
+# The problem happens before signing
 
-**FingerprinTO: tre evidenze distinguibili**
+**No cryptographic proof of physical origin without a trusted capture path.**
 
-| Attestazione della cattura | Compatibilità PRNU | Integrità del file |
+**One format. Assurance matched to the evidence.**
+
+| Manufacturer capture attestation | PRNU compatibility | File integrity |
 |---|---|---|
-| Quando disponibile e verificata | Evidenza statistica del sensore | Hash e firma crittografica |
+| Where available and verified | Statistical sensor evidence | Cryptographic hashes and signatures |
 
-**Origine della cattura ≠ verità della scena.**
+**Physical capture does not establish scene truth.**
 
-<!-- SLIDE 1 — Circa 20 secondi, primi due paragrafi di pitch.md. Visual: tre schede affiancate, non un badge universale di autenticità. Le evidenze possono coesistere: non suggerire che la verifica del produttore escluda il controllo PRNU. Il validatore reale del produttore manca ancora nel prototipo; il PRNU non è una garanzia crittografica di origine fisica. Non aggiungere formule o dettagli di calibrazione a questa slide. -->
+<!-- SLIDE 1 - Approximately 35 seconds; first two paragraphs of pitch.md. Visual: three adjacent evidence cards. Evidence can coexist; manufacturer verification does not exclude PRNU checking. Assess assurance per capture, not merely per device. A hostile client can inject frames before signing; key or app attestation alone does not attest the frame. The prototype still lacks a real manufacturer validator. Do not imply verified support on particular vendors or devices. PRNU is statistical compatibility, not cryptographic proof, and can be spoofed. -->
 
 ---
 
-# Una ricevuta verificabile
+# A verifiable receipt
 
 ```mermaid
 flowchart LR
-    A["Foto, evidenze e metadati"] --> B["Hash e radice R"]
-    B --> C["Firma P-256"]
+    A["Image, evidence and metadata"] --> B["Hashes and root R"]
+    B --> C["P-256 signature"]
     C --> D["Commitment C"]
     D --> E["OpenTimestamps / Bitcoin"]
 ```
@@ -30,21 +32,21 @@ C = D(\texttt{receipt}, R, \sigma)
 h_{\mathrm{OTS}} = \mathrm{SHA256}(C)
 $$
 
-**Ancoraggio temporale ≠ prova della scena o dell’istante di scatto.**
+**Anchoring records commitments, not scene truth or capture time.**
 
-<!-- SLIDE 2 — Circa 25 secondi, terzo paragrafo di pitch.md. Il diagramma è un riassunto del flusso, non il grafo completo delle dipendenze: C lega sia R sia la firma. La firma usa la chiave dell'installazione protetta dal Keystore hardware; ciò non rende il Keystore una firma del sensore. D significa SHA256 di un array CBOR deterministico con separazione di dominio; OTS riceve i 32 byte grezzi di C e ne calcola l'hash. Formula facoltativa, piccola ma leggibile: NON leggerla. Per il dettaglio tecnico vedere crypto-flow.md e i relativi PNG, senza incollare sulla slide l'intero diagramma verticale. -->
+<!-- SLIDE 2 - Approximately 15 seconds; third paragraph of pitch.md. This is a flow summary, not the complete dependency graph: C binds both R and the signature. The installation key is protected by hardware Keystore; this does not make it a sensor signature. D means SHA256 over a deterministic CBOR array with domain separation; OTS receives the 32 raw bytes of C and hashes them. Anchoring is verifiable once the OTS proof is completed and checked. The formula is optional: DO NOT read it. See crypto-flow.md and its PNGs for technical detail; do not paste the entire vertical diagram onto this slide. -->
 
 ---
 
-# Verificabile anche domani
+# Verification need not disappear with a vendor
 
-**Obiettivo proposto:** evidenze interoperabili e verificabilità nel tempo.
+**Proposed contribution:** interoperable evidence and lasting verification.
 
-- Conservare certificati, manifest, policy e prove di stato.
-- Rendere verificabili le evidenze anche oltre la disponibilità del vendor.
+- Preserve certificates, manifests, policies and authenticated status evidence.
+- Preserve the material needed to assess trust at the relevant time.
 
-**Oggi:** nucleo crittografico offline implementato.
+**Implemented:** offline crypto core.
 
-**Da completare:** integrazioni reali e calibrazione.
+**Unfinished:** real capture integrations, calibration and validation.
 
-<!-- SLIDE 3 — Circa 25 secondi, ultimi due paragrafi di pitch.md. Presentare la conservazione della verificabilità storica come contributo proposto, non come archivio a lungo termine già implementato. Un certificato ancorato prova l'esistenza di quei byte, non che l'issuer fosse fidato o la chiave non compromessa. Le integrazioni mancanti comprendono validatore produttore e percorso Android; gli ultimi fix del modulo attendono test sul branch dedicato. Nessun claim di certificazione, sicurezza universale o verifica su sensori reali già conclusa. Chiudere entro circa 70 secondi complessivi; il tetto assoluto rimane 90. -->
+<!-- SLIDE 3 - Approximately 20 seconds; final two paragraphs of pitch.md. Historical verification is a proposed contribution, not an already implemented long-term archive or an unconditional guarantee. Anchoring a certificate establishes the existence of those bytes, not issuer trust or absence of key compromise. Historical verification also requires trust policies, authenticated status evidence and continued cryptographic validity. Missing integrations include the manufacturer validator and Android capture path; the latest module fixes await tests on the dedicated branch. No certification, universal-security or completed real-sensor validation claims. Target approximately 70 seconds overall; absolute maximum 90 seconds. -->

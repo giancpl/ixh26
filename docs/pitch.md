@@ -1,19 +1,19 @@
-<!-- VINCOLO PER GLI AGENTI: Questo file contiene SOLO il testo da pronunciare per la parte crypto del pitch, coordinato con docs/slides.md. Durata massima inderogabile: 90 secondi (1,5 minuti), comprese pause e cambi slide. Mantenere il testo parlato entro 140 parole, puntando a circa 60-75 secondi per lasciare margine. Ad ogni modifica ricontare le parole; per aggiungere un concetto, tagliarne un altro. Formule, dettagli e indicazioni visive appartengono a slides.md e NON vanno letti o aggiunti al parlato. Non aggiungere appendici o nuove sezioni da leggere. Prima della presentazione verificare la durata con una prova cronometrata. Distinguere sempre prototipo implementato, obiettivi e validazioni ancora mancanti. -->
+<!-- AGENT CONSTRAINT: This file contains ONLY the spoken crypto pitch, coordinated with docs/slides.md. Absolute maximum: 90 seconds TOTAL, including pauses and slide transitions. Keep spoken text within 140 words, targeting approximately 60-75 seconds to leave a margin. Recount words after every edit; adding a concept requires cutting another. Formulas and visual details belong in slides.md and MUST NOT be spoken. Do not add spoken appendices or sections. A timed rehearsal is required before presenting. Always distinguish the implemented prototype, proposed contributions and outstanding validation. -->
 
-# Pitch — parte crypto
+# Crypto pitch
 
-<!-- SLIDE 1: apertura e tre tipi di evidenza; circa 20 secondi. -->
+<!-- SLIDE 1: boundary and available evidence; approximately 35 seconds. -->
 
-Una firma crittografica protegge i byte di una foto, ma non dimostra che provengano da un sensore.
+Without a trusted capture path, no signature or blockchain can prove that an image came from a physical sensor. The problem happens before signing.
 
-FingerprinTO propone un formato verificabile per distinguere tre evidenze: attestazione della cattura, quando disponibile; compatibilità statistica con il sensore tramite PRNU; semplice integrità del file.
+Our answer is a single, verifiable format that accepts different sources of evidence and gives each capture the assurance it can support: manufacturer capture attestation where available, statistical compatibility through PRNU, or simply file integrity.
 
-<!-- SLIDE 2: ricevuta e ancoraggio; circa 25 secondi. Non leggere le formule. -->
+<!-- SLIDE 2: receipt and anchoring; approximately 15 seconds. Do not read formulas. -->
 
-Nel prototipo, hash e firme legano immagine, report e policy a una ricevuta, con una chiave d’installazione protetta dal Keystore hardware. OpenTimestamps permette di verificarne l’ancoraggio su Bitcoin. La blockchain documenta l’esistenza dei dati, non la verità della scena.
+Our prototype binds the image, evidence and policy into a signed receipt, anchored through OpenTimestamps on Bitcoin. This records commitments, not the truth of the scene.
 
-<!-- SLIDE 3: contributo proposto e stato reale; circa 25 secondi. Obiettivo totale circa 70 secondi, con margine fino al limite di 90. -->
+<!-- SLIDE 3: proposed contribution and current status; approximately 20 seconds. Target approximately 70 seconds overall; absolute maximum 90 seconds. -->
 
-Il contributo che proponiamo è rendere interoperabili queste evidenze e conservarne la verificabilità quando cambiano o scompaiono i servizi del produttore.
+Our proposed contribution is interoperability and lasting verification: preserving certificates, manifests and trust evidence, so verification need not disappear with a vendor.
 
-Il nucleo crittografico è implementato. Le integrazioni reali e la calibrazione restano da completare. Ogni garanzia deve essere proporzionata alle evidenze disponibili.
+The crypto core is implemented. Real capture integrations and calibration remain unfinished.
