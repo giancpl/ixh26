@@ -80,15 +80,18 @@ $$
 
 ---
 
-# Live test
+# Demo recording
 
-**30 seconds - reserved for the independent verifier.**
+**29.4 seconds / 1.5x - supplied PhoTO app walkthrough.**
 
-Original -> change bytes -> verify again.
+[Clickable preview](assets/demo-poster.png) / [play video](assets/demo-pitch.mp4).
 
-Synthetic signed sample. Sensor origin remains unverified.
+Capture preparation. Private calibration controls. Device enrollment status.
 
-<!-- PRESENTATION SLIDE 5: 1:50-2:20. Leave the centre free for screen sharing. Follow the operator plan in pitch.md; missing enrollment remains pending even when the signature passes. Do not fake an authenticity pass, wait for Bitcoin confirmation or add a second beacon demo. Use a labelled recording if necessary. -->
+Missing authority trust stays unavailable. Recorded local demo / Bitcoin regtest.
+Sensor origin is not established.
+
+<!-- PRESENTATION SLIDE 5: 1:50-2:20. Replace the earlier synthetic byte-tampering demo with the supplied app recording; do not narrate results that this video does not show. The original is preserved, the pitch copy is silent at 1.5x, and both the thumbnail and button launch the external MP4. Pre-open the player because PDF viewers may block launch actions. Return to slide 6 after playback. No second demo or extra time. -->
 
 ---
 

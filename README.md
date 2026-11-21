@@ -244,7 +244,7 @@ rerun those tests, recompute the fixtures independently or build the Android app
 | Hash/signature and PRNU diagrams | [Flow diagrams and PNGs](docs/diagrams/crypto-flow.md) |
 | Implementation coverage and validation tasks | [Audit](docs/implementation/CRYPTO-MODULE-AUDIT.md), [roadmap](docs/implementation/CRYPTO-V3-ROADMAP.md), [experiment runbook](docs/implementation/V3-EXPERIMENT-RUNBOOK.md) |
 | Bitcoin/OTS subsystem | [Installation, CLI, regtest and RPC guide](docs/implementation/BITCOIN-SETTLEMENT.md) |
-| Pitch material | [Spoken pitch](docs/pitch/pitch.md), [slide content](docs/pitch/slides.md), [Lagrange PDF](docs/pitch/fingerprinto-pitch.pdf), [Overleaf sources](docs/pitch/fingerprinto-pitch-overleaf.zip) |
+| Pitch material | [Spoken pitch](docs/pitch/pitch.md), [slide content](docs/pitch/slides.md), [Lagrange PDF](docs/pitch/fingerprinto-pitch.pdf), [PDF + demo bundle](docs/pitch/fingerprinto-pitch-presentation.zip), [Overleaf sources](docs/pitch/fingerprinto-pitch-overleaf.zip) |
 
 The crypto module and the timestamping service are separate components: the
 latter timestamps opaque bytes and does not authenticate photo provenance.

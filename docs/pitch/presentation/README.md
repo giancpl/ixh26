@@ -31,21 +31,44 @@ The supplied `to.png` remains untouched and is not required by the build.
 | 2 | Capture attestation, statistical PRNU, byte integrity | 0:40-1:15 |
 | 3 | Exact v3 root/signature/commitment and OTS start digest | 1:15-1:30 |
 | 4 | Interoperability and proposed lasting verification | 1:30-1:50 |
-| 5 | Live verifier / screen share | 1:50-2:20 |
+| 5 | Supplied PhoTO recording, 1.5x / 29.4 seconds | 1:50-2:20 |
 | 6 | What's next, including the close | 2:20-2:55 |
 
-Five seconds remain as buffer. The revised spoken script has **268 words**,
+Five seconds remain as buffer. The revised spoken script has **270 words**,
 including the 30-second demo narration; the crypto block retains 119 words.
 Formulas are visual material, not additional spoken text. The sequence has
 not been rehearsed: count and planned timings do not establish delivery time.
 No overlay pages or automatic section interstitials are added.
 
-The demo screen reserves space, not an embedded live application or a fake
-success screenshot. Follow `pitch.md` to prepare the synthetic signed bundle,
-show pending enrollment honestly, then show changed-byte verification failure.
-Switch to the actual terminal/screen share during the 30-second slot. A recording
-must be labelled. No network confirmation wait, live key provisioning or extra
-beacon demonstration is included.
+The demo screen now includes a clickable frame and Play demo video button.
+They launch `assets/demo-pitch.mp4` relative to the exported PDF in `docs/pitch`.
+The supplied original is preserved at `assets/video_2026-11-21_11-05-46.mp4`
+(44.143 seconds, 576x1280). The derived H.264/yuv420p MP4 is silent at 1.5x,
+29.41 seconds, so narration and playback fit the existing 30-second slot.
+The speed/recorded status is visible. No content is selectively cut.
+
+This replaces the proposed synthetic byte-tampering demo. The recording shows
+capture preparation, private calibration controls and device enrollment status
+in a local/regtest-labelled UI, including unavailable enrollment due to a missing
+authority pin. It is not a demonstrated successful end-to-end verification,
+mainnet anchoring or physical-origin result. Pitch narration is aligned to those
+visible states. The user supplied the video; frame review is not a device test.
+
+Use the [portable presentation bundle](../fingerprinto-pitch-presentation.zip)
+to keep the PDF and relative `assets/` video path together. Some viewers block
+PDF launch actions: pre-open the MP4 and switch windows if necessary. The video
+is linked, not an in-page multimedia stream; browser playback is not guaranteed.
+Do not play the 44-second original during the three-minute pitch. The MP4 has
+been decoded and its duration checked; GUI launch playback still needs rehearsal
+in the actual PDF viewer/player used on stage.
+
+Video processing used FFmpeg 7.1 via isolated imageio-ffmpeg 0.6.0 tooling under
+the ignored `.tools-android/video-tools` directory. Reproduction filter:
+`-vf setpts=PTS/1.5 -an -c:v libx264 -crf 20 -preset medium -pix_fmt yuv420p -movflags +faststart`.
+The poster is extracted at 18 seconds from the unchanged original.
+
+Original SHA-256: `fd9ad43930a27b759312d29e4fda1e31210c8463a98320f20e1e941ca704f35a`.
+Derived SHA-256: `280cd7333537f1a6700b44e7afb86093ab3aad9c7feae5507a0af0c282a8ac19`.
 
 ## Future work and defensible wording
 
@@ -77,7 +100,7 @@ latexmk -pdf -synctex=1 -interaction=nonstopmode -file-line-error -halt-on-error
 
 The Overleaf archive has `main.tex` at its root and rewrites only the image
 path to `assets/fingerprinto-stand.png`; the theme remains identical. It contains
-the required source/theme/artwork and no auxiliary build files. Select pdfLaTeX.
+the required source/theme/artwork, demo poster and MP4, and no auxiliary build files. Download the video alongside the PDF when presenting outside Overleaf. Select pdfLaTeX.
 
 Validation: local latexmk build, six-page PDF, no overfull/underfull boxes in the
 final log, and rendered visual review of all six pages. Mathematical construction

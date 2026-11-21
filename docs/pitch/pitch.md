@@ -6,14 +6,12 @@
 
 The external-beacon token experiment is now implemented separately on
 `leomaster`; see [profile](../prnu/BEACON-EXPERIMENT.md) and
-[validation record](../prnu/BEACON-VALIDATION.md). It is not the live demo below:
+[validation record](../prnu/BEACON-VALIDATION.md). It is not the recorded app demonstration below:
 no real display/camera trial or complete beacon-to-v3 workflow has been validated.
 Do not add a second demo or extend the 180-second plan. If replacing the demo
 later, retain the 30-second slot and explicitly show synthetic/token-only status;
 never call successful token decoding sensor origin or physical presence.
-The native integration on later main also needs a separate status review before
-presenting this script; this branch's old integration statements are not an audit
-of those subsequent changes.
+The supplied app recording illustrates a later interface; this branch's old integration statements are not an audit of that code or device run.
 
 ## Running order
 
@@ -22,7 +20,7 @@ of those subsequent changes.
 | 0:00-0:20 | 20 s | Problem: what can we actually trust about a photo? | Proposed slide 1: problem and intended workflow; product speaker |
 | 0:20-0:40 | 20 s | Product: evidence travels with the original | Same slide; product speaker hands over to crypto speaker |
 | 0:40-1:50 | 70 s | Crypto boundary, receipt and lasting verification | Existing three crypto slides become presentation slides 2-4 |
-| 1:50-2:20 | 30 s | Demo: original evidence versus changed bytes | Prepared offline terminal / short screen recording; demo operator |
+| 1:50-2:20 | 30 s | Demo: recorded PhoTO app walkthrough | Supplied recording at 1.5x, 29.4 seconds; demo operator |
 | 2:20-2:45 | 25 s | What exists and what the next experiment must establish | Presentation slide 6: what's next / validation gates |
 | 2:45-2:55 | 10 s | Close with the contribution | Same final slide; product speaker |
 | 2:55-3:00 | 5 s | Safety margin | Finish; no additional content |
@@ -59,43 +57,31 @@ team introduction or an extra closing slide unless equivalent time is cut.
 
 ## 1:50-2:20 - Demo
 
-> Here is a synthetic signed example. Its signature checks out; sensor origin remains unverified. Change the file and verification fails. The receipt binds evidence to bytes. It cannot create evidence that was never there.
+> This recording shows capture preparation, private calibration controls and enrollment status. The authority pin is not configured, so enrollment remains unavailable. We show that state explicitly: the interface does not turn missing trust into verified origin.
 
 ### Operator plan - not spoken
 
-| Demo clock | Action | What the audience should see |
-|---|---|---|
-| 0-8 s | Open the prepared original fixture and its receipt; keep both verifier commands ready | Explicit label: synthetic example, not a live camera-origin demonstration |
-| 8-18 s | Verify the original bundle using the independent CLI | Valid installation signature; missing trusted enrollment keeps the overall decision pending, not authenticated |
-| 18-26 s | Verify a prepared copy with changed asset bytes and the unchanged receipt | Binding/signature failure; no acceptance of the modified file |
-| 26-30 s | Hold the two results side by side while finishing the narration | Integrity and origin are separate findings |
+Play [the supplied demo, adapted to 1.5x](assets/demo-pitch.mp4) from slide 5.
+The 44.143-second [original recording](assets/video_2026-11-21_11-05-46.mp4)
+is preserved unchanged. The pitch copy is silent and approximately 29.4 seconds;
+read the narration above during playback. Both the recording and playback speed
+are labelled on the slide. This replaces the earlier proposed synthetic
+original/modified-bundle demonstration; that comparison is not shown in this video.
 
-Suggested existing entry point, with filenames to be prepared before presenting:
+Before presenting, open the exported PDF from `docs/pitch` with its `assets`
+folder alongside it. Click the preview or Play demo video button; they launch
+`assets/demo-pitch.mp4` in an external player. Some PDF/browser viewers block
+external launch actions. Open the MP4 in advance and use a direct player/window
+switch if the link is blocked. Return to slide 6 immediately after playback;
+do not add another live test or repeat the original at normal speed.
 
-```bash
-python -m fingerprinto v3 verify demo-original.zip
-python -m fingerprinto v3 verify demo-modified.zip
-```
-
-Preparation is still required: use the existing synthetic v3 fixtures, preserve
-the signed receipt and attachments, and label the fixture as synthetic. Without
-a separately trusted enrollment, the original's overall result is expected to
-remain pending even though its installation signature verifies. Keep that
-outcome visible. Do not substitute `inspect` for verification or show a generic
-green authenticity badge. Use a readable terminal with only the relevant fields
-highlighted, preserving the actual verifier output.
-
-This is a proposed demonstration, not a demo already executed in this revision.
-Rehearse on the separate validation branch before choosing it for the stage.
-If a real Android integration is subsequently validated, reassess this plan;
-there is no validated live capture-to-signed-receipt demo in this branch.
-
-Use a pre-recorded version of the same actual commands/results if live execution
-is unreliable; label it as recorded. Keep its duration within the same 30 seconds.
-Do not wait for Bitcoin confirmation, provision a phone key, perform calibration
-or download dependencies on stage. If a timestamp proof is shown in a later
-revision, prepare and verify it beforehand and identify its network; do not
-claim instant confirmation for the photo shown live.
+The screen recording shows a local/regtest-labelled interface, not a verified
+mainnet anchor. Its unavailable authority pin and enrollment state must remain
+visible and must not be narrated as successful enrollment or physical origin.
+No claim is made that the entire app/crypto pipeline ran successfully. The video
+was supplied by the user; reviewing its frames is not an independent device test.
+A real-time verifier test can replace this recording in a later rehearsal, but
+is not part of the present 30-second slot.
 
 ## 2:20-2:45 - Status and next experiment
 
@@ -109,8 +95,8 @@ claim instant confirmation for the photo shown live.
 
 - Count only the blockquotes as speech, including the demo narration. The crypto segment must remain within 140 words and 90 seconds; the full script must remain within 280 words and 180 seconds including the demo.
 - Run the whole sequence, with actual clicks and handoffs, at least once with a stopwatch. Plan to finish by 2:55; do not infer compliance from word count alone.
-- If running late, omit the second product sentence and shorten the status block to its first sentence. Retain the crypto limitations and the original/modified comparison. Do not add explanations while waiting for a command.
-- Keep the demo to 30 seconds. On failure, switch immediately to the labelled recording; if unavailable, skip the demo and describe the intended comparison without claiming it ran successfully.
+- If running late, omit the second product sentence and shorten the status block to its first sentence. Retain the crypto limitations and the recorded app walkthrough. Do not add explanations while waiting for a command.
+- Keep the demo to 30 seconds. Pre-open the supplied recording; if its launch fails, switch to the player. If playback is unavailable, skip it without claiming it was shown.
 - Do not add formulas or extend the 70-second crypto block during questions or transitions; questions follow the timed pitch if the event allows them.
 
 ## Camera challenges and optimistic verification - editorial rationale

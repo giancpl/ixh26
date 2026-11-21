@@ -139,19 +139,26 @@ Interoperable, lasting verification
 Anchored certificate bytes do not establish issuer trust.}
 \end{frame}
 
-% 1:50--2:20: actually switch to the verifier; this is not a simulated UI.
-\begin{frame}{Live test \hfill\normalfont\small 30 seconds}
-\vspace{0.2cm}
-\begin{pitchcard}[height=3.6cm,colback=kn-bg]
-\centering\vspace{0.65cm}
-{\Large\color{kn-muted}Live verifier / screen share}\par
+% 1:50--2:20: supplied recording; external playback from the exported PDF.
+\begin{frame}{Demo recording \hfill\normalfont\small 29.4 seconds / 1.5$\times$}
+\begin{columns}[c,onlytextwidth]
+\begin{column}{0.29\textwidth}
+\centering
+\href{run:assets/demo-pitch.mp4}{\includegraphics[height=5.0cm]{../assets/demo-poster.png}}
+\end{column}
+\begin{column}{0.67\textwidth}
+{\Large\bfseries PhoTO app walkthrough\par}
 \vspace{0.45cm}
-Original \quad$\longrightarrow$\quad change bytes \quad$\longrightarrow$\quad verify again
-\end{pitchcard}
-\vspace{0.15cm}
-\muted{Synthetic signed sample. Sensor origin remains unverified.}
-\vfill
-% Recording/confirmation instructions are in pitch.md, not projected.
+Capture preparation\par\vspace{0.15cm}
+Private calibration controls\par\vspace{0.15cm}
+Device enrollment status\par
+\vspace{0.5cm}
+\href{run:assets/demo-pitch.mp4}{\beamergotobutton{Play demo video}}\par
+\vspace{0.3cm}
+\muted{Missing authority trust stays unavailable.}\par
+\labelsmall{Recorded local demo / Bitcoin regtest.\par Sensor origin is not established.}
+\end{column}
+\end{columns}
 \end{frame}
 
 % 2:20--2:55: replaces the old status/closing slot, never extra time.
