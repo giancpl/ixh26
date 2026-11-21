@@ -57,7 +57,15 @@ standard proof against its explicitly selected Bitcoin node/network.
 
 Bundle ZIP members are `photo.jpg`, `event.json`, `payload.bin`, `proof.ots`,
 and `README.txt`. A receipt may be included as optional untrusted metadata.
-No user key belongs in this API or bundle.
+No user private key belongs in this API or bundle.
+
+The optional [evidence-v3 application contract](EVIDENCE-V3.md) adds authenticated
+enrollment/calibration/preparation, one signed `photo-evidence` commitment tag,
+nullable snapshot evidence and separate v3 proof/bundle endpoints. The Nostr
+OTS envelope above remains byte-for-byte unchanged. Shared `app-v3.json` contains
+synthetic, genuinely signed proposal/receipt/event vectors for Python/Kotlin.
+Combined CLI verification uses `--evidence-bundle`, `--trust-db`,
+`--authority-spki` and `--reference-dir`; see [the native integration guide](../docs/V3-APP-INTEGRATION.md).
 
 Independent bundle verification (no API connection or receipt required):
 

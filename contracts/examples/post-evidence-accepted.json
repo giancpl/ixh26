@@ -1,0 +1,46 @@
+{
+  "event": {
+    "id": "aadcf55fa0d5654511c20ea8d0a3422a1063587726c4fc7e84c1ddb92d8236c0",
+    "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+    "created_at": 1795232182,
+    "kind": 20,
+    "tags": [
+      [
+        "title",
+        "Photo"
+      ],
+      [
+        "imeta",
+        "url http://127.0.0.1:8080/v1/media/91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+        "m image/jpeg",
+        "x 91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920",
+        "dim 64x48"
+      ],
+      [
+        "m",
+        "image/jpeg"
+      ],
+      [
+        "x",
+        "91377b7d9ce503a2e51f1ae1acc388892012d3a293319fbfaf7959e126c35920"
+      ],
+      [
+        "photo-evidence",
+        "fingerprinto/evidence-v3",
+        "5cf846b21988dbb297d55d02e6dca6dc7a06d78a9afe50b4619a8db5068bc6a9"
+      ]
+    ],
+    "content": "",
+    "sig": "e93f9ee7f5f55fbaf8a7e7fa1da1b148add7bd937fa09bfe314990388a68fa6c178b86217ed70d3cb0d3b910420c057d26a35e5f0532ab884b76e0f58d895ec6"
+  },
+  "publication_status": "QUEUED",
+  "settlement": null,
+  "evidence": {
+    "profile": "evidence-v3",
+    "commitment": "5cf846b21988dbb297d55d02e6dca6dc7a06d78a9afe50b4619a8db5068bc6a9",
+    "assessment": null,
+    "settlement": null,
+    "proof_url": "http://127.0.0.1:8080/v1/posts/aadcf55fa0d5654511c20ea8d0a3422a1063587726c4fc7e84c1ddb92d8236c0/evidence/proof",
+    "bundle_url": "http://127.0.0.1:8080/v1/posts/aadcf55fa0d5654511c20ea8d0a3422a1063587726c4fc7e84c1ddb92d8236c0/evidence/bundle"
+  }
+}

@@ -18,7 +18,9 @@ data class PhotoAnchorState(
     val feed: List<FeedEntry> = emptyList(), val queued: Int = 0,
     val captured: File? = null, val preview: Bitmap? = null,
     val selected: PhotoPost? = null, val verification: Verification? = null,
-    val copyResult: String? = null
+    val copyResult: String? = null,
+    val deviceStatus: String = "Device enrollment not checked", val calibrationStatus: String = "No calibration session",
+    val privacy: String = "", val draftCaption: String = "", val originalCapture: File? = null
 )
 
 class PhotoAnchorModel(application: Application) : AndroidViewModel(application) {
@@ -26,6 +28,19 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
     private val mutable = MutableStateFlow(PhotoAnchorState())
     val state = mutable.asStateFlow()
     private var refreshing = false
+    private val draftLock = Any()
+    private fun persistCapture() = synchronized(draftLock) {
+        val file = File(getApplication<Application>().noBackupFilesDir, "active-capture.json")
+        val value = mutable.value
+        if (value.captured == null) file.delete() else atomicWrite(file, org.json.JSONObject()
+            .put("path", value.captured.absolutePath).put("original", value.originalCapture?.absolutePath)
+            .put("caption", value.draftCaption).toString())
+    }
+    fun setCaption(value: String) {
+        if (value.length > 1000 || mutable.value.busy) return
+        mutable.value = mutable.value.copy(draftCaption = value)
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+    }
 
     init {
         viewModelScope.launch {
@@ -33,7 +48,17 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
                 val (pubkey, name) = repository.initialize()
                 val cached = repository.cachedFeed()
                 mutable.value = mutable.value.copy(ready = true, pubkey = pubkey, name = name,
-                    feed = cached, queued = repository.pendingCount(), message = "Local regtest demo · USB forwarding required")
+                    feed = cached, queued = repository.pendingCount(), deviceStatus = repository.deviceStatus(), message = "Local regtest demo · USB forwarding required")
+                val draft = File(application.noBackupFilesDir, "active-capture.json")
+                if (draft.exists()) runCatching {
+                    val saved = org.json.JSONObject(draft.readText())
+                    val file = File(saved.getString("path"))
+                    require(file.canonicalPath.startsWith(application.filesDir.canonicalPath + "/"))
+                    val (prepared, bitmap) = repository.preparePhoto(file)
+                    mutable.value = mutable.value.copy(captured = prepared, preview = bitmap, privacy = repository.privacy(prepared),
+                        draftCaption = saved.optString("caption"), originalCapture = saved.optString("original").takeIf { it.isNotEmpty() }?.let { File(it) }
+                            ?.takeIf { it.canonicalPath.startsWith(application.filesDir.canonicalPath + "/") } ?: file)
+                }
                 while (isActive) { refreshNow(); delay(5000) }
             } catch (_: Exception) {
                 mutable.value = mutable.value.copy(message = "Local identity unavailable. Existing keys were preserved.")
@@ -54,6 +79,9 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
         } catch (_: Exception) {
             mutable.value = mutable.value.copy(queued = repository.pendingCount(), message = "Local services unavailable · saved feed and queue preserved")
         } finally { refreshing = false }
+        val device = runCatching { repository.refreshDevice() }.getOrDefault("UNAVAILABLE — current device enrollment could not be checked")
+        val calibration = runCatching { repository.calibrationStatus() }.getOrDefault("UNAVAILABLE — private calibration status")
+        mutable.value = mutable.value.copy(deviceStatus = device, calibrationStatus = calibration)
     }
 
     fun refresh() { viewModelScope.launch { refreshNow() } }
@@ -65,20 +93,69 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
 
     fun captured(file: File) = action("JPEG finalized. Add a caption and publish when ready.") {
         val (prepared, bitmap) = repository.preparePhoto(file)
-        mutable.value = mutable.value.copy(captured = prepared, preview = bitmap)
+        mutable.value = mutable.value.copy(captured = prepared, preview = bitmap, privacy = repository.privacy(prepared), originalCapture = prepared, draftCaption = "")
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
     }
 
     fun discard() {
         val file = mutable.value.captured
-        mutable.value = mutable.value.copy(captured = null, preview = null)
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { file?.delete() }
+        mutable.value = mutable.value.copy(captured = null, preview = null, originalCapture = null, draftCaption = "")
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { persistCapture(); file?.delete() }
     }
 
-    fun publish(caption: String) = action("Signed post saved. Publication and timestamp progress independently.") {
-        val photo = mutable.value.captured ?: return@action
-        repository.publishPhoto(photo, caption)
-        mutable.value = mutable.value.copy(captured = null, preview = null, queued = repository.pendingCount())
+    fun publish(caption: String) = publishMode(caption, false)
+
+    fun publishEvidence(caption: String) = publishMode(caption, true)
+
+    private fun publishMode(caption: String, evidence: Boolean) = action("Signed post saved. Publication and timestamp progress independently.") {
+        var photo = mutable.value.captured ?: return@action
+        if (!evidence && !photo.name.startsWith("cleaned-")) {
+            photo = repository.cleanedCopy(photo)
+            val (_, preview) = repository.preparePhoto(photo)
+            mutable.value = mutable.value.copy(captured = photo, preview = preview, privacy = repository.privacy(photo))
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+        }
+        repository.publishPhoto(photo, caption, withEvidence = evidence)
+        mutable.value = mutable.value.copy(captured = null, preview = null, queued = repository.pendingCount(), originalCapture = null, draftCaption = "")
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
     }
+
+    fun renewPreparation() = action("New v3 preparation requested; previous evidence preserved") {
+        mutable.value.captured?.let { repository.renewPreparation(it) }
+    }
+    fun enrollDevice() = action("Device enrollment updated") { mutable.value = mutable.value.copy(deviceStatus = repository.enrollDevice()) }
+    fun refreshDevice() = action("Device status refreshed") { mutable.value = mutable.value.copy(deviceStatus = repository.refreshDevice()) }
+    fun resetDevice() = action("Only the installation key was retired; Nostr identity and old receipts retained") { mutable.value = mutable.value.copy(deviceStatus = repository.resetDevice()) }
+    fun startCalibration() = action("Private calibration session created") {
+        val file = mutable.value.captured ?: error("Capture a calibration frame first")
+        mutable.value = mutable.value.copy(calibrationStatus = repository.startCalibration(file))
+    }
+    fun addCalibrationFrame(role: String) = action("Private frame stored; it was not published") {
+        val file = mutable.value.captured ?: error("Capture a frame first")
+        mutable.value = mutable.value.copy(calibrationStatus = repository.addCalibrationFrame(file, role), captured = null, preview = null)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+    }
+    fun importCalibrationFrame(uri: Uri) = action("Other-camera test frame stored privately") {
+        mutable.value = mutable.value.copy(calibrationStatus = repository.importCalibrationFrame(uri))
+    }
+    fun evaluateCalibration() = action("Calibration queued; no thresholds are approved automatically") {
+        mutable.value = mutable.value.copy(calibrationStatus = repository.evaluateCalibration())
+    }
+    fun refreshCalibration() = action("Calibration refreshed") { mutable.value = mutable.value.copy(calibrationStatus = repository.calibrationStatus()) }
+    fun cleanCopy() = action("Cleaned copy selected; original receipt will not be reused") {
+        val original = mutable.value.captured ?: error("No capture")
+        val copy = repository.cleanedCopy(original)
+        val (_, preview) = repository.preparePhoto(copy)
+        mutable.value = mutable.value.copy(captured = copy, preview = preview, privacy = repository.privacy(copy))
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+    }
+    fun useOriginal() = action("Original selected; bytes preserved") {
+        val original = mutable.value.originalCapture ?: error("Original not available")
+        val (_, preview) = repository.preparePhoto(original)
+        mutable.value = mutable.value.copy(captured = original, preview = preview, privacy = repository.privacy(original))
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { persistCapture() }
+    }
+    fun exportEvidence(uri: Uri) = action("Standard v3 bundle exported separately") { mutable.value.selected?.let { repository.exportEvidence(it, uri) } }
 
     fun select(post: PhotoPost) {
         mutable.value = mutable.value.copy(selected = post, verification = null, copyResult = null)
@@ -113,6 +190,7 @@ class PhotoAnchorModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             mutable.value = mutable.value.copy(busy = true)
             try { block(); mutable.value = mutable.value.copy(message = success) }
+            catch (failure: ApiFailure) { mutable.value = mutable.value.copy(message = "Local service: ${failure.code}. Draft, keys and signed queue preserved; retry or publish without origin evidence.") }
             catch (_: Exception) { mutable.value = mutable.value.copy(message = "Operation unavailable. Existing keys, signed queue and files were preserved.") }
             finally { mutable.value = mutable.value.copy(busy = false, queued = repository.pendingCount()) }
         }

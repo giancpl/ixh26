@@ -16,6 +16,7 @@ class Config:
     calendars: tuple[str, ...] = ()
     bitcoin_conf: str | None = None
     timeout: int = 10
+    evidence_config: str | None = None
     retry_seconds: float = 5
     lease_seconds: float = 120
 
@@ -44,4 +45,5 @@ class Config:
                    network=os.environ.get("PHOTOANCHOR_NETWORK", "mainnet"),
                    calendars=tuple(x.strip() for x in raw.split(",") if x.strip()) if raw is not None else (),
                    bitcoin_conf=os.environ.get("PHOTOANCHOR_BITCOIN_CONF"),
+                   evidence_config=os.environ.get("PHOTOANCHOR_EVIDENCE_CONFIG"),
                    timeout=int(os.environ.get("PHOTOANCHOR_TIMEOUT", "10")))

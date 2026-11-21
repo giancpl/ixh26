@@ -96,6 +96,13 @@ public final class ReceiptV3 {
                 signer, manufacturer, model, time, challenge, evidence, signature.clone()});
     }
 
+    public void requireIdentity(byte[] expectedKey, byte[][] expectedChain, String expectedPackage,
+                                long expectedVersion, byte[] expectedSigner, byte[] expectedChallenge) {
+        if(!Arrays.equals(key,expectedKey)||!Arrays.deepEquals(chain,expectedChain)
+            ||!packageName.equals(expectedPackage)||version!=expectedVersion||!Arrays.equals(signer,expectedSigner)
+            ||!Arrays.equals(challenge,expectedChallenge))fail();
+    }
+
     private static byte[] d(String label, Object... fields) { return ReceiptV1.protocolHash(label, fields); }
     private static byte[] optionalHash(byte[] b) { return b == null ? null : hash(b); }
     private static byte[] hash(byte[] b) { if (b == null || b.length != 32) fail(); return b.clone(); }

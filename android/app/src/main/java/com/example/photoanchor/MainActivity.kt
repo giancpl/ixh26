@@ -111,6 +111,9 @@ internal fun PhotoAnchorApp(
     val saveBundle = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) model.export(uri)
     }
+    val saveEvidence = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) model.exportEvidence(uri)
+    }
     val checkCopy = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) model.verifyCopy(uri)
     }
@@ -340,6 +343,7 @@ internal fun PhotoAnchorApp(
                         saveProfile = model::saveProfile,
                         onSelectPin = model::select,
                         onOpenCamera = { tab = "Camera" },
+                        evidenceControls = { EvidenceSetupPanel(state, model) },
                     )
                     "Camera" -> if (state.name.isBlank()) {
                         OnboardingNameCard(
@@ -353,6 +357,7 @@ internal fun PhotoAnchorApp(
                             state = state,
                             publish = model::publish,
                             discard = model::discard,
+                            model = model,
                         )
                     } else {
                         CameraScreen(state.busy, model::captured, model::cameraError)
@@ -385,6 +390,7 @@ internal fun PhotoAnchorApp(
             onDismiss = model::dismiss,
             onCheckCopy = { checkCopy.launch(arrayOf("image/jpeg")) },
             onExportBundle = { saveBundle.launch("bitpin-${selected.id.take(12)}.zip") },
+            onExportEvidence = { saveEvidence.launch("photo-v3-evidence.zip") },
         )
     }
 }

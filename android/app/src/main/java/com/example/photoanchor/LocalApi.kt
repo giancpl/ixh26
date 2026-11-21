@@ -38,6 +38,32 @@ class LocalApi(val baseUrl: String = BuildConfig.API_URL) {
         } finally { connection.disconnect() }
     }
 
+    fun authorized(keys: org.nostrdevkit.sdk.Keys, method: String, path: String,
+                   body: ByteArray = byteArrayOf(), binary: Boolean = false): JSONObject {
+        val tags = listOf(listOf("u", baseUrl + path), listOf("method", method),
+            listOf("payload", PhotoProtocol.sha256(body)), listOf("nonce", java.util.UUID.randomUUID().toString()))
+            .map { org.nostrdevkit.sdk.Tag.parse(it) }
+        val auth = org.nostrdevkit.sdk.EventBuilder(org.nostrdevkit.sdk.Kind(27235u), "").tags(tags)
+            .finalize(keys).use { android.util.Base64.encodeToString(it.asJson().toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP) }
+        val c = connection(path, method)
+        c.setRequestProperty("Authorization", "Nostr $auth")
+        if (method != "GET") {
+            c.doOutput = true
+            c.setRequestProperty("Content-Type", if (binary) "application/octet-stream" else "application/json")
+            c.setFixedLengthStreamingMode(body.size)
+            try { c.outputStream.use { it.write(body) } } catch (failure: Exception) { c.disconnect(); throw failure }
+        }
+        return StrictJson.parseObject(response(c, 4 * 1024 * 1024), 4 * 1024 * 1024)
+    }
+
+    fun verifyEvidence(post: PhotoPost): JSONObject = json("/v1/posts/${post.id}/evidence/verify", JSONObject())
+
+    fun evidenceProof(post: PhotoPost): ByteArray = response(
+        connection("/v1/posts/${post.id}/evidence/proof", "GET"), 2 * 1024 * 1024)
+
+    fun evidenceBundle(post: PhotoPost): ByteArray = response(
+        connection("/v1/posts/${post.id}/evidence/bundle", "GET"), 48 * 1024 * 1024)
+
     fun upload(file: File): JSONObject {
         require(file.length() in 1..PhotoProtocol.MAX_PHOTO_BYTES.toLong())
         val connection = connection("/v1/media", "POST")

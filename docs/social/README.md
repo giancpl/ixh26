@@ -3,7 +3,9 @@
 This demo links a Nostr signing key, an immutable JPEG and Bitcoin timestamp
 evidence. It is designed for two USB-connected Android phones and a local Docker
 environment. There are no public relays configured and no automatic external
-publication. Hardware attestations, account recovery, iOS, RAW, comments, likes,
+publication. The optional [native v3 workflow](../V3-APP-INTEGRATION.md) adds
+hardware-key enrollment and private server PRNU; actual hardware acceptance is
+still deferred. Account recovery, iOS, RAW, comments, likes,
 followers and a web verifier are outside this MVP.
 
 ## What a reader verifies
@@ -27,7 +29,8 @@ it is not a mainnet anchor.** HTTP receipts are untrusted metadata. A standard
 ## Start and run the real Docker demonstration
 
 Start with the [PhoTO overview](../../README.md) and [documentation map](../README.md).
-Current integrated checks are recorded in the [integration review](../reviews/LEOMAIN_PR9.md).
+Current v3 application checks are recorded in the [app integration review](../reviews/V3_APP.md);
+the earlier crypto-module checks are in the [source integration review](../reviews/LEOMAIN_PR9.md).
 [CONSOLIDATION.md](../CONSOLIDATION.md) records the staged history; the earlier
 validation report and agent handoffs in this directory are historical.
 

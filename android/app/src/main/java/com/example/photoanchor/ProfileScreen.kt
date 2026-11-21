@@ -28,6 +28,7 @@ internal fun ProfileScreen(
     saveProfile: (String) -> Unit,
     onSelectPin: (PhotoPost) -> Unit,
     onOpenCamera: () -> Unit,
+    evidenceControls: @Composable () -> Unit = {},
 ) {
     val p = LocalPalette.current
     var name by remember(state.name) { mutableStateOf(state.name) }
@@ -49,6 +50,7 @@ internal fun ProfileScreen(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalItemSpacing = 12.dp,
     ) {
+        item(span = StaggeredGridItemSpan.FullLine) { evidenceControls() }
         item(span = StaggeredGridItemSpan.FullLine) {
             SurfCard(modifier = Modifier.fillMaxWidth(), padding = 22.dp) {
                 Column(

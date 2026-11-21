@@ -12,7 +12,7 @@ import java.security.MessageDigest
 data class PhotoPost(
     val json: String, val id: String, val pubkey: String, val signature: String,
     val photoHash: String, val photoUrl: String, val width: Int, val height: Int,
-    val caption: String, val createdAt: Long
+    val caption: String, val createdAt: Long, val evidenceCommitment: String? = null
 )
 
 /** Application contract. All Nostr cryptography is delegated to the official SDK. */
@@ -53,6 +53,9 @@ object PhotoProtocol {
             (0 until tag.length()).map { tag.getString(it) }.also { require(it.isNotEmpty()) }
         }
         fun tag(name: String): List<String> = entries.filter { it.first() == name }.single()
+        val evidence = entries.filter { it.first() == "photo-evidence" }
+        require(evidence.isEmpty() || (evidence.size == 1 && evidence[0].size == 3 &&
+            evidence[0][1] == "fingerprinto/evidence-v3" && hex64.matches(evidence[0][2])))
         val caption = raw.getString("content")
         require(tag("title") == listOf("title", caption.ifEmpty { "Photo" }))
         require(tag("m") == listOf("m", "image/jpeg"))
@@ -72,7 +75,7 @@ object PhotoProtocol {
         val url = meta.getValue("url")
         require(url.isNotEmpty())
         if (apiUrl != null) require(url == "$apiUrl/v1/media/$hash")
-        return PhotoPost(json, id, pubkey, signature, hash, url, width, height, caption, raw.getLong("created_at"))
+        return PhotoPost(json, id, pubkey, signature, hash, url, width, height, caption, raw.getLong("created_at"), evidence.firstOrNull()?.get(2))
     }
 
     fun payload(post: PhotoPost): ByteArray {
@@ -82,13 +85,16 @@ object PhotoProtocol {
             .toByteArray(Charsets.UTF_8)
     }
 
-    fun signPhoto(keys: Keys, caption: String, hash: String, url: String, width: Int, height: Int): PhotoPost {
+    fun signPhoto(keys: Keys, caption: String, hash: String, url: String, width: Int, height: Int, evidenceCommitment: String? = null): PhotoPost {
         require(caption.length <= 1000 && hex64.matches(hash) && width > 0 && height > 0)
-        val tags = listOf(
+        val tags = (listOf(
             listOf("title", caption.ifEmpty { "Photo" }),
             listOf("imeta", "url $url", "m image/jpeg", "x $hash", "dim ${width}x$height"),
             listOf("m", "image/jpeg"), listOf("x", hash)
-        ).map { Tag.parse(it) }
+        ) + if (evidenceCommitment != null) {
+            require(hex64.matches(evidenceCommitment))
+            listOf(listOf("photo-evidence", "fingerprinto/evidence-v3", evidenceCommitment))
+        } else emptyList()).map { Tag.parse(it) }
         return EventBuilder(Kind(20u), caption).tags(tags).finalize(keys).use { parse(it.asJson()) }
     }
 

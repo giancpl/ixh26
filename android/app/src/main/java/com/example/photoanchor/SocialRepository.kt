@@ -25,7 +25,9 @@ import java.time.Duration
 data class FeedEntry(val post: PhotoPost, val name: String, val preview: Bitmap?)
 data class Verification(
     val event: String = "Not checked", val integrity: String = "Not checked",
-    val timestamp: String = "Not checked", val publication: String = "Unknown"
+    val timestamp: String = "Not checked", val publication: String = "Unknown",
+    val receipt: String = "No v3 receipt", val origin: String = "Origin not verified",
+    val device: String = "Not checked", val evidenceTimestamp: String = "No v3 timestamp"
 )
 
 class SocialRepository(private val context: Context) {
@@ -36,11 +38,13 @@ class SocialRepository(private val context: Context) {
     private val cache = File(context.filesDir, "media").apply { mkdirs() }
     private val feedFile = File(context.noBackupFilesDir, "feed.json")
     private lateinit var keys: Keys
+    private lateinit var device: DeviceEvidenceRepository
     private var client: Client? = null
     private val profiles = mutableMapOf<String, Pair<Long, String>>()
 
     suspend fun initialize(): Pair<String, String> = withContext(Dispatchers.IO) {
         keys = identities.loadOrCreate()
+        device = DeviceEvidenceRepository(context, keys, api)
         keys.publicKey().use { it.toHex() } to identities.name()
     }
 
@@ -62,26 +66,14 @@ class SocialRepository(private val context: Context) {
 
     /** Finalization occurs before hashing; neither upload nor retry edits the JPEG. */
     suspend fun preparePhoto(file: File): Pair<File, Bitmap?> = withContext(Dispatchers.IO) {
-        ExifInterface(file).apply {
-            listOf(
-                ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF,
-                ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF,
-                ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_ALTITUDE_REF,
-                ExifInterface.TAG_GPS_TIMESTAMP, ExifInterface.TAG_GPS_DATESTAMP,
-                ExifInterface.TAG_GPS_PROCESSING_METHOD, ExifInterface.TAG_MAKE,
-                ExifInterface.TAG_MODEL, ExifInterface.TAG_BODY_SERIAL_NUMBER,
-                ExifInterface.TAG_CAMERA_OWNER_NAME, ExifInterface.TAG_LENS_SERIAL_NUMBER,
-                ExifInterface.TAG_IMAGE_UNIQUE_ID
-            ).forEach { setAttribute(it, null) }
-            saveAttributes()
-        }
         require(file.length() in 1..PhotoProtocol.MAX_PHOTO_BYTES.toLong())
         file to thumbnail(file)
     }
 
-    suspend fun publishPhoto(file: File, caption: String): PhotoPost = withContext(Dispatchers.IO) {
+    suspend fun publishPhoto(file: File, caption: String, withEvidence: Boolean = false): PhotoPost = withContext(Dispatchers.IO) {
         mutex.withLock {
             require(caption.length <= 1000)
+            require(!withEvidence || !file.name.startsWith("cleaned-")) { "Cleaned copies use the ordinary Nostr path" }
             val digest = file.inputStream().use { PhotoProtocol.hash(it) }
             val uploaded = api.upload(file)
             require(uploaded.getString("sha256") == digest)
@@ -92,7 +84,12 @@ class SocialRepository(private val context: Context) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.absolutePath, bounds)
             require(bounds.outWidth > 0 && bounds.outHeight > 0 && bounds.outMimeType == "image/jpeg")
-            val post = PhotoProtocol.signPhoto(keys, caption, digest, uploaded.getString("url"), bounds.outWidth, bounds.outHeight)
+            val commitment = if (withEvidence) device.publishCommitment(file) else null
+            val postFile = File(context.noBackupFilesDir, "draft-posts/${digest}-${PhotoProtocol.sha256(caption.toByteArray())}-${withEvidence}.json")
+            val post = if (postFile.exists()) PhotoProtocol.parse(postFile.readText(), api.baseUrl) else {
+                PhotoProtocol.signPhoto(keys, caption, digest, uploaded.getString("url"), bounds.outWidth, bounds.outHeight, commitment)
+                    .also { atomicWrite(postFile, it.json) }
+            }
             outbox.enqueue(post.json)
             // Once signed, the durable queue owns this event even when HTTP is down.
             runCatching { deliver(File(context.noBackupFilesDir, "outbox/${post.id}.json")) }
@@ -182,6 +179,57 @@ class SocialRepository(private val context: Context) {
             return@withContext result.copy(integrity = "INVALID — original JPEG hash differs", timestamp = "Not requested")
         }
         result = result.copy(integrity = "VALID — original JPEG SHA-256 checked on this device")
+        if (checked.evidenceCommitment != null) {
+            val bundle = try { api.evidenceBundle(checked) } catch (_: Exception) { null }
+            result = if (bundle == null) result.copy(receipt = "UNAVAILABLE — v3 bundle download failed") else {
+                try { result.copy(receipt = device.verifyBundle(bundle, checked)) }
+                catch (_: Exception) { result.copy(receipt = "INVALID — v3 signature, attachments or commitment mismatch") }
+            }
+            try {
+                val v3 = api.verifyEvidence(checked)
+                require(v3.getString("commitment") == checked.evidenceCommitment)
+                val assessment = v3.optJSONObject("assessment")
+                val v3Settlement = v3.optJSONObject("settlement")
+                if (assessment != null && assessment.has("decision")) {
+                    result = result.copy(origin = "Local server analysis — " + assessment.getJSONObject("decision").getString("label") +
+                        "\nManufacturer: " + assessment.getJSONObject("manufacturer").getString("status") +
+                        " · " + assessment.getJSONObject("manufacturer").getString("reason") +
+                        "\nPRNU: " + assessment.getJSONObject("prnu").getString("status") +
+                        " · " + assessment.getJSONObject("prnu").getString("reason"),
+                        device = "Local authority — " + assessment.getJSONObject("enrollment").getString("status") +
+                            " · " + assessment.getJSONObject("enrollment").getString("reason"))
+                }
+                if (v3Settlement != null) {
+                    require(v3Settlement.getString("network") == "regtest")
+                    require(v3Settlement.getString("version") == "upp-settlement/0.1")
+                    require(v3Settlement.getString("backend") == "opentimestamps-bitcoin")
+                    if (!v3Settlement.isNull("proof_url"))
+                        require(v3Settlement.getString("proof_url") == "${api.baseUrl}/v1/posts/${checked.id}/evidence/proof")
+                    if (!v3Settlement.isNull("proof_sha256"))
+                        require(PhotoProtocol.sha256(api.evidenceProof(checked)) == v3Settlement.getString("proof_sha256"))
+                    val v3Status = v3Settlement.getString("status")
+                    require(v3Status in setOf("PENDING", "CONFIRMED", "INVALID", "UNVERIFIABLE", "ERROR"))
+                    if (v3Status !in setOf("ERROR", "UNVERIFIABLE") || !v3Settlement.isNull("payload_sha256"))
+                        require(v3Settlement.getString("payload_sha256") == PhotoProtocol.sha256(AuthorityRecords.unhex(v3.getString("commitment"))))
+                    if (v3Status == "CONFIRMED") {
+                        require(v3Settlement.getBoolean("binding_checked"))
+                        val block = v3Settlement.getJSONObject("bitcoin")
+                        require(!block.isNull("block_height") && !block.isNull("block_time"))
+                    }
+                    val blockDetails = if (v3Status == "CONFIRMED") {
+                        val block = v3Settlement.getJSONObject("bitcoin")
+                        "\nBlock ${block.getLong("block_height")} · ${java.time.Instant.ofEpochSecond(block.getLong("block_time"))}"
+                    } else ""
+                    val source = if (v3Status == "CONFIRMED") " — verified by local node — regtest" else " — regtest"
+                    result = result.copy(evidenceTimestamp = v3Status + " — v3 timestamp" + source + blockDetails)
+                }
+
+            } catch (_: Exception) {
+                result = result.copy(origin = "UNAVAILABLE — no current local server assessment", device = "UNAVAILABLE — current enrollment not checked",
+                    evidenceTimestamp = "UNAVAILABLE — no consistent fresh v3 timestamp report")
+            }
+            if (result.receipt.startsWith("INVALID")) result = result.copy(origin = "Not accepted — local receipt verification failed")
+        }
         try {
             val snapshot = api.post(checked.id)
             result = result.copy(publication = snapshot.getString("publication_status"))
@@ -223,6 +271,75 @@ class SocialRepository(private val context: Context) {
     suspend fun export(post: PhotoPost, uri: Uri) = withContext(Dispatchers.IO) {
         PhotoProtocol.parse(post.json, api.baseUrl)
         val bytes = api.bundle(post)
+        context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(bytes) }
+    }
+
+    suspend fun renewPreparation(file: File): String = withContext(Dispatchers.IO) { device.renewPreparation(file) }
+    suspend fun deviceStatus(): String = withContext(Dispatchers.IO) { device.status() }
+    suspend fun enrollDevice(): String = withContext(Dispatchers.IO) { device.enroll() }
+    suspend fun refreshDevice(): String = withContext(Dispatchers.IO) { device.refreshEnrollment() }
+    suspend fun resetDevice(): String = withContext(Dispatchers.IO) { device.resetEnrollment() }
+    suspend fun calibrationStatus(): String = withContext(Dispatchers.IO) { device.calibrationStatus() }
+    suspend fun evaluateCalibration(): String = withContext(Dispatchers.IO) { device.evaluateCalibration() }
+
+    suspend fun startCalibration(file: File): String = withContext(Dispatchers.IO) {
+        val exif = ExifInterface(file)
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        val routeFile = File(file.absolutePath + ".route.json")
+        require(routeFile.exists()) { "A fixed app camera route is required" }
+        val route = JSONObject(routeFile.readText())
+        require(route.getBoolean("fixed"))
+        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)
+        require(orientation in 1..8)
+        val geometry = JSONObject().put("camera", route.getString("camera"))
+            .put("mode", route.getString("mode")).put("width", 256).put("height", 256)
+            .put("decoder", "pillow-13.0.0/rgb-green-stored-exif-$orientation/1")
+            .put("source_width", bounds.outWidth).put("source_height", bounds.outHeight)
+        device.startCalibration(geometry)
+    }
+
+    suspend fun addCalibrationFrame(file: File, role: String): String = withContext(Dispatchers.IO) { device.addFrame(file, role) }
+    suspend fun importCalibrationFrame(uri: Uri): String = withContext(Dispatchers.IO) {
+        val file = File(context.cacheDir, "calibration-import.jpg")
+        try {
+            val bytes = context.contentResolver.openInputStream(uri)!!.use { readBounded(it, PhotoProtocol.MAX_PHOTO_BYTES) }
+            file.writeBytes(bytes); device.addFrame(file, "impostor")
+        } finally { file.delete() }
+    }
+
+    suspend fun privacy(file: File): String = withContext(Dispatchers.IO) {
+        val exif = ExifInterface(file)
+        val sensitive = listOf(ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LONGITUDE,
+            ExifInterface.TAG_BODY_SERIAL_NUMBER, ExifInterface.TAG_CAMERA_OWNER_NAME,
+            ExifInterface.TAG_LENS_SERIAL_NUMBER, ExifInterface.TAG_IMAGE_UNIQUE_ID)
+            .filter { exif.getAttribute(it) != null }
+        "Original JPEG preserved. " + if (sensitive.isEmpty()) "No listed sensitive EXIF fields detected; review before sharing."
+            else "Sensitive EXIF present: " + sensitive.joinToString() + ". Choose a cleaned copy or cancel."
+    }
+
+    suspend fun cleanedCopy(file: File): File = withContext(Dispatchers.IO) {
+        val copy = File(context.filesDir, "cleaned-${java.util.UUID.randomUUID()}.jpg")
+        file.copyTo(copy, overwrite = false)
+        ExifInterface(copy).apply {
+            listOf(
+                ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF,
+                ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF,
+                ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_ALTITUDE_REF,
+                ExifInterface.TAG_GPS_TIMESTAMP, ExifInterface.TAG_GPS_DATESTAMP,
+                ExifInterface.TAG_GPS_PROCESSING_METHOD, ExifInterface.TAG_MAKE,
+                ExifInterface.TAG_MODEL, ExifInterface.TAG_BODY_SERIAL_NUMBER,
+                ExifInterface.TAG_CAMERA_OWNER_NAME, ExifInterface.TAG_LENS_SERIAL_NUMBER,
+                ExifInterface.TAG_IMAGE_UNIQUE_ID
+            ).forEach { setAttribute(it, null) }
+            saveAttributes()
+        }
+        copy
+    }
+
+    suspend fun exportEvidence(post: PhotoPost, uri: Uri) = withContext(Dispatchers.IO) {
+        val bytes = api.evidenceBundle(post)
+        device.verifyBundle(bytes, post)
         context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(bytes) }
     }
 

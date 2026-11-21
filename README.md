@@ -8,9 +8,10 @@ check who signed it, whether the downloaded file matches the post, and the
 available Bitcoin/OpenTimestamps evidence.
 
 The project explores how to support claims about a photo's origin. The current
-social app provides signed publication and byte integrity. Camera-origin
-verification is a separate experiment, with device integration and real-camera
-validation still required.
+social app provides signed publication and byte integrity. Its optional v3 path
+connects hardware-key enrollment, local-server PRNU analysis and device-signed
+receipts. Real-camera calibration and manufacturer validation remain experimental;
+the app does not promise physical photo authenticity.
 
 ## What the checks mean
 
@@ -19,7 +20,7 @@ validation still required.
 | Nostr signature and event ID | The event was signed by the indicated key; caption, URL and image hash are bound to it | Android, locally |
 | JPEG integrity | The downloaded bytes match the SHA-256 in the signed event | Android, locally |
 | OTS timestamp | The expected payload matches a standard proof verified against the selected Bitcoin chain | Local API + Bitcoin Core; exported bundles can be checked independently with the CLI |
-| Camera origin | Manufacturer credentials or statistical PRNU evidence, under an explicit trust policy | Experimental `fingerprinto` module; not connected to native photo publication |
+| Camera origin | Manufacturer credentials or statistical PRNU evidence, under an explicit trust policy | Optional native v3 flow and local-server analysis; real-device origin guarantees remain unvalidated |
 
 A public key identifies a signing key. Profile names, captions and declared
 capture times remain author claims. A valid signature does not establish a
@@ -62,6 +63,7 @@ Phone acceptance is still deferred; builds and headless demos do not replace it.
 ## Where to start
 
 - [Documentation map and architecture](docs/README.md): components, proof formats and current scope.
+- [Native v3 setup and workflow](docs/V3-APP-INTEGRATION.md): operator trust, device enrollment, private calibration and separate proofs.
 - [Android app](android/README.md): identity, capture, feed, verification and build.
 - [Protocol and API contracts](contracts/README.md): signed events, exact OTS payload and independent bundle verification.
 - [Settlement guide](docs/SETTLEMENT.md): Python API, CLI, mainnet/pruned Core, regtest, statuses and exit codes.
@@ -79,8 +81,9 @@ python -m pytest -q -m 'not network and not regtest and not social'
 Python tests, shared Python/JVM crypto vectors, Android builds/unit tests/lint,
 web checks and real Docker lifecycles have been executed; see the
 [validation report](docs/reviews/LEOMAIN_PR9.md) for versions, counts and limits.
-Actual Pixel 9 Pro/GrapheneOS attestation, two-phone acceptance, a real
-manufacturer validator and measured PRNU calibration remain open.
+The [v3 application validation report](docs/reviews/V3_APP.md) records the new
+integration checks. Actual Pixel 9 Pro/GrapheneOS attestation, two-phone
+acceptance, a real manufacturer validator and measured PRNU calibration remain open.
 
 **Naming:** PhoTO is the app and project name. PhotoAnchor and BitPin are earlier
 product/UI names retained in historical reports. `fingerprinto` is the crypto

@@ -113,9 +113,10 @@ internal fun PublishScreen(
     state: PhotoAnchorState,
     publish: (String) -> Unit,
     discard: () -> Unit,
+    model: PhotoAnchorModel,
 ) {
     val p = LocalPalette.current
-    var caption by rememberSaveable(state.captured?.absolutePath) { mutableStateOf("") }
+    val caption = state.draftCaption
     Column(
         Modifier
             .fillMaxSize()
@@ -162,9 +163,11 @@ internal fun PublishScreen(
                     }
                 }
 
+                CaptureEvidenceControls(state, model, caption)
                 OutlinedTextField(
                     value = caption,
-                    onValueChange = { if (it.length <= 1000) caption = it },
+                    onValueChange = model::setCaption,
+                    enabled = !state.busy,
                     label = { Text("Title or description") },
                     placeholder = { Text("Tell everyone what your Pin is about…") },
                     shape = RoundedCornerShape(12.dp),
@@ -189,7 +192,7 @@ internal fun PublishScreen(
                         modifier = Modifier.weight(1f),
                     )
                     BitPolitoPrimaryButton(
-                        text = if (state.busy) "Publishing…" else "Publish Pin",
+                        text = if (state.busy) "Publishing…" else "Publish cleaned copy without origin evidence",
                         icon = DeckIcon.Star,
                         onClick = { publish(caption) },
                         enabled = !state.busy,
@@ -202,6 +205,7 @@ internal fun PublishScreen(
 }
 
 @Composable
+@androidx.annotation.OptIn(markerClass = [androidx.camera.camera2.interop.ExperimentalCamera2Interop::class])
 internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: () -> Unit) {
     val p = LocalPalette.current
     val context = LocalContext.current
@@ -215,7 +219,9 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
     var back by remember { mutableStateOf(true) }
     var flash by remember { mutableStateOf(false) }
     var capturing by remember { mutableStateOf(false) }
-    val capture = remember { ImageCapture.Builder().build() }
+    var routeReady by remember { mutableStateOf(false) }
+    var capture by remember { mutableStateOf(ImageCapture.Builder().build()) }
+    var routeInfo by remember { mutableStateOf(org.json.JSONObject().put("fixed", false)) }
     val executor = remember { Executors.newSingleThreadExecutor() }
     val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
     DisposableEffect(Unit) { onDispose { executor.shutdown() } }
@@ -264,25 +270,46 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
     }
 
     DisposableEffect(owner, back) {
+        routeReady = false
         val future = ProcessCameraProvider.getInstance(context)
         var provider: ProcessCameraProvider? = null
         var disposed = false
         future.addListener({
             if (!disposed) runCatching {
                 provider = future.get()
-                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-                provider!!.unbindAll()
-                provider!!.bindToLifecycle(
-                    owner,
-                    if (back) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA,
-                    preview,
-                    capture,
-                )
+                val route = runCatching { FixedCaptureRoute.select(context, back) }.getOrNull()
+                fun bind(fixed: Boolean) {
+                    val captureBuilder = ImageCapture.Builder()
+                    val previewBuilder = Preview.Builder()
+                    if (fixed) route?.physical?.let { physical ->
+                        androidx.camera.camera2.interop.Camera2Interop.Extender(captureBuilder).setPhysicalCameraId(physical)
+                        androidx.camera.camera2.interop.Camera2Interop.Extender(previewBuilder).setPhysicalCameraId(physical)
+                    }
+                    capture = captureBuilder.build()
+                    val preview = previewBuilder.build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                    val selector = if (fixed && route != null) CameraSelector.Builder().addCameraFilter { infos ->
+                        infos.filter { androidx.camera.camera2.interop.Camera2CameraInfo.from(it).cameraId == route.logical }
+                    }.build() else if (back) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
+                    provider!!.unbindAll()
+                    val camera = provider!!.bindToLifecycle(owner, selector, preview, capture)
+                    camera.cameraControl.setZoomRatio(1f)
+                    val observed = if (fixed && route != null) route.cameraId else androidx.camera.camera2.interop.Camera2CameraInfo.from(camera.cameraInfo).cameraId
+                    routeInfo = org.json.JSONObject().put("fixed", fixed).put("camera", observed)
+                        .put("mode", if (fixed) "camerax-1.4.1/fixed-physical/zoom-1/rotation-0" else "camerax-1.4.1/unfixed-route")
+                    routeReady = true
+                }
+                if (route == null) bind(false) else {
+                    // Unsupported physical stream combinations must not break ordinary capture.
+                    runCatching { bind(true) }.getOrElse { bind(false) }
+                }
             }.onFailure { onError() }
         }, ContextCompat.getMainExecutor(context))
-        onDispose { disposed = true; provider?.unbindAll() }
+        onDispose { disposed = true; routeReady = false; provider?.unbindAll() }
     }
     capture.flashMode = if (flash) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
+    val routeMessage = if (!routeReady) "Opening camera…" else if (routeInfo.optBoolean("fixed"))
+        "Fixed camera route selected · physical identity still requires independent enrollment"
+        else "PRNU unavailable on this route · ordinary photo capture remains available"
 
     Column(
         Modifier
@@ -290,6 +317,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Text(routeMessage, color = p.mu, fontSize = 12.sp)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -326,7 +354,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                     text = "Flip",
                     icon = DeckIcon.Smartphone,
                     onClick = { back = !back },
-                    enabled = !capturing && !busy,
+                    enabled = !capturing && !busy && routeReady,
                 )
 
                 Box(
@@ -335,14 +363,18 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                         .clip(CircleShape)
                         .border(4.dp, p.fg, CircleShape)
                         .semantics { contentDescription = if (capturing) "Saving photo" else "Capture photo" }
-                        .clickable(enabled = !capturing && !busy, role = Role.Button) {
+                        .clickable(enabled = !capturing && !busy && routeReady, role = Role.Button) {
                             capturing = true
                             val file = File(context.filesDir, "capture-${UUID.randomUUID()}.jpg")
+                            val observedRoute = org.json.JSONObject(routeInfo.toString()).also {
+                                it.put("mode", it.optString("mode") + if (flash) "/flash-on" else "/flash-off")
+                            }
                             capture.takePicture(
                                 ImageCapture.OutputFileOptions.Builder(file).build(),
                                 executor,
                                 object : ImageCapture.OnImageSavedCallback {
                                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                                        File(file.absolutePath + ".route.json").writeText(observedRoute.toString())
                                         ContextCompat.getMainExecutor(context).execute {
                                             capturing = false
                                             onCaptured(file)
@@ -375,7 +407,7 @@ internal fun CameraScreen(busy: Boolean, onCaptured: (File) -> Unit, onError: ()
                     text = if (flash) "Flash On" else "Flash",
                     icon = DeckIcon.Lightning,
                     onClick = { flash = !flash },
-                    enabled = !capturing && !busy,
+                    enabled = !capturing && !busy && routeReady,
                 )
             }
         }

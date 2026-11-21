@@ -16,7 +16,7 @@ hybrid = ["cryptography>=46.0.7,<47", "pqcrypto==0.4.0"]
 prnu = ["cryptography>=46.0.7,<47", "pillow==13.0.0"]
 protocol = ["nostr-sdk==0.45.1"]
 server = ["aiohttp==3.14.5", "pillow==13.0.0"]
-social = ["nostr-sdk==0.45.1", "fastapi==0.115.12", "uvicorn==0.34.2", "httpx==0.28.1", "pillow==13.0.0"]
+social = ["cryptography>=46.0.7,<47", "nostr-sdk==0.45.1", "fastapi==0.115.12", "uvicorn==0.34.2", "httpx==0.28.1", "pillow==13.0.0"]
 
 [project.scripts]
 upp-settlement = "settlement.cli:main"

@@ -18,7 +18,7 @@ locally and requests fresh timestamp verification from the API's Bitcoin node.
 | `contracts/`, `upp_protocol/` | Shared API/fixtures, kind-20 validation, signed-event payload and bundle CLI | [Contracts](../contracts/README.md) |
 | `social/` | FastAPI, SQLite/media storage and durable relay/OTS jobs | [Local app and Docker](social/README.md) |
 | `settlement/` | Opaque-byte OTS stamp/upgrade/Bitcoin verification; mainnet by default | [Settlement](SETTLEMENT.md) |
-| `fingerprinto/`, portable Android crypto primitives | Experimental installation receipts, enrollment and PRNU evidence | [Crypto specification](crypto.md), [runbook](V3-EXPERIMENT-RUNBOOK.md) |
+| `fingerprinto/`, native v3 workflow | Optional device enrollment/receipts, private server PRNU and independent proof | [App v3 setup](V3-APP-INTEGRATION.md), [crypto specification](crypto.md) |
 | `server/`, `web/` | Separate legacy image-byte API and web UI | [Legacy regtest guide](REGTEST_SERVER.md) |
 
 `compose.social.yml` overlays the standalone regtest environment. The normal
@@ -48,9 +48,10 @@ the pixels, and no sensor signature is assumed available on Pixel/GrapheneOS.
 Read the [crypto flow diagrams](crypto-flow.md), [implementation audit](CRYPTO-MODULE-AUDIT.md),
 [roadmap](CRYPTO-V3-ROADMAP.md) and [PRNU method](PRNU-EXPERIMENT.md).
 The [integration review](reviews/LEOMAIN_PR9.md) records subsequent validation
-of the source audit's corrections. Native v3 capture integration, a real
-manufacturer validator, actual device attestation and independently trusted,
-measured camera-reference calibration remain open. The hybrid-v2 experiment is
+of the source audit's corrections. The [native app integration](V3-APP-INTEGRATION.md)
+now connects the v3 workflow; [its software validation](reviews/V3_APP.md) is recorded
+separately. A real manufacturer validator, actual device attestation and independently
+trusted, measured camera-reference calibration remain open. The hybrid-v2 experiment is
 separate from the P-256 v3 profile and from the Nostr app identity.
 
 [Legal positioning](regulations.md) describes dated research and service limits;
@@ -58,7 +59,8 @@ it is not a certification of PhoTO or its timestamps.
 
 ## Validation and historical records
 
-- [Latest integrated validation](reviews/LEOMAIN_PR9.md): automated checks, real Docker lifecycles and remaining acceptance gates.
+- [Native v3 app validation](reviews/V3_APP.md): current integration checks and remaining phone acceptance.
+- [Crypto-module integration validation](reviews/LEOMAIN_PR9.md): earlier source reconciliation and real Docker lifecycles.
 - [Two-phone checklist](social/CHECKLIST.md#actual-two-phone-acceptance--deferred-by-the-user): still pending; earlier agent handoffs above it are historical.
 - [Consolidation log](CONSOLIDATION.md): staged PR/branch history, not current setup instructions.
 - [Earlier MVP validation](social/VALIDATION.md), [crypto checkpoint](CRYPTO-CHECKPOINT-2026-11-21.md) and [source handoff](CRYPTO-REVIEW-HANDOFF.md): dated snapshots, not current branch status.
