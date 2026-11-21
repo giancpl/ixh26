@@ -1,5 +1,11 @@
 # FingerprinTO | Android capture and source evidence
 
+**Implementation audit:** [CRYPTO-MODULE-AUDIT.md](CRYPTO-MODULE-AUDIT.md)
+maps this target to the source, corrections and still-missing implementation.
+The full Android/manufacturer flow is not yet complete. Tests of the latest
+audit changes are deferred to the separate validation branch. Regulatory
+relevance and qualified-service limits are in [regulations.md](regulations.md).
+
 **Current implementation target:** the P-256 evidence profile proposed below (wire version 3). The user-facing question is “What evidence supports this photo’s origin?” A manufacturer can authenticate a capture claim. Photo-response non-uniformity (PRNU) can support statistical attribution to an enrolled camera. Neither establishes the truth of the depicted event. Photographing a screen is still a physical capture.
 
 ## <u>Changed: receipt issuance and the three evidence levels</u>

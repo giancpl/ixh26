@@ -1,5 +1,11 @@
 # FingerprinTO implementation progress
 
+**Latest audit:** [CRYPTO-MODULE-AUDIT.md](CRYPTO-MODULE-AUDIT.md) distinguishes
+implemented primitives, source corrections awaiting the test branch, missing
+manufacturer/Android integration, and empirical acceptance gates. The module
+must not be described as entirely implemented. Regulatory notes are in
+[regulations.md](regulations.md).
+
 **Current v3 work:** [CRYPTO-V3-ROADMAP.md](CRYPTO-V3-ROADMAP.md) tracks the
 manufacturer/PRNU direction. Implemented pieces now include the shared reducer,
 v3 receipt/attachment codecs, experimental PRNU numeric core, reference records,

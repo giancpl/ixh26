@@ -311,6 +311,9 @@ and stderr to avoid credential leakage.
 The evidence-v3 crypto-module experiment is documented in
 [the v3 runbook](docs/V3-EXPERIMENT-RUNBOOK.md), with its
 [roadmap and remaining acceptance gates](docs/CRYPTO-V3-ROADMAP.md).
+The [source audit](docs/CRYPTO-MODULE-AUDIT.md) lists still-missing implementation
+and recent corrections awaiting the dedicated test branch. Relevant legal
+frameworks and limits of commercial claims are in [regulations](docs/regulations.md).
 Use `python -m fingerprinto v3 --help` for the explicit profile; v1 and hybrid-v2
 remain separate. Synthetic passing tests do not establish real-camera accuracy.
 

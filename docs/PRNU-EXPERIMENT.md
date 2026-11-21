@@ -21,6 +21,12 @@ before investing in the calibration UI. Never fit the final test set.
 - Binary64 arithmetic throughout, row-major accumulation. One-level orthonormal
   Haar 2x2 blocks, details soft-thresholded at 3.0 intensity units, exact inverse;
   W = I - denoised(I). This is real denoising, not a placeholder random score.
+  Python floating-point reductions use explicit ordered addition, matching the
+  intended Java order rather than depending on built-in `sum` behaviour across
+  Python versions. The audit correction awaits revalidation on the test branch;
+  existing published reference bytes/refHash must not be regenerated.
+  The language change is documented in
+  [Python 3.12 release notes](https://docs.python.org/3/whatsnew/3.12.html#other-language-changes).
 - Mask original intensities outside inclusive [8,247]. Subtract each valid
   row's mean, then each valid column's mean, once; invalid values become zero.
 - Streaming reference: sum(I*W)/sum(I^2), valid support at least max(2,ceil(.8*N))

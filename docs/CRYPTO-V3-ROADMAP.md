@@ -7,7 +7,7 @@ remains an independent experiment. Preserve its tests/bytes and legacy v1.
 ## Objective and feasibility gates
 
 Commercial/legal research is tracked separately in
-[EU-ITALY-LEGAL-POSITIONING.md](EU-ITALY-LEGAL-POSITIONING.md). It identifies
+[regulations.md](regulations.md). It identifies
 possible evidential/document-workflow support and a future qualified-timestamp
 option; it does not certify this prototype or change the technical acceptance
 gates below.
@@ -71,6 +71,14 @@ is pending, and a disproven anchor blocks. A personal trust choice is deliberate
 not a reducer input and cannot change verification or C.
 
 ## Progress
+
+**Latest source audit:** [CRYPTO-MODULE-AUDIT.md](CRYPTO-MODULE-AUDIT.md).
+Pre-sign attachment preflight, ordered floating-point accumulation, retained
+status history and crash-recoverable acceptance/publication have been corrected
+in source. These corrections have not been execution-tested on this branch.
+The historical test counts below exclude them. Real manufacturer validation and
+Android decoder/calibration/capture integration are still missing code, not
+merely unexecuted tests.
 
 - Stage 1 implemented in `fingerprinto/evidence_v3.py` and `EvidenceV3.java`.
   It returns decision eligibility only, not an accepted receipt or measured

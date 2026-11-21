@@ -117,7 +117,8 @@ blocks acceptance. XRPL is outside this branch.
 - Android decoder interoperability/route calibration, worker cancellation and
   the actual capture/calibration lifecycle. App UI/build and SDK acceptance are
   deferred; the current JVM checks do not execute Android hardware.
-- Durable operational recovery between consumed enrollment challenge and
-  authority publication, deployed authority key custody/status distribution.
+- Validate the new atomic intake-decision retention, scoped recovery and
+  idempotent authority-publication paths; deployed authority key custody/status
+  distribution and current-policy checks remain operational requirements.
 
 These are open acceptance gates, not successful results inferred from fixtures.

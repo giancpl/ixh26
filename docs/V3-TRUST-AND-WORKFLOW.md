@@ -4,8 +4,11 @@
 verifier-owned SQLite database. Pin the authority SPKI through deployment,
 separately from the phone key, bundle, policy and report. Each lookup checks the
 signature again, installation hash, release policy, validity and current status.
-Higher sequence updates replace older records; rollback/conflicting updates are
-rejected. Replaying an identical record is idempotent. Local database rollback
+Higher sequence updates change the current record and retain the original
+signed versions in a separate history table; conflicting updates are rejected.
+Current/history disagreement fails closed. Existing stores migrate their current
+record only; previously overwritten history is unavailable. Replaying an
+identical record is idempotent. Local whole-database rollback
 by its administrator is outside this mechanism; protect backups and freshness
 when deploying it. Expired/missing records keep verification pending.
 
@@ -22,9 +25,16 @@ does not require issuing a photo receipt first. Python/Java share the root
 challenge)`. The challenge must match the attestation and the declarations
 must match its application identity before the registry is consumed. After
 acceptance, `retain_accepted` signs/retains an installation-only authority record.
-The provisioner must durably retain/recover the accepted intake result across
-challenge consumption and authority publication: these calls are not a single
-distributed transaction. Physical-camera/reference associations remain empty
+The intake now stores the original accepted decision and proof in the challenge
+database in the same transaction as consumption. `recover_intake` can recover
+it after interruption before publication, scoped to key/challenge/policy/app
+identity; an acceptance lacking the v3 possession proof cannot be promoted.
+`retain_accepted` reuses an existing identical publication's original bytes and
+refuses to resurrect older grants. Recovery preserves the original evaluation
+time; the provisioner must reassess current policy/revocation before publication.
+Older consumed challenges without retained decisions cannot be reconstructed.
+The trust database/publication remains separate from intake; this is not a
+cross-service transaction. Physical-camera/reference associations remain empty
 until separately approved; installation attestation alone does not prove them.
 
 Record schema `fingerprinto/enrollment-v3/1` binds installation SHA-256, package,
@@ -48,6 +58,10 @@ Retries reuse stored bytes; changed input/policy/report/key produces a conflict.
 The producer performs no external submission. Preserve the returned original
 asset, credential and attachments together with the journalled receipt. Reference
 records are published separately; this function does not capture/calibrate a phone.
+Attachment/schema checks and aggregate limits (reserving the longest allowed
+signature) run before signing, so an oversized report does not create an
+unexportable journalled receipt. These latest audit corrections await execution
+testing on the dedicated branch; see `CRYPTO-MODULE-AUDIT.md`.
 
 `verify_v3` reconstructs and verifies the signed receipt, re-evaluates both origin
 checks using caller-configured validators/store/reference retrieval, and reports
