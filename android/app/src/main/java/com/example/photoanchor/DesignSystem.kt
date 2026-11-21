@@ -1,6 +1,14 @@
 package com.example.photoanchor
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -18,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -28,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -187,6 +197,118 @@ internal enum class DeckIcon(val vw: Float, val vh: Float, val pathData: String)
         1680f,
         "M560 0V140H700V560H560V1540H420V1400H280V560H420V280H0V140H140V0H560ZM280 560H0V420H280V560ZM420 1540V1680H280V1540H420Z",
     ),
+    Share(
+        1400f,
+        1260f,
+        "M840 0H700V140V280V350H560H420H280V490H140V630H0V770V910V1050V1260H140V1050H280V910H420H560H700V980V1120V1260H840V1120H980H1120V840H1260V700H1400V560H1260V420H1120V280H980V140H840V0Z",
+    ),
+    Qr(
+        1260f,
+        1260f,
+        "M140 0H420V140H140V0ZM140 280V140H0V280H140ZM280 420V280H140V420H0V560H140V840H0V980H140V1120H0V1260H1260V0H980V140H840V0H560V140H420V420H280ZM700 280H840V140H700V280ZM700 560V280H560V560H420V700H280V840H140V980H280V1120H420V980H560V840H420V700H560V560H700ZM840 560H700V700H840V840H700V980H840V1120H980V980H1120V700H840V560ZM1120 420H840V560H1120V420ZM1120 280V140H980V280H1120ZM980 980H840V840H980V980ZM420 840V980H280V840H420ZM280 420V560H140V420H280Z",
+    ),
+    Message(
+        1540f,
+        1120f,
+        "M140 0H1400V140H1540V980H1400V1120H420V980H280V1120H0V140H140V0ZM280 280V700H1260V280H280Z",
+    ),
+    Bell(
+        1120f,
+        1260f,
+        "M420 0H700V140H840V280H980V700H1120V980H0V700H140V840H280V700H420V280H280V140H420V0ZM280 280V700H140V280H280ZM700 1120H420V1260H700V1120Z",
+    ),
+}
+
+/** Animated BitPolito Pixel Lightning Bolt burst overlay shown on double-tap Zap (+21 sats) */
+@Composable
+internal fun BoxScope.LightningZapBurstOverlay(burstTrigger: Int) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(burstTrigger) {
+        if (burstTrigger > 0) {
+            visible = true
+            delay(820)
+            visible = false
+        }
+    }
+    val pulseScale by animateFloatAsState(
+        targetValue = if (visible) 1.08f else 0.6f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "zapPulseScale",
+    )
+    AnimatedVisibility(
+        visible = visible,
+        modifier = Modifier.align(Alignment.Center),
+        enter = scaleIn(
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+        ) + fadeIn(),
+        exit = scaleOut() + fadeOut(),
+    ) {
+        Column(
+            modifier = Modifier.graphicsLayer {
+                scaleX = pulseScale
+                scaleY = pulseScale
+            },
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(
+                Modifier
+                    .size(76.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF001CE0).copy(alpha = 0.92f))
+                    .border(2.5.dp, Color(0xFFFCD34D), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                PixelIcon(
+                    icon = DeckIcon.Lightning,
+                    size = 40.dp,
+                    tint = Color(0xFFFCD34D),
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(99.dp),
+                color = Color(0xFFF59E0B),
+                border = BorderStroke(1.5.dp, Color(0xFFFEF3C7)),
+                shadowElevation = 6.dp,
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    PixelIcon(DeckIcon.Lightning, size = 11.dp, tint = Color(0xFF451A03))
+                    Text(
+                        text = "+21 SATS ZAPPED",
+                        color = Color(0xFF451A03),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 11.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+internal fun handleOf(name: String, pubkey: String): String {
+    val slug = name.trim().lowercase().replace(Regex("[^a-z0-9_]+"), "").take(14)
+    return if (slug.isNotEmpty()) "@$slug" else "@nostr_${pubkey.take(6)}"
+}
+
+internal fun boardForCaption(caption: String): String {
+    val c = caption.lowercase()
+    return when {
+        "bitcoin" in c || "btc" in c || "sat" in c -> "Bitcoin"
+        "street" in c || "city" in c || "urban" in c -> "Street"
+        "arch" in c || "design" in c || "polito" in c -> "Architecture"
+        "nature" in c || "sky" in c || "mountain" in c -> "Nature"
+        else -> "Inspiration"
+    }
 }
 
 @Composable
