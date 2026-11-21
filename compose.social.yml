@@ -109,6 +109,7 @@ services:
       - artifacts:/artifacts
       - evidence-config:/evidence-config:ro
       - evidence-authority:/authority:ro
+      - ${PHOTOANCHOR_OPERATOR_DIR:-./social-artifacts/operator}:/operator:ro,z
     depends_on:
       api:
         condition: service_healthy

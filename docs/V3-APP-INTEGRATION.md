@@ -65,6 +65,9 @@ container (policy and revocations are mounted read-only from `/operator`):
   --policy /operator/policy.json --revocations-file /operator/revocations.json
 ```
 
+The worker also mounts this operator directory read-only so it can re-read the
+current revocation snapshot at intake/recovery. The HTTP API has no such mount.
+
 Enrollment checks hardware attestation at intake. The local authority grants a
 30-day enrollment record, subject to signed status updates/revocation and expiry;
 it is not a fresh boot/app attestation for every photo. Policy changes requiring
