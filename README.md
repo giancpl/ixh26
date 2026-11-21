@@ -83,8 +83,10 @@ Python tests, shared Python/JVM crypto vectors, Android builds/unit tests/lint,
 web checks and real Docker lifecycles have been executed; see the
 [validation report](docs/reviews/LEOMAIN_PR9.md) for versions, counts and limits.
 The [v3 application validation report](docs/reviews/V3_APP.md) records the new
-integration checks. Actual Pixel 9 Pro/GrapheneOS attestation, two-phone
-acceptance, a real manufacturer validator and measured PRNU calibration remain open.
+integration checks. [Real Pixel 9 Pro/GrapheneOS tests](docs/reviews/PIXEL9_PRO_2026-11-21.md)
+now cover hardware enrollment, capture, signing, both regtest proofs and export.
+Two-phone acceptance, a real manufacturer validator and measured PRNU calibration
+remain open.
 
 **Naming:** PhoTO is the app and project name. PhotoAnchor and BitPin are earlier
 product/UI names retained in historical reports. `fingerprinto` is the crypto

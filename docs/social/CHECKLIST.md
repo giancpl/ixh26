@@ -45,6 +45,11 @@ the original checkout may be used by another task and must not be switched.
 
 ## Actual two-phone acceptance — deferred by the user
 
+Update 2026-11-21: the [single-Pixel device run](../reviews/PIXEL9_PRO_2026-11-21.md)
+now exercises capture, publication, hardware enrollment, v3 signing, both real
+OTS proofs, export and independent verification. The checklist below retains
+the separate two-phone gate; one handset does not establish Bob acceptance.
+
 No phones were connected during initial implementation. The user requested
 that this test be performed later. Do not mark these complete from headless
 service tests, JVM tests or an APK build.
